@@ -1,0 +1,19 @@
+{
+    "name": "jhun/campus-food-ordering-system",
+    "description": "University canteen management system built with pure PHP and Domain-Driven Design (DDD).",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "App\\": "App/",
+            "Inc\\": "Inc/"
+
+        }
+    },
+    "authors": [
+        {
+            "name": "JhunJhun2003",
+            "email": "kokyaw3482@gamil.com"
+        }
+    ],
+    "require": {}
+}

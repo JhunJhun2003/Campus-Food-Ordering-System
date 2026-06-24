@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Reports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<link rel="stylesheet" href="admin-reports.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <a href="#" class="logo-area"><iconify-icon icon="lucide:utensils-crosses"></iconify-icon><span>FOODIE</span></a>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="#"><iconify-icon icon="lucide:layout-dashboard"></iconify-icon>Dashboard</a></li>
+            <li class="nav-item"><a href="#"><iconify-icon icon="lucide:users"></iconify-icon>Users</a></li>
+            <li class="nav-item"><a href="#"><iconify-icon icon="lucide:book-open"></iconify-icon>Menu</a></li>
+            <li class="nav-item"><a href="#"><iconify-icon icon="lucide:shopping-bag"></iconify-icon>Orders</a></li>
+            <li class="nav-item active"><a href="#"><iconify-icon icon="lucide:bar-chart-3"></iconify-icon>Reports</a></li>
+            <li class="nav-item"><a href="#"><iconify-icon icon="lucide:settings"></iconify-icon>Settings</a></li>
+            <li class="nav-item" style="margin-top:auto;"><a href="#"><iconify-icon icon="lucide:log-out"></iconify-icon>Logout</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-workspace">
+        <h1 class="page-header">Admin - Reports</h1>
+        
+        <div class="controls-row">
+            <select class="dropdown-picker">
+                <option>May 12, 2024 to May 20, 2024</option>
+                <option>Last 30 Days</option>
+                <option>This Year</option>
+            </select>
+            <button class="btn-export"><iconify-icon icon="lucide:download"></iconify-icon>Export</button>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card card-orders">
+                <span class="metric-title">Total Orders</span>
+                <span class="metric-value">254</span>
+            </div>
+            <div class="metric-card card-revenue">
+                <span class="metric-title">Total Revenue</span>
+                <span class="metric-value">$25,400</span>
+            </div>
+            <div class="metric-card card-users">
+                <span class="metric-title">Active Users</span>
+                <span class="metric-value">120</span>
+            </div>
+            <div class="metric-card card-pending">
+                <span class="metric-title">Pending Orders</span>
+                <span class="metric-value">18</span>
+            </div>
+        </div>
+
+        <div class="chart-panel">
+            <h3 class="chart-title">Sales Overview</h3>
+            
+            <div class="chart-stage">
+                <div class="axis-y-label" style="bottom: 85%;">$300</div>
+                <div class="axis-y-label" style="bottom: 56%;">$200</div>
+                <div class="axis-y-label" style="bottom: 28%;">$100</div>
+                <div class="axis-y-label" style="bottom: 0%;">$0</div>
+                
+                <svg class="svg-chart-line" viewBox="0 0 500 200" preserveAspectRatio="none">
+                    <polyline fill="none" stroke="#1E293B" stroke-width="2.5" points="0,200 125,130 250,200 375,130 500,80"/>
+                </svg>
+            </div>
+            <div class="axis-x-row">
+                <span>May</span>
+                <span>Jun</span>
+                <span>July</span>
+                <span>Aug</span>
+                <span>Sep</span>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

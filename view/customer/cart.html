@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Foodie - Shopping Cart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="cart.css" />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="container nav-wrapper">
+        <a href="#" class="logo-group"
+          ><iconify-icon icon="lucide:utensils-crosses"></iconify-icon
+          ><span>FOODIE</span></a
+        >
+      </div>
+    </header>
+    <main class="container">
+      <div class="cart-layout">
+        <div class="cart-panel">
+          <h2 class="cart-title">Your Cart (2 items)</h2>
+          <script>
+            for (let i = 0; i < 2; i++) {
+              document.write(`
+                            <div class="cart-item">
+                                <div class="cart-product">
+                                    <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f354/512.webp" alt="Food Item">
+                                    <div>
+                                        <h4 style="font-weight:700;">Cheese Burger Deluxe</h4>
+                                        <p style="color:var(--text-muted); font-size:13px; margin-top:2px;">$ 100</p>
+                                    </div>
+                                </div>
+                                <div class="qty-controls">
+                                    <button class="qty-btn">-</button>
+                                    <span class="qty-val">1</span>
+                                    <button class="qty-btn">+</button>
+                                </div>
+                            </div>
+                        `);
+            }
+          </script>
+        </div>
+        <div class="summary-panel">
+          <h3 style="margin-bottom: 20px; font-weight: 700">Order Summary</h3>
+          <div class="summary-row"><span>Subtotal</span><span>$ 200</span></div>
+          <div class="summary-row">
+            <span>Delivery Fee</span><span>$ 10</span>
+          </div>
+          <div class="summary-row total">
+            <span>Total Price</span><span>$ 210</span>
+          </div>
+          <button class="btn-checkout">Proceed to Checkout</button>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
