@@ -6,11 +6,19 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use App\User\Presentation\Http\Controllers\UserController;
 
 $controller = new UserController();
-$controller->requireGuest();
 
-$error = $_SESSION['error'] ?? '';
-$success = $_SESSION['success'] ?? '';
-unset($_SESSION['error'], $_SESSION['success']);
+// Redirect if already logged in
+if ($controller->isLoggedIn()) {
+    if ($_SESSION['user_role'] === 'admin') {
+        header('Location: ../admin/admin-dashboard.php');
+    } else {
+        header('Location: ../customer/menu.php');
+    }
+    exit();
+}
+
+$error = '';
+$success = '';
 
 // Handle Login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
@@ -60,13 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         </div>
         <div class="auth-form-panel">
             <?php if ($error): ?>
-                <div style="background:#FEE2E2; color:#991B1B; padding:12px; border-radius:8px; margin-bottom:16px;">
+                <div class="alert alert-error">
+                    <iconify-icon icon="lucide:alert-circle"></iconify-icon>
                     <?php echo htmlspecialchars($error); ?>
                 </div>
             <?php endif; ?>
             
             <?php if ($success): ?>
-                <div style="background:#D3FEE3; color:#15803D; padding:12px; border-radius:8px; margin-bottom:16px;">
+                <div class="alert alert-success">
+                    <iconify-icon icon="lucide:check-circle"></iconify-icon>
                     <?php echo htmlspecialchars($success); ?>
                 </div>
             <?php endif; ?>
@@ -81,15 +91,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 <input type="hidden" name="login" value="1">
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" name="email" placeholder="name@example.com" required>
+                    <input type="email" name="email" placeholder="name@example.com" value="<?php echo isset($_COOKIE['user_email']) ? htmlspecialchars($_COOKIE['user_email']) : ''; ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <input type="password" name="password" placeholder="••••••••" required>
                 </div>
                 <div class="form-options">
-                    <label style="display:flex; gap:6px; cursor:pointer;">
-                        <input type="checkbox" name="remember"> Remember me
+                    <label>
+                        <input type="checkbox" name="remember" <?php echo isset($_COOKIE['user_email']) ? 'checked' : ''; ?>> 
+                        Remember me
                     </label>
                     <a href="#">Forgot Password?</a>
                 </div>
@@ -118,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 <button type="submit" class="btn-primary">Create Account</button>
             </form>
             
-            <div class="divider">Or continue with</div>
+            <div class="divider"><span>Or continue with</span></div>
             <div class="social-group">
                 <button class="social-btn"><iconify-icon icon="logos:google-icon"></iconify-icon> Google</button>
                 <button class="social-btn"><iconify-icon icon="logos:apple"></iconify-icon> Apple</button>

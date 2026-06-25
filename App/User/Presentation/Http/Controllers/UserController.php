@@ -5,7 +5,7 @@ use App\User\Application\DTOs\RegisterUserRequest;
 use App\User\Application\Usecases\RegisterUserUseCase;
 use App\User\Application\DTOs\LoginUserRequest;
 use App\User\Application\Usecases\LoginUserUseCase;
-use App\User\Infrastructure\repositories\UserRepository;
+use App\User\Infrastructure\Repositories\UserRepository;
 
 class UserController
 {
