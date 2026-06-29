@@ -7,6 +7,7 @@ use App\User\Domain\ValueObjects\Email;
 
 interface UserRepositoryInterface
 {
+    // ===== USER CRUD =====
     public function save(User $user): void;
     public function findById(UserId $id): ?User;
     public function findByEmail(Email $email): ?User;
@@ -14,6 +15,13 @@ interface UserRepositoryInterface
     public function delete(UserId $id): void;
     public function exists(Email $email): bool;
     
-    // NEW: Get role ID by role name
+    // ===== ROLE =====
     public function getRoleId(string $roleName): int;
+    
+    // ===== ADMIN DASHBOARD =====
+    public function getTotalUsers(): int;
+    public function getTotalFoods(): int;
+    public function getTotalOrders(): int;
+    public function getPendingOrders(): int;
+    public function getRecentOrders(int $limit = 5): array;
 }
