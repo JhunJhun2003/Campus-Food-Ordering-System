@@ -13,4 +13,7 @@ interface UserRepositoryInterface
     public function findAll(): array;
     public function delete(UserId $id): void;
     public function exists(Email $email): bool;
+    
+    // NEW: Get role ID by role name
+    public function getRoleId(string $roleName): int;
 }

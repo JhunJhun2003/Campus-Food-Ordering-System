@@ -36,9 +36,11 @@ class LoginUserUseCase
         }
 
         // Determine redirect URL based on role
-        $redirectUrl = $user->isAdmin() 
-            ? '/view/admin/admin-dashboard.php' 
-            : '/view/customer/menu.php';
+        $redirectUrl = match ($user->getRole()) {
+            'admin' => '/view/admin/admin-dashboard.php',
+            'staff' => '/view/staff/staff-dashboard.php',
+            default => '/view/customer/dashboard.php'
+        };
 
         return new LoginUserResponse(
             true,

@@ -51,14 +51,19 @@ class RegisterUserUseCase
             return new RegisterUserResponse(false, 'Validation failed', null, $errors);
         }
 
+        // Get role_id from repository (NO SQL HERE!)
+        $roleId = $this->userRepository->getRoleId('user');
+
         // Create user
         $user = new User(
-            new UserId(null), // Auto-increment ID
+            new UserId(null),
+            $roleId,
+            'user',
             $request->name,
             $email,
             $password,
             $request->phone,
-            'user' // Default role
+            null // address
         );
 
         // Save user

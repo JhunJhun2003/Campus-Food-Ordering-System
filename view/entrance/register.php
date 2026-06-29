@@ -12,7 +12,7 @@ if ($controller->isLoggedIn()) {
     if ($_SESSION['user_role'] === 'admin') {
         header('Location: ../admin/admin-dashboard.php');
     } else {
-        header('Location: ../customer/menu.php');
+        header('Location: ../customer/dashboard.php'); // ✅ Fixed: dashboard.php
     }
     exit();
 }
@@ -26,9 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($result['success']) {
         $success = $result['message'];
-        // Optional: Auto-login after registration
-        // header('Location: login.php');
-        // exit();
     } else {
         if (isset($result['errors'])) {
             $error = implode('<br>', $result['errors']);

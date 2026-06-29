@@ -6,19 +6,11 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use App\User\Presentation\Http\Controllers\UserController;
 
 $controller = new UserController();
+$controller->requireGuest();
 
-// Redirect if already logged in
-if ($controller->isLoggedIn()) {
-    if ($_SESSION['user_role'] === 'admin') {
-        header('Location: ../admin/admin-dashboard.php');
-    } else {
-        header('Location: ../customer/menu.php');
-    }
-    exit();
-}
-
-$error = '';
-$success = '';
+$error = $_SESSION['error'] ?? '';
+$success = $_SESSION['success'] ?? '';
+unset($_SESSION['error'], $_SESSION['success']);
 
 // Handle Login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {

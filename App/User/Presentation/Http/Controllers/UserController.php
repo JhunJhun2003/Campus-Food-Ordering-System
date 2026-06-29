@@ -32,7 +32,7 @@ class UserController
             'success' => $response->success,
             'message' => $response->message,
             'user' => $response->user,
-            'errors' => $response->errors
+            'errors' => $response->errors ?? null
         ];
     }
 
@@ -51,9 +51,8 @@ class UserController
             $_SESSION['user_id'] = $response->user->getId()->getValue();
             $_SESSION['user_name'] = $response->user->getName();
             $_SESSION['user_email'] = $response->user->getEmail()->getValue();
-            $_SESSION['user_role'] = $response->user->getRole();
+            $_SESSION['user_role'] = $response->user->getRoleName();
             
-            // Remember me (7 days)
             if ($request->remember) {
                 setcookie('user_email', $response->user->getEmail()->getValue(), time() + (7 * 24 * 60 * 60), '/');
             }
@@ -63,8 +62,17 @@ class UserController
             'success' => $response->success,
             'message' => $response->message,
             'user' => $response->user,
-            'redirect' => $response->redirectUrl
+            'redirect' => $response->redirectUrl ?? $this->getRedirectUrl($_SESSION['user_role'] ?? 'user')
         ];
+    }
+
+    private function getRedirectUrl(string $role): string
+    {
+        return match ($role) {
+            'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
+            'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
+            default => '/Campus-Food-Ordering-System/view/customer/dashboard.php'
+        };
     }
 
     public function logout(): void
@@ -76,7 +84,8 @@ class UserController
         // Clear remember me cookie
         setcookie('user_email', '', time() - 3600, '/');
         
-        header('Location: /view/entrance/login.php');
+        // Redirect to login page with full path
+        header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
         exit();
     }
 
@@ -102,7 +111,7 @@ class UserController
     public function requireAuth(): void
     {
         if (!$this->isLoggedIn()) {
-            header('Location: /view/entrance/login.php');
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
             exit();
         }
     }
@@ -111,7 +120,16 @@ class UserController
     {
         $this->requireAuth();
         if ($_SESSION['user_role'] !== 'admin') {
-            header('Location: /view/customer/menu.php');
+            header('Location: /Campus-Food-Ordering-System/view/customer/menu.php');
+            exit();
+        }
+    }
+
+    public function requireStaff(): void
+    {
+        $this->requireAuth();
+        if (!in_array($_SESSION['user_role'], ['admin', 'staff'])) {
+            header('Location: /Campus-Food-Ordering-System/view/customer/menu.php');
             exit();
         }
     }
@@ -119,11 +137,13 @@ class UserController
     public function requireGuest(): void
     {
         if ($this->isLoggedIn()) {
-            if ($_SESSION['user_role'] === 'admin') {
-                header('Location: /view/admin/admin-dashboard.php');
-            } else {
-                header('Location: /view/customer/menu.php');
-            }
+            $role = $_SESSION['user_role'];
+            $redirect = match ($role) {
+                'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
+                'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
+                default => '/Campus-Food-Ordering-System/view/customer/dashboard.php'
+            };
+            header('Location: ' . $redirect);
             exit();
         }
     }

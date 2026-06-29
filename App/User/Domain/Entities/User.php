@@ -9,46 +9,59 @@ use DateTime;
 class User
 {
     private UserId $id;
+    private int $roleId;
+    private string $roleName;
     private string $name;
     private Email $email;
     private Password $password;
     private ?string $phone;
-    private string $role;
+    private ?string $address;
     private DateTime $createdAt;
     private ?DateTime $updatedAt;
 
     public function __construct(
         UserId $id,
+        int $roleId,
+        string $roleName,
         string $name,
         Email $email,
         Password $password,
         ?string $phone = null,
-        string $role = 'user'
+        ?string $address = null
     ) {
         $this->id = $id;
+        $this->roleId = $roleId;
+        $this->roleName = $roleName;
         $this->name = $name;
         $this->email = $email;
         $this->password = $password;
         $this->phone = $phone;
-        $this->role = $role;
+        $this->address = $address;
         $this->createdAt = new DateTime();
         $this->updatedAt = null;
     }
 
     // Getters
     public function getId(): UserId { return $this->id; }
+    public function getRoleId(): int { return $this->roleId; }
+    public function getRoleName(): string { return $this->roleName; }
     public function getName(): string { return $this->name; }
     public function getEmail(): Email { return $this->email; }
     public function getPassword(): Password { return $this->password; }
     public function getPhone(): ?string { return $this->phone; }
-    public function getRole(): string { return $this->role; }
+    public function getAddress(): ?string { return $this->address; }
     public function getCreatedAt(): DateTime { return $this->createdAt; }
     public function getUpdatedAt(): ?DateTime { return $this->updatedAt; }
 
-    // Business Methods
-    public function isAdmin(): bool { return $this->role === 'admin'; }
-    public function isUser(): bool { return $this->role === 'user'; }
+    // Role Check Methods
+    public function isAdmin(): bool { return $this->roleName === 'admin'; }
+    public function isStaff(): bool { return $this->roleName === 'staff'; }
+    public function isUser(): bool { return $this->roleName === 'user'; }
+    public function hasStaffAccess(): bool { 
+        return in_array($this->roleName, ['admin', 'staff']); 
+    }
 
+    // Business Methods
     public function changeName(string $name): void
     {
         $this->name = $name;
@@ -67,21 +80,22 @@ class User
         $this->updatedAt = new DateTime();
     }
 
+    public function changeAddress(?string $address): void
+    {
+        $this->address = $address;
+        $this->updatedAt = new DateTime();
+    }
+
     public function changePassword(Password $password): void
     {
         $this->password = $password;
         $this->updatedAt = new DateTime();
     }
 
-    public function promoteToAdmin(): void
+    public function changeRole(int $roleId, string $roleName): void
     {
-        $this->role = 'admin';
-        $this->updatedAt = new DateTime();
-    }
-
-    public function demoteToUser(): void
-    {
-        $this->role = 'user';
+        $this->roleId = $roleId;
+        $this->roleName = $roleName;
         $this->updatedAt = new DateTime();
     }
 
@@ -89,10 +103,12 @@ class User
     {
         return [
             'id' => $this->id->getValue(),
+            'role_id' => $this->roleId,
+            'role_name' => $this->roleName,
             'name' => $this->name,
             'email' => $this->email->getValue(),
             'phone' => $this->phone,
-            'role' => $this->role,
+            'address' => $this->address,
             'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $this->updatedAt ? $this->updatedAt->format('Y-m-d H:i:s') : null
         ];
