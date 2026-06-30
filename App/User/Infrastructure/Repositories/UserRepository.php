@@ -22,13 +22,9 @@ class UserRepository implements UserRepositoryInterface
     // USER CRUD METHODS
     // ============================================
 
-    /**
-     * Save user (insert or update)
-     */
     public function save(User $user): void
     {
         if ($user->getId()->isEmpty()) {
-            // Insert new user
             $sql = "INSERT INTO users (role_id, name, email, password, phone, address) 
                     VALUES (:role_id, :name, :email, :password, :phone, :address)";
             
@@ -42,7 +38,6 @@ class UserRepository implements UserRepositoryInterface
                 ':address' => $user->getAddress()
             ]);
         } else {
-            // Update existing user
             $sql = "UPDATE users SET 
                     role_id = :role_id,
                     name = :name, 
@@ -65,9 +60,6 @@ class UserRepository implements UserRepositoryInterface
         }
     }
 
-    /**
-     * Find user by ID
-     */
     public function findById(UserId $id): ?User
     {
         $sql = "SELECT u.*, r.role_name 
@@ -81,9 +73,6 @@ class UserRepository implements UserRepositoryInterface
         return $data ? $this->hydrate($data) : null;
     }
 
-    /**
-     * Find user by email
-     */
     public function findByEmail(Email $email): ?User
     {
         $sql = "SELECT u.*, r.role_name 
@@ -97,9 +86,6 @@ class UserRepository implements UserRepositoryInterface
         return $data ? $this->hydrate($data) : null;
     }
 
-    /**
-     * Find all users
-     */
     public function findAll(): array
     {
         $sql = "SELECT u.*, r.role_name 
@@ -112,9 +98,6 @@ class UserRepository implements UserRepositoryInterface
         return array_map([$this, 'hydrate'], $data);
     }
 
-    /**
-     * Delete user by ID
-     */
     public function delete(UserId $id): void
     {
         $sql = "DELETE FROM users WHERE id = :id";
@@ -122,9 +105,6 @@ class UserRepository implements UserRepositoryInterface
         $stmt->execute([':id' => $id->getValue()]);
     }
 
-    /**
-     * Check if user exists by email
-     */
     public function exists(Email $email): bool
     {
         $sql = "SELECT COUNT(*) as count FROM users WHERE email = :email";
@@ -139,9 +119,6 @@ class UserRepository implements UserRepositoryInterface
     // ROLE METHODS
     // ============================================
 
-    /**
-     * Get role ID by role name
-     */
     public function getRoleId(string $roleName): int
     {
         $sql = "SELECT id FROM user_roles WHERE role_name = :role_name";
@@ -149,16 +126,13 @@ class UserRepository implements UserRepositoryInterface
         $stmt->execute([':role_name' => $roleName]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        return $result['id'] ?? 3; // Default to 'user' (id=3)
+        return $result['id'] ?? 3;
     }
 
     // ============================================
     // ADMIN DASHBOARD METHODS
     // ============================================
 
-    /**
-     * Get total number of users
-     */
     public function getTotalUsers(): int
     {
         $stmt = $this->db->query("SELECT COUNT(*) as count FROM users");
@@ -166,9 +140,6 @@ class UserRepository implements UserRepositoryInterface
         return (int) ($result['count'] ?? 0);
     }
 
-    /**
-     * Get total number of foods
-     */
     public function getTotalFoods(): int
     {
         $stmt = $this->db->query("SELECT COUNT(*) as count FROM foods");
@@ -176,9 +147,6 @@ class UserRepository implements UserRepositoryInterface
         return (int) ($result['count'] ?? 0);
     }
 
-    /**
-     * Get total number of orders
-     */
     public function getTotalOrders(): int
     {
         $stmt = $this->db->query("SELECT COUNT(*) as count FROM orders");
@@ -186,9 +154,6 @@ class UserRepository implements UserRepositoryInterface
         return (int) ($result['count'] ?? 0);
     }
 
-    /**
-     * Get number of pending orders (status_id = 1)
-     */
     public function getPendingOrders(): int
     {
         $sql = "SELECT COUNT(*) as count FROM orders WHERE status_id = 1";
@@ -198,9 +163,6 @@ class UserRepository implements UserRepositoryInterface
         return (int) ($result['count'] ?? 0);
     }
 
-    /**
-     * Get recent orders
-     */
     public function getRecentOrders(int $limit = 5): array
     {
         $sql = "SELECT 
@@ -223,12 +185,159 @@ class UserRepository implements UserRepositoryInterface
     }
 
     // ============================================
-    // HELPER METHODS
+    // REPORTS METHODS
+    // ============================================
+
+    public function getTotalRevenue(): float
+    {
+        $stmt = $this->db->query("SELECT SUM(total_amount) as total FROM orders WHERE status_id = 5");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (float) ($result['total'] ?? 0);
+    }
+
+    public function getCompletedOrders(): int
+    {
+        $sql = "SELECT COUNT(*) as count FROM orders WHERE status_id = 5";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    public function getMonthlyRevenue(int $months = 6): array
+    {
+        $sql = "SELECT 
+                    DATE_FORMAT(order_date, '%Y-%m') as month,
+                    SUM(total_amount) as revenue,
+                    COUNT(*) as order_count
+                FROM orders 
+                WHERE status_id = 5
+                GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+                ORDER BY month DESC
+                LIMIT :months";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':months', $months, PDO::PARAM_INT);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $chartData = [];
+        
+        foreach (array_reverse($results) as $row) {
+            $monthNum = (int) substr($row['month'], 5);
+            $chartData[] = [
+                'month' => $monthNames[$monthNum - 1] ?? $row['month'],
+                'revenue' => (float) $row['revenue'],
+                'orders' => (int) $row['order_count']
+            ];
+        }
+        
+        return $chartData;
+    }
+
+    public function getOrderStats(): array
+    {
+        $sql = "SELECT 
+                    status_id,
+                    COUNT(*) as count,
+                    SUM(total_amount) as total
+                FROM orders 
+                GROUP BY status_id";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // ============================================
+    // SETTINGS METHODS (ADD THIS SECTION)
     // ============================================
 
     /**
-     * Hydrate database data to User entity
+     * Get all settings as key-value array
      */
+    public function getAllSettings(): array
+    {
+        $sql = "SELECT setting_key, setting_value, setting_group FROM settings ORDER BY setting_group, setting_key";
+        $stmt = $this->db->query($sql);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $settings = [];
+        foreach ($results as $row) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        return $settings;
+    }
+
+    /**
+     * Get settings by group
+     */
+    public function getSettingsByGroup(string $group): array
+    {
+        $sql = "SELECT setting_key, setting_value FROM settings WHERE setting_group = :group ORDER BY setting_key";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':group' => $group]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $settings = [];
+        foreach ($results as $row) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        return $settings;
+    }
+
+    /**
+     * Get a single setting by key
+     */
+    public function getSetting(string $key): ?string
+    {
+        $sql = "SELECT setting_value FROM settings WHERE setting_key = :key";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':key' => $key]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['setting_value'] ?? null;
+    }
+
+    /**
+     * Update a single setting
+     */
+    public function updateSetting(string $key, string $value): bool
+    {
+        $sql = "UPDATE settings SET setting_value = :value WHERE setting_key = :key";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':key' => $key,
+            ':value' => $value
+        ]);
+    }
+
+    /**
+     * Update multiple settings
+     */
+    public function updateSettings(array $settings): array
+    {
+        $success = [];
+        $failed = [];
+        
+        foreach ($settings as $key => $value) {
+            if ($this->updateSetting($key, $value)) {
+                $success[] = $key;
+            } else {
+                $failed[] = $key;
+            }
+        }
+        
+        return [
+            'success' => $success,
+            'failed' => $failed
+        ];
+    }
+
+    // ============================================
+    // HELPER METHODS
+    // ============================================
+
     private function hydrate(array $data): User
     {
         return new User(
@@ -237,7 +346,7 @@ class UserRepository implements UserRepositoryInterface
             $data['role_name'],
             $data['name'],
             new Email($data['email']),
-            new Password($data['password'], true), // isHashed = true
+            new Password($data['password'], true),
             $data['phone'] ?? null,
             $data['address'] ?? null
         );

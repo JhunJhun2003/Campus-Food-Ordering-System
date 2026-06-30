@@ -24,4 +24,13 @@ interface UserRepositoryInterface
     public function getTotalOrders(): int;
     public function getPendingOrders(): int;
     public function getRecentOrders(int $limit = 5): array;
+
+        // SETTINGS METHODS 
+    // ============================================
+
+    public function getAllSettings(): array;
+    public function getSettingsByGroup(string $group): array;
+    public function getSetting(string $key): ?string;
+    public function updateSetting(string $key, string $value): bool;
+    public function updateSettings(array $settings): array;
 }
