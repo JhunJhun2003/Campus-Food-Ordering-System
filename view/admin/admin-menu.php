@@ -4,18 +4,15 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
-use App\Food\Infrastructure\Repositories\FoodRepository;
+use App\Food\Presentation\Http\Controllers\FoodController;
 
 $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
 
-// Get all foods from repository
-$foodRepository = new FoodRepository();
-$foods = $foodRepository->findAll();
-
-// Get categories for filter
-$db = \Inc\Database::getConnection();
-$categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(\PDO::FETCH_ASSOC);
+// Get foods from FoodController
+$foodController = new FoodController();
+$foods = $foodController->index();
+$categories = $foodController->getCategories();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -28,7 +25,19 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(\PD
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-menu.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sidebar-link.active {
+            background-color: #EEF2FF;
+            color: #4F46E5;
+        }
+        .sidebar-link:hover {
+            background-color: #F9FAFB;
+            color: #111827;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 flex h-screen text-gray-800 antialiased">
 
@@ -47,12 +56,12 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(\PD
             </div>
 
             <nav class="space-y-1 px-3">
-                <a href="admin-dashboard.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
+                <a href="admin-dashboard.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-house text-lg w-6 text-center"></i>
                     <span>Dashboard</span>
                 </a>
 
-                <a href="admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
+                <a href="admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-regular fa-user text-lg w-6 text-center"></i>
                     <span>Users</span>
                 </a>
@@ -62,17 +71,17 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(\PD
                     <span>Menu</span>
                 </a>
 
-                <a href="admin-orders.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
+                <a href="admin-orders.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
 
-                <a href="admin-reports.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
+                <a href="admin-reports.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-chart-simple text-lg w-6 text-center"></i>
                     <span>Reports</span>
                 </a>
 
-                <a href="admin-settings.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
+                <a href="admin-settings.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
                     <span>Settings</span>
                 </a>
@@ -98,7 +107,6 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(\PD
 
     <!-- ===== MAIN CONTENT ===== -->
     <main class="flex-1 p-8 overflow-y-auto">
-        <!-- Page Header -->
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Manage Menu</h1>
@@ -179,7 +187,6 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(\PD
                                     </td>
                                     <td class="py-4 px-6 text-gray-600">
                                         <?php 
-                                            // Get category name
                                             $categoryName = '';
                                             foreach ($categories as $cat) {
                                                 if ($cat['id'] == $food->getCategoryId()) {
