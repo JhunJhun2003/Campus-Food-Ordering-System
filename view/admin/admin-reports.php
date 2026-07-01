@@ -30,26 +30,7 @@ $maxRevenue = !empty($monthlyRevenue) ? max(array_column($monthlyRevenue, 'reven
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .sidebar-link.active {
-            background-color: #EEF2FF;
-            color: #4F46E5;
-        }
-        .sidebar-link:hover {
-            background-color: #F9FAFB;
-            color: #111827;
-        }
-        .stat-card {
-            transition: all 0.3s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
-        }
-    </style>
+    <link rel="stylesheet" href="admin-reports.css">
 </head>
 <body class="bg-[#F8FAFC] flex h-screen text-slate-800 antialiased overflow-hidden">
 

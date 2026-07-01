@@ -143,4 +143,94 @@ class FoodRepository implements FoodRepositoryInterface
             'created_at' => $data['created_at']
         ];
     }
+     /**
+     * Get food for editing
+     */
+    public function getFoodForEdit(int $id): ?array
+    {
+        $sql = "SELECT * FROM foods WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
+    /**
+     * Create a new food item
+     */
+    public function createFood(array $data): int
+    {
+        $sql = "INSERT INTO foods (category_id, name, description, price, stock, image, preparation_time) 
+                VALUES (:category_id, :name, :description, :price, :stock, :image, :preparation_time)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':category_id' => $data['category_id'],
+            ':name' => $data['name'],
+            ':description' => $data['description'],
+            ':price' => $data['price'],
+            ':stock' => $data['stock'],
+            ':image' => $data['image'] ?? '',
+            ':preparation_time' => $data['preparation_time'] ?? 15
+        ]);
+        
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
+     * Update a food item
+     */
+    public function updateFood(int $id, array $data): bool
+    {
+        $fields = [];
+        $params = [':id' => $id];
+        
+        if (isset($data['category_id'])) {
+            $fields[] = "category_id = :category_id";
+            $params[':category_id'] = $data['category_id'];
+        }
+        if (isset($data['name'])) {
+            $fields[] = "name = :name";
+            $params[':name'] = $data['name'];
+        }
+        if (isset($data['description'])) {
+            $fields[] = "description = :description";
+            $params[':description'] = $data['description'];
+        }
+        if (isset($data['price'])) {
+            $fields[] = "price = :price";
+            $params[':price'] = $data['price'];
+        }
+        if (isset($data['stock'])) {
+            $fields[] = "stock = :stock";
+            $params[':stock'] = $data['stock'];
+        }
+        if (isset($data['image'])) {
+            $fields[] = "image = :image";
+            $params[':image'] = $data['image'];
+        }
+        if (isset($data['preparation_time'])) {
+            $fields[] = "preparation_time = :preparation_time";
+            $params[':preparation_time'] = $data['preparation_time'];
+        }
+        
+        if (empty($fields)) {
+            return false;
+        }
+        
+        $sql = "UPDATE foods SET " . implode(', ', $fields) . " WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($params);
+    }
+
+    /**
+     * Delete a food item (soft delete)
+     */
+    public function deleteFood(int $id): bool
+    {
+        // Soft delete - update status to inactive
+        $sql = "UPDATE foods SET status = 'inactive' WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':id' => $id]);
+    }
 }

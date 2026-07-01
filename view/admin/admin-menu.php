@@ -4,15 +4,131 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
-use App\Food\Presentation\Http\Controllers\FoodController;
+use App\Food\Infrastructure\Repositories\FoodRepository;
+use Inc\Database;
 
 $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
 
-// Get foods from FoodController
-$foodController = new FoodController();
-$foods = $foodController->index();
-$categories = $foodController->getCategories();
+// Get repository instance
+$foodRepository = new FoodRepository();
+
+// Get all foods
+$foods = $foodRepository->findAll();
+
+// Get categories
+$db = Database::getConnection();
+$categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// ============================================
+// HANDLE ADD FOOD
+// ============================================
+$addError = '';
+$addSuccess = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
+    $categoryId = (int) ($_POST['category_id'] ?? 0);
+    $name = trim($_POST['name'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $price = (float) ($_POST['price'] ?? 0);
+    $stock = (int) ($_POST['stock'] ?? 0);
+    $preparationTime = (int) ($_POST['preparation_time'] ?? 15);
+    $image = trim($_POST['image'] ?? '');
+    
+    if (empty($name) || $categoryId <= 0 || $price <= 0) {
+        $addError = 'Name, Category, and Price are required.';
+    } else {
+        try {
+            $data = [
+                'category_id' => $categoryId,
+                'name' => $name,
+                'description' => $description,
+                'price' => $price,
+                'stock' => $stock,
+                'preparation_time' => $preparationTime,
+                'image' => $image
+            ];
+            
+            $foodId = $foodRepository->createFood($data);
+            if ($foodId > 0) {
+                $addSuccess = 'Food item added successfully!';
+                $foods = $foodRepository->findAll();
+            } else {
+                $addError = 'Failed to add food item.';
+            }
+        } catch (Exception $e) {
+            $addError = 'Failed to add food item: ' . $e->getMessage();
+        }
+    }
+}
+
+// ============================================
+// HANDLE EDIT FOOD
+// ============================================
+$editFood = null;
+$editError = '';
+$editSuccess = '';
+
+// Get food data for edit modal
+if (isset($_GET['edit'])) {
+    $editId = (int) $_GET['edit'];
+    $editFood = $foodRepository->getFoodForEdit($editId);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
+    $foodId = (int) ($_POST['food_id'] ?? 0);
+    $categoryId = (int) ($_POST['category_id'] ?? 0);
+    $name = trim($_POST['name'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $price = (float) ($_POST['price'] ?? 0);
+    $stock = (int) ($_POST['stock'] ?? 0);
+    $preparationTime = (int) ($_POST['preparation_time'] ?? 15);
+    $image = trim($_POST['image'] ?? '');
+    
+    if (empty($name) || $categoryId <= 0 || $price <= 0) {
+        $editError = 'Name, Category, and Price are required.';
+    } else {
+        try {
+            $data = [
+                'category_id' => $categoryId,
+                'name' => $name,
+                'description' => $description,
+                'price' => $price,
+                'stock' => $stock,
+                'preparation_time' => $preparationTime,
+                'image' => $image
+            ];
+            
+            $updated = $foodRepository->updateFood($foodId, $data);
+            if ($updated) {
+                $editSuccess = 'Food item updated successfully!';
+                $foods = $foodRepository->findAll();
+                $editFood = null;
+            } else {
+                $editError = 'Failed to update food item.';
+            }
+        } catch (Exception $e) {
+            $editError = 'Failed to update food item: ' . $e->getMessage();
+        }
+    }
+}
+
+// ============================================
+// HANDLE DELETE FOOD
+// ============================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
+    $foodId = (int) ($_POST['food_id'] ?? 0);
+    if ($foodId > 0) {
+        try {
+            $deleted = $foodRepository->deleteFood($foodId);
+            if ($deleted) {
+                $foods = $foodRepository->findAll();
+            }
+        } catch (Exception $e) {
+            // Handle error
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -25,19 +141,8 @@ $categories = $foodController->getCategories();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .sidebar-link.active {
-            background-color: #EEF2FF;
-            color: #4F46E5;
-        }
-        .sidebar-link:hover {
-            background-color: #F9FAFB;
-            color: #111827;
-        }
-    </style>
+    <!-- External CSS file -->
+    <link rel="stylesheet" href="admin-menu.css">
 </head>
 <body class="bg-gray-50 flex h-screen text-gray-800 antialiased">
 
@@ -60,27 +165,22 @@ $categories = $foodController->getCategories();
                     <i class="fa-solid fa-house text-lg w-6 text-center"></i>
                     <span>Dashboard</span>
                 </a>
-
                 <a href="admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-regular fa-user text-lg w-6 text-center"></i>
                     <span>Users</span>
                 </a>
-
                 <a href="admin-menu.php" class="sidebar-link active flex items-center space-x-4 px-4 py-3 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-book-open text-lg w-6 text-center"></i>
                     <span>Menu</span>
                 </a>
-
                 <a href="admin-orders.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
-
                 <a href="admin-reports.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-chart-simple text-lg w-6 text-center"></i>
                     <span>Reports</span>
                 </a>
-
                 <a href="admin-settings.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
                     <span>Settings</span>
@@ -112,7 +212,7 @@ $categories = $foodController->getCategories();
                 <h1 class="text-2xl font-bold text-gray-900">Manage Menu</h1>
                 <p class="text-gray-400 text-sm mt-1">Manage your food items and categories</p>
             </div>
-            <button class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors">
+            <button onclick="openAddFoodModal()" class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors">
                 <i class="fa-solid fa-plus"></i>
                 <span>Add Item</span>
             </button>
@@ -120,7 +220,6 @@ $categories = $foodController->getCategories();
         
         <div class="bg-white border border-gray-100 rounded-xl shadow-sm flex flex-col overflow-hidden">
             
-            <!-- Search & Filter Bar -->
             <div class="p-5 flex items-center justify-between border-b border-gray-50">
                 <div class="relative w-full max-w-xl">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
@@ -143,7 +242,6 @@ $categories = $foodController->getCategories();
                 </div>
             </div>
 
-            <!-- Table -->
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse text-left">
                     <thead>
@@ -217,12 +315,16 @@ $categories = $foodController->getCategories();
                                     </td>
                                     <td class="py-4 px-6">
                                         <div class="flex items-center justify-center space-x-3">
-                                            <button class="text-gray-400 hover:text-indigo-600 transition-colors edit-btn" title="Edit" data-id="<?php echo $food->getId(); ?>">
+                                            <button onclick="openEditFoodModal(<?php echo $food->getId(); ?>)" class="text-gray-400 hover:text-indigo-600 transition-colors" title="Edit">
                                                 <i class="fa-regular fa-pen-to-square"></i>
                                             </button>
-                                            <button class="text-gray-400 hover:text-red-600 transition-colors delete-btn" title="Delete" data-id="<?php echo $food->getId(); ?>">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </button>
+                                            <form method="POST" style="display:inline;" onsubmit="return confirmDelete(event);">
+                                                <input type="hidden" name="delete_food" value="1">
+                                                <input type="hidden" name="food_id" value="<?php echo $food->getId(); ?>">
+                                                <button type="submit" class="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                                                    <i class="fa-regular fa-trash-can"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>
@@ -232,7 +334,6 @@ $categories = $foodController->getCategories();
                 </table>
             </div>
 
-            <!-- Pagination -->
             <div class="p-4 border-t border-gray-100 flex items-center justify-between bg-white">
                 <p class="text-sm text-gray-400">
                     Showing <span class="font-medium text-gray-600"><?php echo count($foods); ?></span> items
@@ -253,61 +354,265 @@ $categories = $foodController->getCategories();
         </div>
     </main>
 
+    <!-- ===== ADD FOOD MODAL ===== -->
+    <div id="addFoodModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add New Food Item</h2>
+                <button onclick="closeAddFoodModal()" class="modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <?php if ($addError): ?>
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><?php echo htmlspecialchars($addError); ?></span>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($addSuccess): ?>
+                <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span><?php echo htmlspecialchars($addSuccess); ?></span>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="" id="addFoodForm">
+                <input type="hidden" name="add_food" value="1">
+                
+                <div class="form-group">
+                    <label>Food Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" placeholder="e.g., Cheese Burger" required>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Category <span class="text-red-500">*</span></label>
+                        <select name="category_id" required>
+                            <option value="">Select Category</option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['id']; ?>">
+                                    <?php echo htmlspecialchars($category['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Price ($) <span class="text-red-500">*</span></label>
+                        <input type="number" name="price" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Stock Quantity</label>
+                        <input type="number" name="stock" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Preparation Time (mins)</label>
+                        <input type="number" name="preparation_time" placeholder="15" min="0">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" placeholder="Describe the food item..." rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Image URL (optional)</label>
+                    <input type="text" name="image" placeholder="e.g., burger.png">
+                </div>
+                
+                <button type="submit" class="btn-submit">Add Food Item</button>
+                <button type="button" onclick="closeAddFoodModal()" class="btn-cancel">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== EDIT FOOD MODAL ===== -->
+    <div id="editFoodModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Edit Food Item</h2>
+                <button onclick="closeEditFoodModal()" class="modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <?php if ($editError): ?>
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><?php echo htmlspecialchars($editError); ?></span>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($editSuccess): ?>
+                <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span><?php echo htmlspecialchars($editSuccess); ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($editFood): ?>
+                <form method="POST" action="" id="editFoodForm">
+                    <input type="hidden" name="edit_food" value="1">
+                    <input type="hidden" name="food_id" value="<?php echo $editFood['id']; ?>">
+                    
+                    <div class="form-group">
+                        <label>Food Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" value="<?php echo htmlspecialchars($editFood['name']); ?>" required>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Category <span class="text-red-500">*</span></label>
+                            <select name="category_id" required>
+                                <?php foreach ($categories as $category): ?>
+                                    <option value="<?php echo $category['id']; ?>" <?php echo $category['id'] == $editFood['category_id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($category['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Price ($) <span class="text-red-500">*</span></label>
+                            <input type="number" name="price" value="<?php echo $editFood['price']; ?>" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Stock Quantity</label>
+                            <input type="number" name="stock" value="<?php echo $editFood['stock']; ?>" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Preparation Time (mins)</label>
+                            <input type="number" name="preparation_time" value="<?php echo $editFood['preparation_time'] ?? 15; ?>" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" rows="3"><?php echo htmlspecialchars($editFood['description'] ?? ''); ?></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Image URL</label>
+                        <input type="text" name="image" value="<?php echo htmlspecialchars($editFood['image'] ?? ''); ?>" placeholder="e.g., burger.png">
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">Update Food Item</button>
+                    <button type="button" onclick="closeEditFoodModal()" class="btn-cancel">Cancel</button>
+                </form>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast" class="toast"></div>
+
     <script>
-        // Search functionality
+        // ============================================
+        // SEARCH
+        // ============================================
         document.getElementById('searchInput').addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
-            const rows = document.querySelectorAll('tbody tr');
-            
-            rows.forEach(row => {
+            document.querySelectorAll('tbody tr').forEach(row => {
                 const name = row.querySelector('td:first-child span.font-medium')?.textContent?.toLowerCase() || '';
                 const category = row.querySelector('td:nth-child(2)')?.textContent?.toLowerCase() || '';
-                
-                if (name.includes(searchTerm) || category.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = (name.includes(searchTerm) || category.includes(searchTerm)) ? '' : 'none';
             });
         });
 
-        // Category filter
+        // ============================================
+        // CATEGORY FILTER
+        // ============================================
         document.getElementById('categoryFilter').addEventListener('change', function() {
             const categoryId = this.value;
-            const rows = document.querySelectorAll('tbody tr');
-            
-            rows.forEach(row => {
-                if (categoryId === '' || row.dataset.category === categoryId) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+            document.querySelectorAll('tbody tr').forEach(row => {
+                const rowCategory = row.dataset.category || '';
+                row.style.display = (categoryId === '' || rowCategory === categoryId) ? '' : 'none';
             });
         });
 
-        // Delete confirmation
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const foodId = this.dataset.id;
-                if (confirm('Are you sure you want to delete this food item?')) {
-                    // Add delete logic here
-                    alert('Food item ' + foodId + ' deleted!');
-                }
-            });
+        // ============================================
+        // ADD FOOD MODAL
+        // ============================================
+        function openAddFoodModal() {
+            document.getElementById('addFoodModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddFoodModal() {
+            document.getElementById('addFoodModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('addFoodModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddFoodModal();
         });
 
-        // Edit
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const foodId = this.dataset.id;
-                alert('Edit food item ' + foodId + ' coming soon!');
+        // ============================================
+        // EDIT FOOD MODAL
+        // ============================================
+        function openEditFoodModal(foodId) {
+            window.location.href = 'admin-menu.php?edit=' + foodId;
+        }
+
+        function closeEditFoodModal() {
+            window.location.href = 'admin-menu.php';
+        }
+
+        <?php if ($editFood): ?>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('editFoodModal').classList.add('active');
+                document.body.style.overflow = 'hidden';
             });
+        <?php endif; ?>
+
+        document.getElementById('editFoodModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditFoodModal();
         });
 
-        // Add item
-        document.querySelector('.bg-indigo-600')?.addEventListener('click', function() {
-            alert('Add food item functionality coming soon!');
-        });
+        // ============================================
+        // DELETE CONFIRM
+        // ============================================
+        function confirmDelete(event) {
+            if (!confirm('Are you sure you want to delete this food item? This action cannot be undone.')) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
+        // ============================================
+        // TOAST
+        // ============================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        <?php if ($addSuccess): ?>
+            showToast('<?php echo htmlspecialchars($addSuccess); ?>', 'success');
+        <?php endif; ?>
+        
+        <?php if ($addError): ?>
+            showToast('<?php echo htmlspecialchars($addError); ?>', 'error');
+        <?php endif; ?>
+        
+        <?php if ($editSuccess): ?>
+            showToast('<?php echo htmlspecialchars($editSuccess); ?>', 'success');
+        <?php endif; ?>
+        
+        <?php if ($editError): ?>
+            showToast('<?php echo htmlspecialchars($editError); ?>', 'error');
+        <?php endif; ?>
     </script>
 
 </body>
