@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
 use App\User\Infrastructure\Repositories\UserRepository;
+use Inc\Database;
 
 $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
@@ -12,6 +13,75 @@ $currentUser = $adminController->getCurrentUser();
 // Get all users from repository
 $userRepository = new UserRepository();
 $users = $userRepository->findAll();
+
+// Get roles for dropdown
+$db = Database::getConnection();
+$roles = $db->query("SELECT * FROM user_roles ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+
+// Handle Add User
+$addError = '';
+$addSuccess = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $phone = trim($_POST['phone'] ?? '');
+    $roleId = (int) ($_POST['role_id'] ?? 3);
+    
+    // Validate
+    if (empty($name) || empty($email) || empty($password)) {
+        $addError = 'Name, Email, and Password are required.';
+    } else {
+        try {
+            // Check if email exists
+            $checkSql = "SELECT id FROM users WHERE email = :email";
+            $stmt = $db->prepare($checkSql);
+            $stmt->execute([':email' => $email]);
+            if ($stmt->fetch()) {
+                $addError = 'Email already registered.';
+            } else {
+                // Hash password
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                
+                // Insert user
+                $sql = "INSERT INTO users (role_id, name, email, password, phone) 
+                        VALUES (:role_id, :name, :email, :password, :phone)";
+                $stmt = $db->prepare($sql);
+                $stmt->execute([
+                    ':role_id' => $roleId,
+                    ':name' => $name,
+                    ':email' => $email,
+                    ':password' => $hashedPassword,
+                    ':phone' => $phone
+                ]);
+                
+                $addSuccess = 'User added successfully!';
+                
+                // Refresh users list
+                $users = $userRepository->findAll();
+            }
+        } catch (Exception $e) {
+            $addError = 'Failed to add user: ' . $e->getMessage();
+        }
+    }
+}
+
+// Handle Delete User
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
+    $userId = (int) ($_POST['user_id'] ?? 0);
+    if ($userId > 0) {
+        try {
+            $sql = "DELETE FROM users WHERE id = :id AND id != 1"; // Prevent deleting admin
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':id' => $userId]);
+            // Refresh users list
+            $users = $userRepository->findAll();
+        } catch (Exception $e) {
+            // Handle error
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,7 +94,145 @@ $users = $userRepository->findAll();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin-users.css">
+    <link rel="stylesheet" href="admin-users.css">
+    <style>
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F172A;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #94A3B8;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1E293B;
+            margin-bottom: 4px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-family: inherit;
+            background: white;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .form-group .error-text {
+            color: #EF4444;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover {
+            background: #4338CA;
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success {
+            background: #10B981;
+        }
+        .toast.error {
+            background: #EF4444;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 flex h-screen text-gray-800 antialiased">
 
@@ -47,27 +255,22 @@ $users = $userRepository->findAll();
                     <i class="fa-solid fa-house text-lg w-6 text-center"></i>
                     <span>Dashboard</span>
                 </a>
-
                 <a href="admin-users.php" class="sidebar-link active flex items-center space-x-4 px-4 py-3 rounded-lg font-medium transition-colors">
                     <i class="fa-regular fa-user text-lg w-6 text-center"></i>
                     <span>Users</span>
                 </a>
-
                 <a href="admin-menu.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-book-open text-lg w-6 text-center"></i>
                     <span>Menu</span>
                 </a>
-
                 <a href="admin-orders.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
-
                 <a href="admin-reports.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-chart-simple text-lg w-6 text-center"></i>
                     <span>Reports</span>
                 </a>
-
                 <a href="admin-settings.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
                     <span>Settings</span>
@@ -100,7 +303,7 @@ $users = $userRepository->findAll();
                 <h1 class="text-2xl font-bold text-gray-900">Manage Users</h1>
                 <p class="text-gray-400 text-sm mt-1">View and manage all registered users</p>
             </div>
-            <button class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+            <button onclick="openAddUserModal()" class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
                 <i class="fa-solid fa-plus"></i>
                 <span>Add User</span>
             </button>
@@ -115,14 +318,16 @@ $users = $userRepository->findAll();
                     <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
                         <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                     </span>
-                    <input type="text" placeholder="Search users by name or email..." class="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm placeholder-gray-400">
+                    <input type="text" id="searchInput" placeholder="Search users by name or email..." class="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm placeholder-gray-400">
                 </div>
                 <div class="flex items-center space-x-3">
-                    <select class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white">
+                    <select id="roleFilter" class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white">
                         <option value="">All Roles</option>
-                        <option value="admin">Admin</option>
-                        <option value="staff">Staff</option>
-                        <option value="user">User</option>
+                        <?php foreach ($roles as $role): ?>
+                            <option value="<?php echo strtolower($role['role_name']); ?>">
+                                <?php echo ucfirst($role['role_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                     <button class="flex items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                         <i class="fa-solid fa-filter text-gray-700 text-sm"></i>
@@ -138,22 +343,21 @@ $users = $userRepository->findAll();
                             <th class="py-3 px-6">User</th>
                             <th class="py-3 px-6">Email</th>
                             <th class="py-3 px-6">Role</th>
-                            <th class="py-3 px-6">Status</th>
                             <th class="py-3 px-6">Joined</th>
                             <th class="py-3 px-6 text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                    <tbody id="usersTableBody" class="divide-y divide-gray-100 text-sm text-gray-700">
                         <?php if (empty($users)): ?>
                             <tr>
-                                <td colspan="6" class="py-12 text-center text-gray-400">
+                                <td colspan="5" class="py-12 text-center text-gray-400">
                                     <i class="fa-regular fa-user text-4xl block mb-3"></i>
                                     <p class="text-sm font-medium">No users found</p>
                                 </td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($users as $user): ?>
-                                <tr class="hover:bg-gray-50/50 transition-colors">
+                                <tr class="hover:bg-gray-50/50 transition-colors" data-role="<?php echo $user->getRoleName(); ?>">
                                     <td class="py-4 px-6">
                                         <div class="flex items-center space-x-3">
                                             <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-xs
@@ -184,23 +388,21 @@ $users = $userRepository->findAll();
                                             <?php echo ucfirst($user->getRoleName()); ?>
                                         </span>
                                     </td>
-                                    <td class="py-4 px-6">
-                                        <span class="inline-flex items-center px-3 py-1 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-md status-badge">
-                                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
-                                            Active
-                                        </span>
-                                    </td>
                                     <td class="py-4 px-6 text-gray-400 text-xs">
                                         <?php echo $user->getCreatedAt()->format('M d, Y'); ?>
                                     </td>
                                     <td class="py-4 px-6">
                                         <div class="flex items-center justify-center space-x-3">
-                                            <button class="text-gray-400 hover:text-indigo-600 transition-colors edit-btn" title="Edit">
+                                            <button onclick="editUser(<?php echo $user->getId()->getValue(); ?>)" class="text-gray-400 hover:text-indigo-600 transition-colors" title="Edit">
                                                 <i class="fa-regular fa-pen-to-square"></i>
                                             </button>
-                                            <button class="text-gray-400 hover:text-red-600 transition-colors delete-btn" title="Delete">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </button>
+                                            <form method="POST" style="display:inline;" onsubmit="return confirmDelete(event, <?php echo $user->getId()->getValue(); ?>);">
+                                                <input type="hidden" name="delete_user" value="1">
+                                                <input type="hidden" name="user_id" value="<?php echo $user->getId()->getValue(); ?>">
+                                                <button type="submit" class="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                                                    <i class="fa-regular fa-trash-can"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>
@@ -227,68 +429,166 @@ $users = $userRepository->findAll();
                     </button>
                 </nav>
             </div>
-
         </div>
     </main>
 
+    <!-- ===== ADD USER MODAL ===== -->
+    <div id="addUserModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add New User</h2>
+                <button onclick="closeAddUserModal()" class="modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <?php if ($addError): ?>
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><?php echo htmlspecialchars($addError); ?></span>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($addSuccess): ?>
+                <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span><?php echo htmlspecialchars($addSuccess); ?></span>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="" id="addUserForm">
+                <input type="hidden" name="add_user" value="1">
+                
+                <div class="form-group">
+                    <label>Full Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" placeholder="John Doe" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email Address <span class="text-red-500">*</span></label>
+                    <input type="email" name="email" placeholder="john@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Password <span class="text-red-500">*</span></label>
+                    <input type="password" name="password" placeholder="Min 8 characters" required minlength="8">
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="text" name="phone" placeholder="09123456789">
+                </div>
+                
+                <div class="form-group">
+                    <label>Role</label>
+                    <select name="role_id">
+                        <?php foreach ($roles as $role): ?>
+                            <option value="<?php echo $role['id']; ?>">
+                                <?php echo ucfirst($role['role_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-submit">Add User</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== TOAST NOTIFICATION ===== -->
+    <div id="toast" class="toast"></div>
+
     <script>
-        // Search functionality
-        document.querySelector('input[placeholder="Search users by name or email..."]').addEventListener('input', function() {
+        // ============================================
+        // SEARCH FUNCTIONALITY
+        // ============================================
+        document.getElementById('searchInput').addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
-            const rows = document.querySelectorAll('tbody tr');
+            const rows = document.querySelectorAll('#usersTableBody tr');
             
             rows.forEach(row => {
                 const name = row.querySelector('td:first-child span.font-medium')?.textContent?.toLowerCase() || '';
                 const email = row.querySelector('td:nth-child(2)')?.textContent?.toLowerCase() || '';
                 
-                if (name.includes(searchTerm) || email.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = (name.includes(searchTerm) || email.includes(searchTerm)) ? '' : 'none';
             });
         });
 
-        // Role filter
-        document.querySelector('select').addEventListener('change', function() {
+        // ============================================
+        // ROLE FILTER
+        // ============================================
+        document.getElementById('roleFilter').addEventListener('change', function() {
             const role = this.value.toLowerCase();
-            const rows = document.querySelectorAll('tbody tr');
+            const rows = document.querySelectorAll('#usersTableBody tr');
             
             rows.forEach(row => {
-                const roleCell = row.querySelector('td:nth-child(3) span');
-                if (!roleCell) return;
-                
-                const rowRole = roleCell.textContent?.toLowerCase() || '';
-                
-                if (role === '' || rowRole.includes(role)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
+                const rowRole = row.dataset.role?.toLowerCase() || '';
+                row.style.display = (role === '' || rowRole === role) ? '' : 'none';
+            });
+        });
+
+        // ============================================
+        // ADD USER MODAL
+        // ============================================
+        function openAddUserModal() {
+            document.getElementById('addUserModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on overlay click
+        document.getElementById('addUserModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddUserModal();
+            }
+        });
+
+        // ============================================
+        // CONFIRM DELETE
+        // ============================================
+        function confirmDelete(event, userId) {
+            event.preventDefault();
+            if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                const form = event.target;
+                if (userId === 1) {
+                    alert('Cannot delete the main admin user.');
+                    return false;
                 }
-            });
-        });
+                form.submit();
+            }
+            return false;
+        }
 
-        // Delete confirmation
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                if (confirm('Are you sure you want to delete this user?')) {
-                    // Add delete logic here
-                    alert('User deleted!');
-                }
-            });
-        });
+        // ============================================
+        // EDIT USER
+        // ============================================
+        function editUser(userId) {
+            alert('Edit user ID: ' + userId + ' functionality coming soon!');
+        }
 
-        // Edit
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                alert('Edit user functionality coming soon!');
-            });
-        });
+        // ============================================
+        // TOAST NOTIFICATION
+        // ============================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
 
-        // Add user
-        document.querySelector('.bg-indigo-600')?.addEventListener('click', function() {
-            alert('Add user functionality coming soon!');
-        });
+        // Show toast if there's a message from server
+        <?php if ($addSuccess): ?>
+            showToast('<?php echo htmlspecialchars($addSuccess); ?>', 'success');
+        <?php endif; ?>
+        
+        <?php if ($addError): ?>
+            showToast('<?php echo htmlspecialchars($addError); ?>', 'error');
+        <?php endif; ?>
     </script>
 
 </body>
