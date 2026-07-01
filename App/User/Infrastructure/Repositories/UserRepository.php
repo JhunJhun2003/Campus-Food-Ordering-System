@@ -130,6 +130,91 @@ class UserRepository implements UserRepositoryInterface
     }
 
     // ============================================
+    // ADMIN USER MANAGEMENT METHODS (NEW)
+    // ============================================
+
+    public function getAllRoles(): array
+    {
+        $sql = "SELECT * FROM user_roles ORDER BY id";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function emailExists(string $email): bool
+    {
+        $sql = "SELECT id FROM users WHERE email = :email";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':email' => $email]);
+        return $stmt->fetch() !== false;
+    }
+
+    public function createUser(string $name, string $email, string $password, string $phone, int $roleId): int
+    {
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        
+        $sql = "INSERT INTO users (role_id, name, email, password, phone) 
+                VALUES (:role_id, :name, :email, :password, :phone)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':role_id' => $roleId,
+            ':name' => $name,
+            ':email' => $email,
+            ':password' => $hashedPassword,
+            ':phone' => $phone
+        ]);
+        
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function deleteUser(int $userId): bool
+    {
+        // Prevent deleting main admin (ID = 1)
+        if ($userId === 1) {
+            return false;
+        }
+        
+        $sql = "DELETE FROM users WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([':id' => $userId]);
+    }
+
+    public function updateUser(int $userId, array $data): bool
+    {
+        $fields = [];
+        $params = [':id' => $userId];
+        
+        if (isset($data['name'])) {
+            $fields[] = "name = :name";
+            $params[':name'] = $data['name'];
+        }
+        if (isset($data['email'])) {
+            $fields[] = "email = :email";
+            $params[':email'] = $data['email'];
+        }
+        if (isset($data['phone'])) {
+            $fields[] = "phone = :phone";
+            $params[':phone'] = $data['phone'];
+        }
+        if (isset($data['role_id'])) {
+            $fields[] = "role_id = :role_id";
+            $params[':role_id'] = $data['role_id'];
+        }
+        if (isset($data['password']) && !empty($data['password'])) {
+            $fields[] = "password = :password";
+            $params[':password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+        
+        if (empty($fields)) {
+            return false;
+        }
+        
+        $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($params);
+    }
+
+    // ============================================
     // ADMIN DASHBOARD METHODS
     // ============================================
 
@@ -183,7 +268,32 @@ class UserRepository implements UserRepositoryInterface
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+/**
+ * Get user by ID for editing (with role info)
+ */
+public function getUserForEdit(int $userId): ?array
+{
+    $sql = "SELECT u.*, r.role_name 
+            FROM users u 
+            JOIN user_roles r ON u.role_id = r.id 
+            WHERE u.id = :id";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':id' => $userId]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $result ?: null;
+}
 
+/**
+ * Check if email exists excluding a specific user
+ */
+public function emailExistsExcluding(string $email, int $userId): bool
+{
+    $sql = "SELECT id FROM users WHERE email = :email AND id != :user_id";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':email' => $email, ':user_id' => $userId]);
+    return $stmt->fetch() !== false;
+}
     // ============================================
     // REPORTS METHODS
     // ============================================
@@ -249,12 +359,9 @@ class UserRepository implements UserRepositoryInterface
     }
 
     // ============================================
-    // SETTINGS METHODS (ADD THIS SECTION)
+    // SETTINGS METHODS
     // ============================================
 
-    /**
-     * Get all settings as key-value array
-     */
     public function getAllSettings(): array
     {
         $sql = "SELECT setting_key, setting_value, setting_group FROM settings ORDER BY setting_group, setting_key";
@@ -269,9 +376,6 @@ class UserRepository implements UserRepositoryInterface
         return $settings;
     }
 
-    /**
-     * Get settings by group
-     */
     public function getSettingsByGroup(string $group): array
     {
         $sql = "SELECT setting_key, setting_value FROM settings WHERE setting_group = :group ORDER BY setting_key";
@@ -287,9 +391,6 @@ class UserRepository implements UserRepositoryInterface
         return $settings;
     }
 
-    /**
-     * Get a single setting by key
-     */
     public function getSetting(string $key): ?string
     {
         $sql = "SELECT setting_value FROM settings WHERE setting_key = :key";
@@ -299,9 +400,6 @@ class UserRepository implements UserRepositoryInterface
         return $result['setting_value'] ?? null;
     }
 
-    /**
-     * Update a single setting
-     */
     public function updateSetting(string $key, string $value): bool
     {
         $sql = "UPDATE settings SET setting_value = :value WHERE setting_key = :key";
@@ -312,9 +410,6 @@ class UserRepository implements UserRepositoryInterface
         ]);
     }
 
-    /**
-     * Update multiple settings
-     */
     public function updateSettings(array $settings): array
     {
         $success = [];

@@ -5,18 +5,18 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
 use App\User\Infrastructure\Repositories\UserRepository;
-use Inc\Database;
 
 $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
 
-// Get all users from repository
+// Get repository instance
 $userRepository = new UserRepository();
+
+// Get all users
 $users = $userRepository->findAll();
 
-// Get roles for dropdown
-$db = Database::getConnection();
-$roles = $db->query("SELECT * FROM user_roles ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+// Get all roles from repository
+$roles = $userRepository->getAllRoles();
 
 // Handle Add User
 $addError = '';
@@ -29,37 +29,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $phone = trim($_POST['phone'] ?? '');
     $roleId = (int) ($_POST['role_id'] ?? 3);
     
-    // Validate
     if (empty($name) || empty($email) || empty($password)) {
         $addError = 'Name, Email, and Password are required.';
     } else {
         try {
-            // Check if email exists
-            $checkSql = "SELECT id FROM users WHERE email = :email";
-            $stmt = $db->prepare($checkSql);
-            $stmt->execute([':email' => $email]);
-            if ($stmt->fetch()) {
+            if ($userRepository->emailExists($email)) {
                 $addError = 'Email already registered.';
             } else {
-                // Hash password
-                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                
-                // Insert user
-                $sql = "INSERT INTO users (role_id, name, email, password, phone) 
-                        VALUES (:role_id, :name, :email, :password, :phone)";
-                $stmt = $db->prepare($sql);
-                $stmt->execute([
-                    ':role_id' => $roleId,
-                    ':name' => $name,
-                    ':email' => $email,
-                    ':password' => $hashedPassword,
-                    ':phone' => $phone
-                ]);
-                
-                $addSuccess = 'User added successfully!';
-                
-                // Refresh users list
-                $users = $userRepository->findAll();
+                $userId = $userRepository->createUser($name, $email, $password, $phone, $roleId);
+                if ($userId > 0) {
+                    $addSuccess = 'User added successfully!';
+                    $users = $userRepository->findAll();
+                } else {
+                    $addError = 'Failed to add user.';
+                }
             }
         } catch (Exception $e) {
             $addError = 'Failed to add user: ' . $e->getMessage();
@@ -72,13 +55,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
     $userId = (int) ($_POST['user_id'] ?? 0);
     if ($userId > 0) {
         try {
-            $sql = "DELETE FROM users WHERE id = :id AND id != 1"; // Prevent deleting admin
-            $stmt = $db->prepare($sql);
-            $stmt->execute([':id' => $userId]);
-            // Refresh users list
-            $users = $userRepository->findAll();
+            $deleted = $userRepository->deleteUser($userId);
+            if ($deleted) {
+                $users = $userRepository->findAll();
+            }
         } catch (Exception $e) {
             // Handle error
+        }
+    }
+}
+
+// Handle Edit User
+$editUser = null;
+$editError = '';
+$editSuccess = '';
+
+// Get user data for edit modal
+if (isset($_GET['edit'])) {
+    $editId = (int) $_GET['edit'];
+    $editUser = $userRepository->getUserForEdit($editId);
+}
+
+// Handle Edit User POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
+    $userId = (int) ($_POST['user_id'] ?? 0);
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $roleId = (int) ($_POST['role_id'] ?? 3);
+    $password = $_POST['password'] ?? '';
+    
+    if (empty($name) || empty($email)) {
+        $editError = 'Name and Email are required.';
+    } else {
+        try {
+            // Check if email exists excluding current user
+            if ($userRepository->emailExistsExcluding($email, $userId)) {
+                $editError = 'Email already registered to another user.';
+            } else {
+                $data = [
+                    'name' => $name,
+                    'email' => $email,
+                    'phone' => $phone,
+                    'role_id' => $roleId
+                ];
+                
+                if (!empty($password)) {
+                    $data['password'] = $password;
+                }
+                
+                $updated = $userRepository->updateUser($userId, $data);
+                if ($updated) {
+                    $editSuccess = 'User updated successfully!';
+                    $users = $userRepository->findAll();
+                    $editUser = null; // Close modal
+                } else {
+                    $editError = 'Failed to update user.';
+                }
+            }
+        } catch (Exception $e) {
+            $editError = 'Failed to update user: ' . $e->getMessage();
         }
     }
 }
@@ -94,145 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="admin-users.css">
-    <style>
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .modal-overlay.active {
-            display: flex;
-        }
-        .modal {
-            background: white;
-            border-radius: 16px;
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            padding: 32px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            animation: modalSlideIn 0.3s ease;
-        }
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.96);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .modal-header h2 {
-            font-size: 20px;
-            font-weight: 700;
-            color: #0F172A;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #94A3B8;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-        .modal-close:hover {
-            background: #F1F5F9;
-            color: #0F172A;
-        }
-        .form-group {
-            margin-bottom: 18px;
-        }
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #1E293B;
-            margin-bottom: 4px;
-        }
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.2s;
-            font-family: inherit;
-            background: white;
-        }
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #4F46E5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-        .form-group .error-text {
-            color: #EF4444;
-            font-size: 12px;
-            margin-top: 4px;
-        }
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            background: #4F46E5;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-submit:hover {
-            background: #4338CA;
-        }
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 16px 24px;
-            border-radius: 12px;
-            color: white;
-            font-weight: 500;
-            font-size: 14px;
-            z-index: 2000;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            max-width: 400px;
-        }
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .toast.success {
-            background: #10B981;
-        }
-        .toast.error {
-            background: #EF4444;
-        }
-    </style>
+    <link rel="stylesheet" href="admin-users.css?v=1">
+
 </head>
 <body class="bg-gray-50 flex h-screen text-gray-800 antialiased">
 
@@ -297,7 +196,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
 
     <!-- ===== MAIN CONTENT ===== -->
     <main class="flex-1 p-8 overflow-y-auto">
-        <!-- Page Header -->
         <div class="flex justify-between items-start mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Manage Users</h1>
@@ -309,10 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
             </button>
         </div>
         
-        <!-- Users Table -->
         <div class="bg-white border border-gray-100 rounded-xl shadow-sm flex flex-col overflow-hidden">
-            
-            <!-- Search & Filter Bar -->
             <div class="p-5 flex items-center justify-between border-b border-gray-50">
                 <div class="relative w-full max-w-xl">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
@@ -335,7 +230,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
                 </div>
             </div>
 
-            <!-- Table -->
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse text-left">
                     <thead>
@@ -393,13 +287,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
                                     </td>
                                     <td class="py-4 px-6">
                                         <div class="flex items-center justify-center space-x-3">
-                                            <button onclick="editUser(<?php echo $user->getId()->getValue(); ?>)" class="text-gray-400 hover:text-indigo-600 transition-colors" title="Edit">
+                                            <button onclick="openEditUserModal(<?php echo $user->getId()->getValue(); ?>)" class="text-gray-400 hover:text-indigo-600 edit-btn transition-colors" title="Edit">
                                                 <i class="fa-regular fa-pen-to-square"></i>
                                             </button>
                                             <form method="POST" style="display:inline;" onsubmit="return confirmDelete(event, <?php echo $user->getId()->getValue(); ?>);">
                                                 <input type="hidden" name="delete_user" value="1">
                                                 <input type="hidden" name="user_id" value="<?php echo $user->getId()->getValue(); ?>">
-                                                <button type="submit" class="text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                                                <button type="submit" class="text-gray-400 hover:text-red-600 delete-btn transition-colors" title="Delete">
                                                     <i class="fa-regular fa-trash-can"></i>
                                                 </button>
                                             </form>
@@ -412,7 +306,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
                 </table>
             </div>
 
-            <!-- Pagination -->
             <div class="p-4 border-t border-gray-100 flex items-center justify-between bg-white">
                 <p class="text-sm text-gray-400">
                     Showing <span class="font-medium text-gray-600"><?php echo count($users); ?></span> users
@@ -495,21 +388,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
         </div>
     </div>
 
-    <!-- ===== TOAST NOTIFICATION ===== -->
+    <!-- ===== EDIT USER MODAL ===== -->
+    <div id="editUserModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Edit User</h2>
+                <button onclick="closeEditUserModal()" class="modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <?php if ($editError): ?>
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><?php echo htmlspecialchars($editError); ?></span>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($editSuccess): ?>
+                <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span><?php echo htmlspecialchars($editSuccess); ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($editUser): ?>
+                <form method="POST" action="" id="editUserForm">
+                    <input type="hidden" name="edit_user" value="1">
+                    <input type="hidden" name="user_id" value="<?php echo $editUser['id']; ?>">
+                    
+                    <div class="form-group">
+                        <label>Full Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" value="<?php echo htmlspecialchars($editUser['name']); ?>" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email Address <span class="text-red-500">*</span></label>
+                        <input type="email" name="email" value="<?php echo htmlspecialchars($editUser['email']); ?>" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password <span class="text-gray-400 text-xs">(Leave blank to keep current)</span></label>
+                        <input type="password" name="password" placeholder="Enter new password to change">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" name="phone" value="<?php echo htmlspecialchars($editUser['phone'] ?? ''); ?>">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select name="role_id">
+                            <?php foreach ($roles as $role): ?>
+                                <option value="<?php echo $role['id']; ?>" <?php echo $role['id'] == $editUser['role_id'] ? 'selected' : ''; ?>>
+                                    <?php echo ucfirst($role['role_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">Update User</button>
+                    <button type="button" onclick="closeEditUserModal()" class="btn-cancel">Cancel</button>
+                </form>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
     <div id="toast" class="toast"></div>
 
     <script>
         // ============================================
-        // SEARCH FUNCTIONALITY
+        // SEARCH
         // ============================================
         document.getElementById('searchInput').addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#usersTableBody tr');
-            
-            rows.forEach(row => {
+            document.querySelectorAll('#usersTableBody tr').forEach(row => {
                 const name = row.querySelector('td:first-child span.font-medium')?.textContent?.toLowerCase() || '';
                 const email = row.querySelector('td:nth-child(2)')?.textContent?.toLowerCase() || '';
-                
                 row.style.display = (name.includes(searchTerm) || email.includes(searchTerm)) ? '' : 'none';
             });
         });
@@ -519,9 +476,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
         // ============================================
         document.getElementById('roleFilter').addEventListener('change', function() {
             const role = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#usersTableBody tr');
-            
-            rows.forEach(row => {
+            document.querySelectorAll('#usersTableBody tr').forEach(row => {
                 const rowRole = row.dataset.role?.toLowerCase() || '';
                 row.style.display = (role === '' || rowRole === role) ? '' : 'none';
             });
@@ -538,13 +493,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
         function closeAddUserModal() {
             document.getElementById('addUserModal').classList.remove('active');
             document.body.style.overflow = '';
+            // Clear any error/success messages
+            const errorDiv = document.querySelector('#addUserModal .bg-red-50');
+            const successDiv = document.querySelector('#addUserModal .bg-green-50');
+            if (errorDiv) errorDiv.remove();
+            if (successDiv) successDiv.remove();
         }
 
-        // Close modal on overlay click
         document.getElementById('addUserModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeAddUserModal();
-            }
+            if (e.target === this) closeAddUserModal();
+        });
+
+        // ============================================
+        // EDIT USER MODAL
+        // ============================================
+        function openEditUserModal(userId) {
+            // Fetch user data via GET parameter
+            window.location.href = 'admin-users.php?edit=' + userId;
+        }
+
+        function closeEditUserModal() {
+            // Redirect to remove edit parameter
+            window.location.href = 'admin-users.php';
+        }
+
+        // Check if edit modal should be open
+        <?php if ($editUser): ?>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('editUserModal').classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+        <?php endif; ?>
+
+        document.getElementById('editUserModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditUserModal();
         });
 
         // ============================================
@@ -553,25 +535,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
         function confirmDelete(event, userId) {
             event.preventDefault();
             if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-                const form = event.target;
                 if (userId === 1) {
                     alert('Cannot delete the main admin user.');
                     return false;
                 }
-                form.submit();
+                event.target.submit();
             }
             return false;
         }
 
         // ============================================
-        // EDIT USER
-        // ============================================
-        function editUser(userId) {
-            alert('Edit user ID: ' + userId + ' functionality coming soon!');
-        }
-
-        // ============================================
-        // TOAST NOTIFICATION
+        // TOAST
         // ============================================
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
@@ -581,13 +555,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // Show toast if there's a message from server
         <?php if ($addSuccess): ?>
             showToast('<?php echo htmlspecialchars($addSuccess); ?>', 'success');
         <?php endif; ?>
         
         <?php if ($addError): ?>
             showToast('<?php echo htmlspecialchars($addError); ?>', 'error');
+        <?php endif; ?>
+        
+        <?php if ($editSuccess): ?>
+            showToast('<?php echo htmlspecialchars($editSuccess); ?>', 'success');
+        <?php endif; ?>
+        
+        <?php if ($editError): ?>
+            showToast('<?php echo htmlspecialchars($editError); ?>', 'error');
         <?php endif; ?>
     </script>
 
