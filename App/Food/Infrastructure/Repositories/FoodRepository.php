@@ -18,7 +18,6 @@ class FoodRepository implements FoodRepositoryInterface
     public function save(Food $food): void
     {
         if ($food->getId() === null) {
-            // Insert new food
             $sql = "INSERT INTO foods (category_id, name, description, price, stock, image, preparation_time) 
                     VALUES (:category_id, :name, :description, :price, :stock, :image, :preparation_time)";
             
@@ -33,7 +32,6 @@ class FoodRepository implements FoodRepositoryInterface
                 ':preparation_time' => $food->getPreparationTime()
             ]);
         } else {
-            // Update existing food
             $sql = "UPDATE foods SET 
                     category_id = :category_id,
                     name = :name, 
@@ -143,9 +141,11 @@ class FoodRepository implements FoodRepositoryInterface
             'created_at' => $data['created_at']
         ];
     }
-     /**
-     * Get food for editing
-     */
+
+    // ============================================
+    // ADMIN METHODS
+    // ============================================
+
     public function getFoodForEdit(int $id): ?array
     {
         $sql = "SELECT * FROM foods WHERE id = :id";
@@ -155,9 +155,6 @@ class FoodRepository implements FoodRepositoryInterface
         return $result ?: null;
     }
 
-    /**
-     * Create a new food item
-     */
     public function createFood(array $data): int
     {
         $sql = "INSERT INTO foods (category_id, name, description, price, stock, image, preparation_time) 
@@ -177,9 +174,6 @@ class FoodRepository implements FoodRepositoryInterface
         return (int) $this->db->lastInsertId();
     }
 
-    /**
-     * Update a food item
-     */
     public function updateFood(int $id, array $data): bool
     {
         $fields = [];
@@ -224,13 +218,16 @@ class FoodRepository implements FoodRepositoryInterface
     }
 
     /**
-     * Delete a food item (soft delete)
+     * Delete a food item (hard delete - permanently removes from database)
      */
     public function deleteFood(int $id): bool
     {
-        // Soft delete - update status to inactive
-        $sql = "UPDATE foods SET status = 'inactive' WHERE id = :id";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([':id' => $id]);
+        try {
+            $sql = "DELETE FROM foods WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([':id' => $id]);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 }

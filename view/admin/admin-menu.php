@@ -4,128 +4,76 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
-use App\Food\Infrastructure\Repositories\FoodRepository;
-use Inc\Database;
+use App\Food\Presentation\Http\Controllers\FoodController;
 
 $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
 
-// Get repository instance
-$foodRepository = new FoodRepository();
+$foodController = new FoodController();
 
-// Get all foods
-$foods = $foodRepository->findAll();
+// Get data
+$foods = $foodController->index();
+$categories = $foodController->getCategories();
 
-// Get categories
-$db = Database::getConnection();
-$categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
-
-// ============================================
-// HANDLE ADD FOOD
-// ============================================
-$addError = '';
-$addSuccess = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
-    $categoryId = (int) ($_POST['category_id'] ?? 0);
-    $name = trim($_POST['name'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $price = (float) ($_POST['price'] ?? 0);
-    $stock = (int) ($_POST['stock'] ?? 0);
-    $preparationTime = (int) ($_POST['preparation_time'] ?? 15);
-    $image = trim($_POST['image'] ?? '');
-    
-    if (empty($name) || $categoryId <= 0 || $price <= 0) {
-        $addError = 'Name, Category, and Price are required.';
-    } else {
-        try {
-            $data = [
-                'category_id' => $categoryId,
-                'name' => $name,
-                'description' => $description,
-                'price' => $price,
-                'stock' => $stock,
-                'preparation_time' => $preparationTime,
-                'image' => $image
-            ];
-            
-            $foodId = $foodRepository->createFood($data);
-            if ($foodId > 0) {
-                $addSuccess = 'Food item added successfully!';
-                $foods = $foodRepository->findAll();
-            } else {
-                $addError = 'Failed to add food item.';
-            }
-        } catch (Exception $e) {
-            $addError = 'Failed to add food item: ' . $e->getMessage();
-        }
-    }
-}
-
-// ============================================
-// HANDLE EDIT FOOD
-// ============================================
+// Handle Actions
+$message = null;
 $editFood = null;
-$editError = '';
-$editSuccess = '';
 
-// Get food data for edit modal
+// GET: Edit
 if (isset($_GET['edit'])) {
     $editId = (int) $_GET['edit'];
-    $editFood = $foodRepository->getFoodForEdit($editId);
+    $editFood = $foodController->getForEdit($editId);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
-    $foodId = (int) ($_POST['food_id'] ?? 0);
-    $categoryId = (int) ($_POST['category_id'] ?? 0);
-    $name = trim($_POST['name'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $price = (float) ($_POST['price'] ?? 0);
-    $stock = (int) ($_POST['stock'] ?? 0);
-    $preparationTime = (int) ($_POST['preparation_time'] ?? 15);
-    $image = trim($_POST['image'] ?? '');
+// POST: Add
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
+    $data = [
+        'category_id' => (int) ($_POST['category_id'] ?? 0),
+        'name' => trim($_POST['name'] ?? ''),
+        'description' => trim($_POST['description'] ?? ''),
+        'price' => (float) ($_POST['price'] ?? 0),
+        'stock' => (int) ($_POST['stock'] ?? 0),
+        'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
+        'image' => trim($_POST['image'] ?? '')
+    ];
     
-    if (empty($name) || $categoryId <= 0 || $price <= 0) {
-        $editError = 'Name, Category, and Price are required.';
-    } else {
-        try {
-            $data = [
-                'category_id' => $categoryId,
-                'name' => $name,
-                'description' => $description,
-                'price' => $price,
-                'stock' => $stock,
-                'preparation_time' => $preparationTime,
-                'image' => $image
-            ];
-            
-            $updated = $foodRepository->updateFood($foodId, $data);
-            if ($updated) {
-                $editSuccess = 'Food item updated successfully!';
-                $foods = $foodRepository->findAll();
-                $editFood = null;
-            } else {
-                $editError = 'Failed to update food item.';
-            }
-        } catch (Exception $e) {
-            $editError = 'Failed to update food item: ' . $e->getMessage();
-        }
+    $result = $foodController->create($data);
+    $message = $result;
+    
+    if ($result['success']) {
+        $foods = $foodController->index();
     }
 }
 
-// ============================================
-// HANDLE DELETE FOOD
-// ============================================
+// POST: Edit
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
+    $foodId = (int) ($_POST['food_id'] ?? 0);
+    $data = [
+        'category_id' => (int) ($_POST['category_id'] ?? 0),
+        'name' => trim($_POST['name'] ?? ''),
+        'description' => trim($_POST['description'] ?? ''),
+        'price' => (float) ($_POST['price'] ?? 0),
+        'stock' => (int) ($_POST['stock'] ?? 0),
+        'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
+        'image' => trim($_POST['image'] ?? '')
+    ];
+    
+    $result = $foodController->update($foodId, $data);
+    $message = $result;
+    
+    if ($result['success']) {
+        $foods = $foodController->index();
+        $editFood = null;
+    }
+}
+
+// POST: Delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
     $foodId = (int) ($_POST['food_id'] ?? 0);
     if ($foodId > 0) {
-        try {
-            $deleted = $foodRepository->deleteFood($foodId);
-            if ($deleted) {
-                $foods = $foodRepository->findAll();
-            }
-        } catch (Exception $e) {
-            // Handle error
+        $result = $foodController->delete($foodId);
+        if ($result['success']) {
+            $foods = $foodController->index();
         }
     }
 }
@@ -141,8 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- External CSS file -->
-    <link rel="stylesheet" href="admin-menu.css">
+    <link rel="stylesheet" href="admin-menu.css?v=1">
 </head>
 <body class="bg-gray-50 flex h-screen text-gray-800 antialiased">
 
@@ -250,14 +197,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
                             <th class="py-3 px-6">Category</th>
                             <th class="py-3 px-6">Price</th>
                             <th class="py-3 px-6">Stock</th>
-                            <th class="py-3 px-6">Status</th>
                             <th class="py-3 px-6 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
                         <?php if (empty($foods)): ?>
                             <tr>
-                                <td colspan="6" class="py-12 text-center text-gray-400">
+                                <td colspan="5" class="py-12 text-center text-gray-400">
                                     <i class="fa-regular fa-utensils text-4xl block mb-3"></i>
                                     <p class="text-sm font-medium">No food items found</p>
                                 </td>
@@ -298,20 +244,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
                                     <td class="py-4 px-6 font-medium text-gray-900">$<?php echo number_format($food->getPrice(), 2); ?></td>
                                     <td class="py-4 px-6">
                                         <?php if ($food->getStock() > 0): ?>
-                                            <span class="text-emerald-600 font-medium"><?php echo $food->getStock(); ?></span>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                                <?php echo $food->getStock(); ?>
+                                            </span>
                                         <?php else: ?>
-                                            <span class="text-red-500 font-medium">Out of Stock</span>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                Out of Stock
+                                            </span>
                                         <?php endif; ?>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            <?php echo $food->getStock() > 0 
-                                                ? 'bg-emerald-100 text-emerald-800' 
-                                                : 'bg-red-100 text-red-800'; 
-                                            ?>
-                                        ">
-                                            <?php echo $food->getStock() > 0 ? 'Active' : 'Inactive'; ?>
-                                        </span>
                                     </td>
                                     <td class="py-4 px-6">
                                         <div class="flex items-center justify-center space-x-3">
@@ -350,7 +290,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
                     </button>
                 </nav>
             </div>
-
         </div>
     </main>
 
@@ -364,17 +303,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
                 </button>
             </div>
             
-            <?php if ($addError): ?>
+            <?php if (isset($message) && !$message['success'] && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])): ?>
                 <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
                     <i class="fa-solid fa-circle-exclamation"></i>
-                    <span><?php echo htmlspecialchars($addError); ?></span>
-                </div>
-            <?php endif; ?>
-            
-            <?php if ($addSuccess): ?>
-                <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <span><?php echo htmlspecialchars($addSuccess); ?></span>
+                    <span><?php echo htmlspecialchars($message['message']); ?></span>
                 </div>
             <?php endif; ?>
 
@@ -441,17 +373,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
                 </button>
             </div>
             
-            <?php if ($editError): ?>
+            <?php if (isset($message) && !$message['success'] && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])): ?>
                 <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
                     <i class="fa-solid fa-circle-exclamation"></i>
-                    <span><?php echo htmlspecialchars($editError); ?></span>
-                </div>
-            <?php endif; ?>
-            
-            <?php if ($editSuccess): ?>
-                <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <span><?php echo htmlspecialchars($editSuccess); ?></span>
+                    <span><?php echo htmlspecialchars($message['message']); ?></span>
                 </div>
             <?php endif; ?>
 
@@ -548,6 +473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
         function closeAddFoodModal() {
             document.getElementById('addFoodModal').classList.remove('active');
             document.body.style.overflow = '';
+            document.getElementById('addFoodForm')?.reset();
         }
 
         document.getElementById('addFoodModal').addEventListener('click', function(e) {
@@ -598,20 +524,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        <?php if ($addSuccess): ?>
-            showToast('<?php echo htmlspecialchars($addSuccess); ?>', 'success');
-        <?php endif; ?>
-        
-        <?php if ($addError): ?>
-            showToast('<?php echo htmlspecialchars($addError); ?>', 'error');
-        <?php endif; ?>
-        
-        <?php if ($editSuccess): ?>
-            showToast('<?php echo htmlspecialchars($editSuccess); ?>', 'success');
-        <?php endif; ?>
-        
-        <?php if ($editError): ?>
-            showToast('<?php echo htmlspecialchars($editError); ?>', 'error');
+        <?php if (isset($message)): ?>
+            <?php if ($message['success']): ?>
+                showToast('<?php echo htmlspecialchars($message['message']); ?>', 'success');
+            <?php else: ?>
+                showToast('<?php echo htmlspecialchars($message['message']); ?>', 'error');
+            <?php endif; ?>
         <?php endif; ?>
     </script>
 
