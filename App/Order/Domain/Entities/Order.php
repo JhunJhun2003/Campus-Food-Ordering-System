@@ -12,6 +12,8 @@ class Order
     private DateTime $orderDate;
     private ?string $customerName;
     private ?string $customerPhone;
+    private ?string $deliveryAddress;
+    private ?string $paymentMethod;
 
     public function __construct(
         ?int $id,
@@ -19,7 +21,9 @@ class Order
         int $statusId,
         float $totalAmount,
         ?string $customerName = null,
-        ?string $customerPhone = null
+        ?string $customerPhone = null,
+        ?string $deliveryAddress = null,
+        ?string $paymentMethod = null
     ) {
         $this->id = $id;
         $this->userId = $userId;
@@ -27,6 +31,8 @@ class Order
         $this->totalAmount = $totalAmount;
         $this->customerName = $customerName;
         $this->customerPhone = $customerPhone;
+        $this->deliveryAddress = $deliveryAddress;
+        $this->paymentMethod = $paymentMethod;
         $this->orderDate = new DateTime();
     }
 
@@ -38,6 +44,8 @@ class Order
     public function getOrderDate(): DateTime { return $this->orderDate; }
     public function getCustomerName(): ?string { return $this->customerName; }
     public function getCustomerPhone(): ?string { return $this->customerPhone; }
+    public function getDeliveryAddress(): ?string { return $this->deliveryAddress; }
+    public function getPaymentMethod(): ?string { return $this->paymentMethod; }
 
     // Business Methods
     public function updateStatus(int $statusId): void
@@ -54,7 +62,9 @@ class Order
             'total_amount' => $this->totalAmount,
             'order_date' => $this->orderDate->format('Y-m-d H:i:s'),
             'customer_name' => $this->customerName,
-            'customer_phone' => $this->customerPhone
+            'customer_phone' => $this->customerPhone,
+            'delivery_address' => $this->deliveryAddress,
+            'payment_method' => $this->paymentMethod
         ];
     }
 }

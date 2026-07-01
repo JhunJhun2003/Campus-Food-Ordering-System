@@ -27,51 +27,92 @@ $categories = $foodController->getCategories();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Foodie - Explore Menu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
+    <!-- ===== HEADER ===== -->
     <header class="navbar">
-        <div class="container nav-wrapper">
+        <div class="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
             <a href="dashboard.php" class="logo-group">
-                <iconify-icon icon="lucide:utensils-crosses"></iconify-icon>
+                <svg viewBox="0 0 100 100" class="fill-current text-slate-950">
+                    <path d="M42,28 C26,28 22,35 22,41 C22,43 23,45 25,45 L59,45 C61,45 62,43 62,41 C62,35 58,28 42,28 Z M22,49 C21,49 20,50 20,51 C20,53 23,55 25,55 L59,55 C61,55 64,53 64,51 C64,50 63,49 62,49 L22,49 Z M25,59 C21,59 21,63 21,65 C21,72 29,76 42,76 C55,76 63,72 63,65 C63,63 63,59 59,59 L25,59 Z" />
+                    <path d="M68,20 L80,20 C81,20 82,21 82,22 L76,72 C76,73 75,74 74,74 L64,74 C63,74 62,73 62,72 L65,48 L68,20 Z" />
+                    <line x1="74" y1="20" x2="63" y2="8" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+                </svg>
                 <span>FOODIE</span>
             </a>
-            <nav class="nav-links">
-                <a href="dashboard.php" class="active">Dashboard</a>
-                <a href="cart.php">Cart</a>
-                <a href="orders.php">Orders</a>
+
+            <!-- ✅ Navigation - Home, Cart, Orders (No Menu) -->
+            <nav class="hidden md:flex items-center space-x-10">
+                <a href="dashboard.php" class="text-sm font-bold text-emerald-500 border-b-2 border-emerald-500 pb-1.5 interactive-transition">Home</a>
+                <a href="cart.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Cart</a>
+                <a href="orders.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Orders</a>
             </nav>
-            <div class="nav-actions">
-                <a href="cart.php"><iconify-icon icon="lucide:shopping-cart"></iconify-icon></a>
-                <div class="user-dropdown" style="position: relative; display: inline-block;">
-                    <span style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                        <iconify-icon icon="lucide:user"></iconify-icon>
-                        <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">
-                            <?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?>
-                        </span>
-                    </span>
-                    <div class="dropdown-menu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 8px 0; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100;">
-                        <a href="profile.php" style="display: block; padding: 8px 16px; text-decoration: none; color: var(--text-dark); font-size: 14px;">Profile</a>
-                        <a href="orders.php" style="display: block; padding: 8px 16px; text-decoration: none; color: var(--text-dark); font-size: 14px;">My Orders</a>
-                        <hr style="margin: 4px 0; border: none; border-top: 1px solid var(--border);">
-                        <a href="../entrance/logout.php" style="display: block; padding: 8px 16px; text-decoration: none; color: #EF4444; font-size: 14px;">Logout</a>
+
+            <div class="flex items-center space-x-4">
+                <a href="cart.php" class="text-slate-600 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50 relative">
+                    <i class="fa-solid fa-cart-shopping text-lg"></i>
+                </a>
+                <div class="user-dropdown">
+                    <div class="user-trigger" onclick="toggleDropdown()">
+                        <i class="fa-regular fa-user text-slate-600"></i>
+                        <span class="user-name"><?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?></span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                    </div>
+                    <div class="dropdown-menu" id="userDropdown">
+                        <a href="profile.php"><i class="fa-regular fa-user mr-2"></i> Profile</a>
+                        <a href="orders.php"><i class="fa-regular fa-receipt mr-2"></i> My Orders</a>
+                        <div class="divider"></div>
+                        <a href="../entrance/logout.php" class="logout-link"><i class="fa-solid fa-right-from-bracket mr-2"></i> Logout</a>
                     </div>
                 </div>
             </div>
         </div>
     </header>
-    
-    <main class="container">
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Hero Section -->
+        <div class="bg-gradient-to-br from-emerald-50 to-white rounded-2xl p-6 sm:p-8 mb-8 border border-emerald-100/50">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">
+                        🍔 Welcome back, <?php echo htmlspecialchars($currentUser['name'] ?? 'Foodie'); ?>!
+                    </h1>
+                    <p class="text-slate-500 text-sm mt-1">Discover delicious food, order fast, and enjoy every bite.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <?php foreach (array_slice($categories, 0, 4) as $category): ?>
+                        <span class="px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-600">
+                            <?php 
+                                $emoji = match($category['name']) {
+                                    'Burgers' => '🍔',
+                                    'Pizza' => '🍕',
+                                    'Drinks' => '🥤',
+                                    'Sweets' => '🍰',
+                                    'Rice Meals' => '🍚',
+                                    default => '🍽️'
+                                };
+                                echo $emoji . ' ' . htmlspecialchars($category['name']); 
+                            ?>
+                        </span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
         <!-- Search -->
         <div class="search-container">
-            <iconify-icon icon="lucide:search"></iconify-icon>
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
             <input type="text" placeholder="What food are you looking for?" id="searchInput">
         </div>
-        
+
         <!-- Categories -->
         <div class="categories">
             <span class="category-chip active" data-category="all">All Items</span>
@@ -91,38 +132,45 @@ $categories = $foodController->getCategories();
                 </span>
             <?php endforeach; ?>
         </div>
-        
+
         <!-- Menu Grid -->
         <div class="menu-grid" id="menuGrid">
             <?php if (empty($foods)): ?>
-                <p style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
-                    <iconify-icon icon="lucide:utensils" style="font-size: 48px; display: block; margin-bottom: 8px;"></iconify-icon>
-                    No food items available at the moment.
-                </p>
+                <div class="col-span-full text-center py-16 text-slate-400">
+                    <i class="fa-regular fa-utensils text-5xl block mb-4"></i>
+                    <p class="text-sm font-medium">No food items available at the moment.</p>
+                </div>
             <?php else: ?>
                 <?php foreach ($foods as $food): ?>
                     <div class="card" data-category="<?php echo $food->getCategoryId(); ?>">
-                        <img src="<?php echo htmlspecialchars($food->getImage() ?? 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f354/512.webp'); ?>" 
-                             class="card-img" 
-                             alt="<?php echo htmlspecialchars($food->getName()); ?>">
+                        <div class="card-img" style="display: flex; align-items: center; justify-content: center; background: #F8FAFC; border-radius: 10px; height: 140px; font-size: 56px;">
+                            <?php 
+                                $emojiMap = [
+                                    1 => '🍔',
+                                    2 => '🍕',
+                                    3 => '🥤',
+                                    4 => '🍰',
+                                    5 => '🍚',
+                                ];
+                                echo $emojiMap[$food->getCategoryId()] ?? '🍽️';
+                            ?>
+                        </div>
                         <div class="card-body">
                             <h3><?php echo htmlspecialchars($food->getName()); ?></h3>
                             <p><?php echo htmlspecialchars($food->getDescription()); ?></p>
-                            <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                                ⏱️ <?php echo $food->getPreparationTime(); ?> mins
-                            </small>
+                            <small>⏱️ <?php echo $food->getPreparationTime(); ?> mins</small>
                         </div>
                         <div class="card-footer">
                             <span class="price">$ <?php echo number_format($food->getPrice(), 2); ?></span>
                             <?php if ($food->getStock() > 0): ?>
-                                <form action="add-to-cart.php" method="POST">
+                                <form action="add-to-cart.php" method="POST" class="m-0">
                                     <input type="hidden" name="food_id" value="<?php echo $food->getId(); ?>">
                                     <button type="submit" class="add-btn">
-                                        <iconify-icon icon="lucide:plus"></iconify-icon>
+                                        <i class="fa-solid fa-plus"></i>
                                     </button>
                                 </form>
                             <?php else: ?>
-                                <span style="color: #EF4444; font-size: 12px; font-weight: 600;">Out of Stock</span>
+                                <span style="color: #EF4444; font-size: 11px; font-weight: 700;">Out of Stock</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -130,42 +178,37 @@ $categories = $foodController->getCategories();
             <?php endif; ?>
         </div>
     </main>
-    
-    <!-- Bottom Navigation (Mobile) -->
+
+    <!-- ===== BOTTOM NAV (Mobile) ===== -->
     <nav class="bottom-nav">
         <a href="dashboard.php" class="bottom-nav-item active">
-            <iconify-icon icon="lucide:home"></iconify-icon>
-            <span>Dashboard</span>
-        </a>
-        <a href="dashboard.php" class="bottom-nav-item">
-            <iconify-icon icon="lucide:utensils-crosses"></iconify-icon>
-            <span>Menu</span>
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
         </a>
         <a href="cart.php" class="bottom-nav-item">
-            <iconify-icon icon="lucide:shopping-cart"></iconify-icon>
+            <i class="fa-solid fa-cart-shopping"></i>
             <span>Cart</span>
         </a>
+        <a href="orders.php" class="bottom-nav-item">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Orders</span>
+        </a>
         <a href="profile.php" class="bottom-nav-item">
-            <iconify-icon icon="lucide:user"></iconify-icon>
+            <i class="fa-regular fa-user"></i>
             <span>Profile</span>
         </a>
     </nav>
 
+    <!-- ===== SCRIPTS ===== -->
     <script>
-        // User dropdown toggle
-        document.querySelector('.user-dropdown')?.addEventListener('click', function(e) {
-            const dropdown = this.querySelector('.dropdown-menu');
-            if (dropdown) {
-                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-            }
-        });
+        function toggleDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
 
-        // Close dropdown when clicking outside
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.user-dropdown')) {
-                document.querySelectorAll('.dropdown-menu').forEach(el => {
-                    el.style.display = 'none';
-                });
+                document.getElementById('userDropdown').style.display = 'none';
             }
         });
 
