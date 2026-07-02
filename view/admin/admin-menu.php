@@ -11,72 +11,14 @@ $currentUser = $adminController->getCurrentUser();
 
 $foodController = new FoodController();
 
-// Get data
+// Handle all requests through controller
+$result = $foodController->handleRequest();
+$message = $result['message'] ?? null;
+$editFood = $result['editFood'] ?? null;
+
+// Get fresh data
 $foods = $foodController->index();
 $categories = $foodController->getCategories();
-
-// Handle Actions
-$message = null;
-$editFood = null;
-
-// GET: Edit
-if (isset($_GET['edit'])) {
-    $editId = (int) $_GET['edit'];
-    $editFood = $foodController->getForEdit($editId);
-}
-
-// POST: Add
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
-    $data = [
-        'category_id' => (int) ($_POST['category_id'] ?? 0),
-        'name' => trim($_POST['name'] ?? ''),
-        'description' => trim($_POST['description'] ?? ''),
-        'price' => (float) ($_POST['price'] ?? 0),
-        'stock' => (int) ($_POST['stock'] ?? 0),
-        'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
-        'image' => trim($_POST['image'] ?? '')
-    ];
-    
-    $result = $foodController->create($data);
-    $message = $result;
-    
-    if ($result['success']) {
-        $foods = $foodController->index();
-    }
-}
-
-// POST: Edit
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
-    $foodId = (int) ($_POST['food_id'] ?? 0);
-    $data = [
-        'category_id' => (int) ($_POST['category_id'] ?? 0),
-        'name' => trim($_POST['name'] ?? ''),
-        'description' => trim($_POST['description'] ?? ''),
-        'price' => (float) ($_POST['price'] ?? 0),
-        'stock' => (int) ($_POST['stock'] ?? 0),
-        'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
-        'image' => trim($_POST['image'] ?? '')
-    ];
-    
-    $result = $foodController->update($foodId, $data);
-    $message = $result;
-    
-    if ($result['success']) {
-        $foods = $foodController->index();
-        $editFood = null;
-    }
-}
-
-// POST: Delete
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
-    $foodId = (int) ($_POST['food_id'] ?? 0);
-    if ($foodId > 0) {
-        $result = $foodController->delete($foodId);
-        if ($result['success']) {
-            $foods = $foodController->index();
-        }
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">

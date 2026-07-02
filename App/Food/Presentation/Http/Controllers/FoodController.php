@@ -7,12 +7,11 @@ use App\Food\Application\Usecases\UpdateFoodUseCase;
 use App\Food\Application\Usecases\DeleteFoodUseCase;
 use App\Food\Application\Usecases\GetFoodForEditUseCase;
 use App\Food\Infrastructure\Repositories\FoodRepository;
-use App\Food\Domain\Repositories\FoodRepositoryInterface; 
 use Inc\Database;
 
 class FoodController
 {
-    private FoodRepositoryInterface $foodRepository;
+    private FoodRepository $foodRepository;
 
     public function __construct()
     {
@@ -54,5 +53,65 @@ class FoodController
     {
         $useCase = new DeleteFoodUseCase($this->foodRepository);
         return $useCase->execute($id);
+    }
+
+    // New helper method to handle form submissions
+    public function handleRequest(): array
+    {
+        $message = null;
+        $editFood = null;
+
+        // GET: Edit
+        if (isset($_GET['edit'])) {
+            $editId = (int) $_GET['edit'];
+            $editFood = $this->getForEdit($editId);
+        }
+
+        // POST: Add
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
+            $data = [
+                'category_id' => (int) ($_POST['category_id'] ?? 0),
+                'name' => trim($_POST['name'] ?? ''),
+                'description' => trim($_POST['description'] ?? ''),
+                'price' => (float) ($_POST['price'] ?? 0),
+                'stock' => (int) ($_POST['stock'] ?? 0),
+                'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
+                'image' => trim($_POST['image'] ?? '')
+            ];
+            
+            $message = $this->create($data);
+        }
+
+        // POST: Edit
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
+            $foodId = (int) ($_POST['food_id'] ?? 0);
+            $data = [
+                'category_id' => (int) ($_POST['category_id'] ?? 0),
+                'name' => trim($_POST['name'] ?? ''),
+                'description' => trim($_POST['description'] ?? ''),
+                'price' => (float) ($_POST['price'] ?? 0),
+                'stock' => (int) ($_POST['stock'] ?? 0),
+                'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
+                'image' => trim($_POST['image'] ?? '')
+            ];
+            
+            $message = $this->update($foodId, $data);
+            if ($message['success']) {
+                $editFood = null;
+            }
+        }
+
+        // POST: Delete
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
+            $foodId = (int) ($_POST['food_id'] ?? 0);
+            if ($foodId > 0) {
+                $message = $this->delete($foodId);
+            }
+        }
+
+        return [
+            'message' => $message,
+            'editFood' => $editFood
+        ];
     }
 }
