@@ -54,12 +54,11 @@ $categoryEmojis = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-<link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="dashboard.css">
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
-    <!-- ===== HEADER (EXACTLY AS YOUR DESIGN) ===== -->
+    <!-- ===== HEADER ===== -->
     <header class="bg-white border-b border-slate-100 sticky top-0 z-40 shadow-sm shadow-slate-100/50">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             
@@ -75,14 +74,14 @@ $categoryEmojis = [
                 <span class="text-2xl font-black tracking-wider text-slate-950">FOODIE</span>
             </a>
 
-            <!-- Navigation Links (EXACTLY as your design) -->
+            <!-- Navigation Links -->
             <nav class="hidden md:flex items-center space-x-10">
                 <a href="dashboard.php" class="text-sm font-bold text-emerald-500 border-b-2 border-emerald-500 pb-1.5 interactive-transition">Home</a>
                 <a href="cart.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Cart</a>
                 <a href="orders.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Order</a>
             </nav>
 
-            <!-- Right Interfaces (EXACTLY as your design) -->
+            <!-- Right Interfaces -->
             <div class="flex items-center space-x-6">
                 <button onclick="focusSearch()" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
                     <i class="fa-solid fa-magnifying-glass text-lg"></i>
@@ -110,7 +109,7 @@ $categoryEmojis = [
         </div>
     </header>
 
-    <!-- ===== MAIN CONTENT (EXACTLY AS YOUR DESIGN) ===== -->
+    <!-- ===== MAIN CONTENT ===== -->
     <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         <!-- Explore Our Menu Frame Title -->
@@ -118,7 +117,7 @@ $categoryEmojis = [
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Explore Our Menu</h1>
         </div>
 
-        <!-- Search Bar (EXACTLY as your design) -->
+        <!-- Search Bar -->
         <div class="mb-8">
             <div class="relative w-full max-w-2xl">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
@@ -134,7 +133,7 @@ $categoryEmojis = [
             </div>
         </div>
 
-        <!-- Filter Tabs / Categories (EXACTLY as your design) -->
+        <!-- Filter Tabs / Categories -->
         <div class="mb-10">
             <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Categories</p>
             <div class="flex items-center gap-3 overflow-x-auto whitespace-nowrap pb-2">
@@ -160,12 +159,12 @@ $categoryEmojis = [
             </div>
         </div>
 
-        <!-- MENU ITEMS GRID (EXACTLY as your design) -->
+        <!-- MENU ITEMS GRID -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="menu-grid-container">
             <!-- Items injected by JavaScript -->
         </div>
 
-        <!-- Fallback Empty State (EXACTLY as your design) -->
+        <!-- Fallback Empty State -->
         <div id="empty-state" class="hidden text-center py-16">
             <div class="w-20 h-20 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
                 🔍
@@ -176,7 +175,7 @@ $categoryEmojis = [
 
     </main>
 
-    <!-- TOAST POPUP (EXACTLY as your design) -->
+    <!-- TOAST POPUP -->
     <div id="add-toast" class="fixed bottom-6 right-6 bg-slate-950 text-white px-5 py-4 rounded-2xl shadow-2xl flex items-center space-x-3.5 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50 border border-slate-800">
         <div class="text-emerald-400 bg-emerald-500/10 p-2 rounded-xl">
             <i class="fa-solid fa-cart-arrow-down text-lg"></i>
@@ -187,7 +186,7 @@ $categoryEmojis = [
         </div>
     </div>
 
-    <!-- FOOTER (EXACTLY as your design) -->
+    <!-- FOOTER -->
     <footer class="bg-white border-t border-slate-100 mt-20 py-8">
         <div class="max-w-6xl mx-auto px-4 text-center text-slate-400 text-xs font-semibold uppercase tracking-wider">
             &copy; <?php echo date('Y'); ?> FOODIE INC. All rights reserved. Delicious Food, Delivered Fast.
@@ -285,8 +284,9 @@ $categoryEmojis = [
                     ${isOutOfStock ? 
                         `<span class="text-xs font-bold text-red-500">Out of Stock</span>` :
                         `<button 
-                            onclick="addToCart('${item.name}', ${item.id})" 
-                            class="w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/10 interactive-transition hover:scale-105 active:scale-95"
+                            class="w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/10 interactive-transition hover:scale-105 active:scale-95 add-to-cart-btn"
+                            data-id="${item.id}"
+                            data-name="${item.name}"
                         >
                             <i class="fa-solid fa-plus text-sm"></i>
                         </button>`
@@ -294,6 +294,17 @@ $categoryEmojis = [
                 `;
                 
                 container.appendChild(card);
+            });
+
+            // ============================================
+            // ATTACH EVENT LISTENERS TO ADD TO CART BUTTONS
+            // ============================================
+            document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const foodId = this.dataset.id;
+                    const foodName = this.dataset.name;
+                    addToCart(foodName, foodId);
+                });
             });
         }
 
@@ -304,7 +315,7 @@ $categoryEmojis = [
             activeCategory = category;
 
             // Update button styles
-            document.querySelectorAll('.categories button, .flex.items-center.gap-3 button').forEach(btn => {
+            document.querySelectorAll('.flex.items-center.gap-3 button').forEach(btn => {
                 btn.className = 'px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 interactive-transition';
             });
 
@@ -338,6 +349,15 @@ $categoryEmojis = [
         // ADD TO CART
         // ============================================
         function addToCart(dishName, foodId) {
+            // Show loading state on button
+            const buttons = document.querySelectorAll('.add-to-cart-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.id == foodId) {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
+                    btn.disabled = true;
+                }
+            });
+
             fetch('add-to-cart.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -345,16 +365,31 @@ $categoryEmojis = [
             })
             .then(response => response.json())
             .then(data => {
+                // Reset button
+                buttons.forEach(btn => {
+                    if (btn.dataset.id == foodId) {
+                        btn.innerHTML = '<i class="fa-solid fa-plus text-sm"></i>';
+                        btn.disabled = false;
+                    }
+                });
+
                 if (data.success) {
                     cartItemCount = data.item_count || cartItemCount + 1;
                     updateCartBadge();
-                    showToast(`"${dishName}" added to cart!`);
+                    showToast(`"${dishName}" added to cart! 🛒`);
                 } else {
                     showToast(data.message || 'Failed to add item', false);
                 }
             })
-            .catch(() => {
-                showToast('Failed to add item', false);
+            .catch((error) => {
+                // Reset button
+                buttons.forEach(btn => {
+                    if (btn.dataset.id == foodId) {
+                        btn.innerHTML = '<i class="fa-solid fa-plus text-sm"></i>';
+                        btn.disabled = false;
+                    }
+                });
+                showToast('Failed to add item to cart', false);
             });
         }
 
@@ -388,7 +423,7 @@ $categoryEmojis = [
 
             const icon = toast.querySelector('.text-emerald-400');
             if (isSuccess) {
-                icon.innerHTML = '<i class="fa-solid fa-cart-arrow-down text-lg"></i>';
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-lg"></i>';
                 icon.className = 'text-emerald-400 bg-emerald-500/10 p-2 rounded-xl';
             } else {
                 icon.innerHTML = '<i class="fa-solid fa-circle-exclamation text-lg"></i>';

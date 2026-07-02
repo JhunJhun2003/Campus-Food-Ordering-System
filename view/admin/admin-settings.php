@@ -4,6 +4,7 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
+use App\Payment\Presentation\Http\Controllers\PaymentController;
 
 $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
@@ -11,7 +12,11 @@ $currentUser = $adminController->getCurrentUser();
 // Get settings
 $settings = $adminController->getSettings();
 
-// Handle form submission
+// Get payment methods from Payment module
+$paymentController = new PaymentController();
+$paymentMethods = $paymentController->getAllMethods();
+
+// Handle form submission for settings
 $success = '';
 $error = '';
 $updateResult = null;
@@ -21,10 +26,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     
     if (empty($result['failed'])) {
         $success = 'Settings updated successfully!';
-        // Refresh settings
         $settings = $adminController->getSettings();
     } else {
         $error = 'Failed to update some settings.';
+    }
+}
+
+// Handle Add Payment Method
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_payment_method'])) {
+    $name = trim($_POST['payment_name'] ?? '');
+    $accountName = trim($_POST['payment_account_name'] ?? '');
+    $accountNumber = trim($_POST['payment_account_number'] ?? '');
+    
+    if (empty($name)) {
+        $error = 'Payment method name is required.';
+    } else {
+        $result = $paymentController->addMethod($name, $accountName, $accountNumber);
+        if ($result['success']) {
+            $success = 'Payment method added successfully!';
+            $paymentMethods = $paymentController->getAllMethods();
+        } else {
+            $error = $result['message'];
+        }
+    }
+}
+
+// Handle Update Payment Method
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_payment_method'])) {
+    $id = (int) ($_POST['payment_id'] ?? 0);
+    $name = trim($_POST['payment_name'] ?? '');
+    $accountName = trim($_POST['payment_account_name'] ?? '');
+    $accountNumber = trim($_POST['payment_account_number'] ?? '');
+    $isActive = isset($_POST['payment_is_active']) ? 1 : 0;
+    
+    $data = [
+        'name' => $name,
+        'account_name' => $accountName,
+        'account_number' => $accountNumber,
+        'is_active' => $isActive
+    ];
+    
+    $result = $paymentController->updateMethod($id, $data);
+    if ($result['success']) {
+        $success = 'Payment method updated successfully!';
+        $paymentMethods = $paymentController->getAllMethods();
+    } else {
+        $error = $result['message'];
+    }
+}
+
+// Handle Delete Payment Method
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_payment_method'])) {
+    $id = (int) ($_POST['payment_id'] ?? 0);
+    $result = $paymentController->deleteMethod($id);
+    if ($result['success']) {
+        $success = 'Payment method deleted successfully!';
+        $paymentMethods = $paymentController->getAllMethods();
+    } else {
+        $error = $result['message'];
+    }
+}
+
+// Get edit data
+$editPayment = null;
+if (isset($_GET['edit_payment'])) {
+    $editId = (int) $_GET['edit_payment'];
+    foreach ($paymentMethods as $pm) {
+        if ($pm['id'] == $editId) {
+            $editPayment = $pm;
+            break;
+        }
     }
 }
 ?>
@@ -56,6 +127,194 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
         }
         .setting-section:hover {
             border-color: #C7D2FE;
+        }
+        .payment-method-row:hover {
+            background: #F8FAFC;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F172A;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #94A3B8;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1E293B;
+            margin-bottom: 4px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-family: inherit;
+            background: white;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover {
+            background: #4338CA;
+        }
+        .btn-cancel {
+            width: 100%;
+            padding: 12px;
+            background: #F1F5F9;
+            color: #475569;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .btn-cancel:hover {
+            background: #E2E8F0;
+        }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success {
+            background: #10B981;
+        }
+        .toast.error {
+            background: #EF4444;
+        }
+        .toast.info {
+            background: #3B82F6;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #CBD5E1;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background: #4F46E5;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
         }
     </style>
 </head>
@@ -145,7 +404,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
             </div>
         <?php endif; ?>
 
-        <!-- Settings Form -->
+        <!-- ============================================ -->
+        <!-- PAYMENT METHODS SECTION -->
+        <!-- ============================================ -->
+        <div class="bg-white border border-slate-100 rounded-xl shadow-sm mb-6 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-credit-card text-indigo-500"></i>
+                        <span>Payment Methods</span>
+                    </h2>
+                    <p class="text-sm text-slate-500">Manage payment methods available at checkout</p>
+                </div>
+                <button onclick="openAddPaymentModal()" class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add Method</span>
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Account Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Account Number</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <?php if (empty($paymentMethods)): ?>
+                            <tr>
+                                <td colspan="5" class="px-6 py-8 text-center text-slate-400 text-sm">No payment methods added yet.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($paymentMethods as $pm): ?>
+                                <tr class="payment-method-row">
+                                    <td class="px-6 py-4 text-sm font-medium text-slate-800"><?php echo htmlspecialchars($pm['method_name']); ?></td>
+                                    <td class="px-6 py-4 text-sm text-slate-600"><?php echo htmlspecialchars($pm['account_name'] ?? '-'); ?></td>
+                                    <td class="px-6 py-4 text-sm text-slate-600"><?php echo htmlspecialchars($pm['account_number'] ?? '-'); ?></td>
+                                    <td class="px-6 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $pm['is_active'] ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'; ?>">
+                                            <?php echo $pm['is_active'] ? 'Active' : 'Inactive'; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <a href="admin-settings.php?edit_payment=<?php echo $pm['id']; ?>" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Edit</a>
+                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this payment method?');">
+                                            <input type="hidden" name="delete_payment_method" value="1">
+                                            <input type="hidden" name="payment_id" value="<?php echo $pm['id']; ?>">
+                                            <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SETTINGS FORM -->
+        <!-- ============================================ -->
         <form method="POST" action="">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
@@ -233,22 +555,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
                                 <option value="GBP" <?php echo ($settings['currency'] ?? '') == 'GBP' ? 'selected' : ''; ?>>GBP (£)</option>
                             </select>
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Cash on Delivery</label>
-                            <select name="setting_cash_on_delivery" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-                                <option value="1" <?php echo ($settings['cash_on_delivery'] ?? '1') == '1' ? 'selected' : ''; ?>>Enabled</option>
-                                <option value="0" <?php echo ($settings['cash_on_delivery'] ?? '1') == '0' ? 'selected' : ''; ?>>Disabled</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">QR Payment</label>
-                            <select name="setting_qr_payment" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-                                <option value="1" <?php echo ($settings['qr_payment'] ?? '1') == '1' ? 'selected' : ''; ?>>Enabled</option>
-                                <option value="0" <?php echo ($settings['qr_payment'] ?? '1') == '0' ? 'selected' : ''; ?>>Disabled</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
 
@@ -298,6 +604,128 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
             </div>
         </form>
     </main>
+
+    <!-- ===== ADD PAYMENT METHOD MODAL ===== -->
+    <div id="addPaymentModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Add Payment Method</h2>
+                <button onclick="closeAddPaymentModal()" class="modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="">
+                <input type="hidden" name="add_payment_method" value="1">
+                
+                <div class="form-group">
+                    <label>Payment Method Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="payment_name" placeholder="e.g., K Pay, Wave Pay" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Account Name</label>
+                    <input type="text" name="payment_account_name" placeholder="e.g., Foodie Restaurant">
+                </div>
+                
+                <div class="form-group">
+                    <label>Account Number</label>
+                    <input type="text" name="payment_account_number" placeholder="e.g., 0987654321">
+                </div>
+                
+                <button type="submit" class="btn-submit">Add Payment Method</button>
+                <button type="button" onclick="closeAddPaymentModal()" class="btn-cancel">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== EDIT PAYMENT METHOD MODAL ===== -->
+    <?php if ($editPayment): ?>
+    <div id="editPaymentModal" class="modal-overlay active">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Edit Payment Method</h2>
+                <a href="admin-settings.php" class="modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            </div>
+
+            <form method="POST" action="">
+                <input type="hidden" name="update_payment_method" value="1">
+                <input type="hidden" name="payment_id" value="<?php echo $editPayment['id']; ?>">
+                
+                <div class="form-group">
+                    <label>Payment Method Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="payment_name" value="<?php echo htmlspecialchars($editPayment['name']); ?>" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Account Name</label>
+                    <input type="text" name="payment_account_name" value="<?php echo htmlspecialchars($editPayment['account_name'] ?? ''); ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label>Account Number</label>
+                    <input type="text" name="payment_account_number" value="<?php echo htmlspecialchars($editPayment['account_number'] ?? ''); ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label class="flex items-center space-x-3">
+                        <span class="text-sm font-medium text-slate-700">Active</span>
+                        <label class="switch">
+                            <input type="checkbox" name="payment_is_active" <?php echo $editPayment['is_active'] ? 'checked' : ''; ?>>
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-submit">Update Payment Method</button>
+                <a href="admin-settings.php" class="btn-cancel block text-center">Cancel</a>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ============================================
+        // ADD PAYMENT MODAL
+        // ============================================
+        function openAddPaymentModal() {
+            document.getElementById('addPaymentModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddPaymentModal() {
+            document.getElementById('addPaymentModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('addPaymentModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddPaymentModal();
+        });
+
+        // ============================================
+        // TOAST
+        // ============================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        <?php if ($success): ?>
+            showToast('<?php echo htmlspecialchars($success); ?>', 'success');
+        <?php endif; ?>
+        
+        <?php if ($error): ?>
+            showToast('<?php echo htmlspecialchars($error); ?>', 'error');
+        <?php endif; ?>
+    </script>
 
 </body>
 </html>

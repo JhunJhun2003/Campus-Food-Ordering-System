@@ -18,9 +18,24 @@ class CreateOrderUseCase
         $this->cartRepository = $cartRepository;
     }
 
-    public function execute(int $userId, array $items, float $total, string $address, string $paymentMethod): array
-    {
+    public function execute(
+        int $userId, 
+        array $items, 
+        float $total, 
+        string $address, 
+        string $paymentMethod, 
+        string $fullName, 
+        string $phone, 
+        string $accountName, 
+        string $accountNumber, 
+        string $transactionImage
+    ): array {
         try {
+            // Validate
+            if (empty($items)) {
+                return ['success' => false, 'message' => 'Cart is empty.'];
+            }
+
             // status_id = 1 means 'pending'
             $statusId = 1;
 
@@ -31,7 +46,12 @@ class CreateOrderUseCase
                 $statusId,
                 $total,
                 $address,
-                $paymentMethod
+                $paymentMethod,
+                $fullName,
+                $phone,
+                $accountName,
+                $accountNumber,
+                $transactionImage
             );
 
             $orderId = $this->orderRepository->save($order);

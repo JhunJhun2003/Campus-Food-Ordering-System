@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use App\User\Presentation\Http\Controllers\UserController;
 use App\Cart\Presentation\Http\Controllers\CartController;
 use App\Order\Presentation\Http\Controllers\OrderController;
+use App\Payment\Presentation\Http\Controllers\PaymentController;
 
 $userController = new UserController();
 
@@ -31,36 +32,116 @@ if (empty($items)) {
     exit();
 }
 
-// Handle order submission
+// Get payment methods from Payment module
+$paymentController = new PaymentController();
+$paymentMethods = $paymentController->getActiveMethods();
+
+// Handle order submission - ONLY presentation logic here
 $error = '';
 $success = '';
 $orderId = null;
+$selectedMethod = null;
+$accountName = '';
+$deliveryAddress = '';
+$fullName = '';
+$phone = '';
+$selectedPaymentMethodId = isset($_POST['payment_method_id']) ? (int) $_POST['payment_method_id'] : 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
-    $paymentMethod = $_POST['payment_method'] ?? 'cod';
-    $accountName = $_POST['account_name'] ?? '';
-    $accountNumber = $_POST['account_number'] ?? '';
-    $deliveryAddress = $_POST['delivery_address'] ?? '';
+    $fullName = trim($_POST['full_name'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $paymentMethodId = $selectedPaymentMethodId;
+    $accountName = trim($_POST['account_name'] ?? '');
+    $deliveryAddress = trim($_POST['delivery_address'] ?? '');
+    $transactionImage = '';
     
-    // Validate
-    if ($paymentMethod !== 'cod' && (empty($accountName) || empty($accountNumber))) {
-        $error = 'Please fill in account details for digital payment.';
+    // Debug: Log the payment method ID
+    error_log('Payment Method ID received: ' . $paymentMethodId);
+    
+    // Get selected payment method
+    $selectedMethod = null;
+    foreach ($paymentMethods as $pm) {
+        if ($pm['id'] == $paymentMethodId) {
+            $selectedMethod = $pm;
+            break;
+        }
+    }
+    
+    $paymentMethodName = $selectedMethod['method_name'] ?? 'Cash on Delivery';
+    $isDigital = $paymentMethodName !== 'Cash on Delivery';
+    
+    // Basic validation (presentation layer)
+    if (empty($fullName)) {
+        $error = 'Please enter your full name.';
+    } elseif (empty($phone)) {
+        $error = 'Please enter your phone number.';
+    } elseif (empty($paymentMethodId) || $paymentMethodId === 0) {
+        $error = 'Please select a payment method.';
+    } elseif (!$selectedMethod) {
+        $error = 'Selected payment method is not available.';
+    } elseif ($isDigital && empty($accountName)) {
+        $error = 'Please enter your account name for digital payment.';
     } elseif (empty($deliveryAddress)) {
         $error = 'Please enter your delivery address.';
     } else {
-        // Create order
-        $orderController = new OrderController();
-        $result = $orderController->createOrder($userId, $items, $total, $deliveryAddress, $paymentMethod);
+        // Handle file upload
+        if ($isDigital && isset($_FILES['transaction_image']) && $_FILES['transaction_image']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/../../Public/uploads/transactions/';
+            
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            $file = $_FILES['transaction_image'];
+            $fileExt = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $fileName = 'transaction_' . time() . '_' . uniqid() . '.' . $fileExt;
+            
+            if (move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
+                $transactionImage = 'uploads/transactions/' . $fileName;
+            } else {
+                $error = 'Failed to upload transaction image.';
+            }
+        } elseif ($isDigital) {
+            $error = 'Please upload a transaction image.';
+        }
         
-        if ($result['success']) {
-            $orderId = $result['order_id'];
-            // Clear cart
-            $cartController->clear($userId);
-            $success = 'Order placed successfully!';
-        } else {
-            $error = $result['message'] ?? 'Failed to place order. Please try again.';
+        if (empty($error)) {
+            // Delegate to Controller
+            $orderController = new OrderController();
+            $result = $orderController->createOrder(
+                $userId, 
+                $items, 
+                $total, 
+                $deliveryAddress, 
+                $paymentMethodName, 
+                $fullName, 
+                $phone, 
+                $accountName, 
+                $selectedMethod['account_number'] ?? '', 
+                $transactionImage
+            );
+            
+            if ($result['success']) {
+                $orderId = $result['order_id'];
+                $success = 'Order placed successfully!';
+            } else {
+                $error = $result['message'] ?? 'Failed to place order. Please try again.';
+            }
         }
     }
+}
+
+// If there was an error, pre-fill the form fields
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($error)) {
+    $fullName = $_POST['full_name'] ?? '';
+    $phone = $_POST['phone'] ?? '';
+    $deliveryAddress = $_POST['delivery_address'] ?? '';
+    $accountName = $_POST['account_name'] ?? '';
+}
+
+$orderPlaced = !empty($success) && !empty($orderId);
+if ($orderPlaced) {
+    $itemCount = 0;
 }
 ?>
 <!DOCTYPE html>
@@ -74,43 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #FCFDFE;
-        }
-        .interactive-transition {
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .step-view {
-            animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(12px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .custom-radio:checked + div {
-            border-color: #10B981;
-            background-color: #ECFDF5;
-        }
-        .alert-error {
-            background-color: #FEE2E2;
-            border: 1px solid #FCA5A5;
-            color: #991B1B;
-        }
-        .alert-success {
-            background-color: #D1FAE5;
-            border: 1px solid #6EE7B7;
-            color: #065F46;
-        }
-    </style>
+    <link rel="stylesheet" href="checkout.css">
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
@@ -157,7 +202,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         <div class="mb-10 text-center sm:text-left">
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-8">Checkout</h1>
             
-            <!-- Error/Success Messages -->
             <?php if ($error): ?>
                 <div class="alert-error px-4 py-3 rounded-xl mb-4 text-sm font-medium flex items-center space-x-2">
                     <i class="fa-solid fa-circle-exclamation"></i>
@@ -175,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             <!-- Step Progress -->
             <div class="relative max-w-2xl mx-auto sm:mx-0">
                 <div class="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -translate-y-1/2 z-0"></div>
-                <div id="step-progress-line" class="absolute top-1/2 left-0 w-[0%] h-0.5 bg-emerald-500 -translate-y-1/2 z-0 transition-all duration-500 ease-in-out"></div>
+                <div id="step-progress-line" class="absolute top-1/2 left-0 <?php echo $orderPlaced ? 'w-full' : 'w-[0%]'; ?> h-0.5 bg-emerald-500 -translate-y-1/2 z-0 transition-all duration-500 ease-in-out"></div>
                 
                 <div class="relative flex justify-between z-10">
                     <div class="flex flex-col items-center">
@@ -183,81 +227,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                         <span id="label-step-1" class="text-xs font-bold text-slate-900 mt-2 transition-all duration-300">Payment</span>
                     </div>
                     <div class="flex flex-col items-center">
-                        <div id="circle-step-2" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-slate-100 text-slate-400 transition-all duration-300">2</div>
-                        <span id="label-step-2" class="text-xs font-medium text-slate-400 mt-2 transition-all duration-300">Review</span>
+                        <div id="circle-step-2" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100' : 'bg-slate-100 text-slate-400'; ?> transition-all duration-300">2</div>
+                        <span id="label-step-2" class="text-xs <?php echo $orderPlaced ? 'font-bold text-slate-900' : 'font-medium text-slate-400'; ?> mt-2 transition-all duration-300">Review</span>
                     </div>
                     <div class="flex flex-col items-center">
-                        <div id="circle-step-3" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-slate-100 text-slate-400 transition-all duration-300">3</div>
-                        <span id="label-step-3" class="text-xs font-medium text-slate-400 mt-2 transition-all duration-300">Confirm</span>
+                        <div id="circle-step-3" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100' : 'bg-slate-100 text-slate-400'; ?> transition-all duration-300">3</div>
+                        <span id="label-step-3" class="text-xs <?php echo $orderPlaced ? 'font-bold text-slate-900' : 'font-medium text-slate-400'; ?> mt-2 transition-all duration-300">Confirm</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- STEP 1: Payment -->
-        <div id="panel-step-1" class="step-view grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div id="panel-step-1" class="step-view <?php echo $orderPlaced ? 'hidden' : 'grid'; ?> grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            <!-- Left Column: Payment Methods -->
-            <div class="lg:col-span-7 space-y-4">
-                <h2 class="text-lg font-bold text-slate-950 tracking-wide mb-2">Select Payment Method</h2>
+            <!-- Left Column: Dynamic Payment Methods -->
+<!-- Left Column: Dynamic Payment Methods -->
+<div class="lg:col-span-7 space-y-4">
+    <h2 class="text-lg font-bold text-slate-950 tracking-wide mb-2">Select Payment Method</h2>
+    
+    <div class="space-y-3" id="payment-methods-list">
+        <?php if (empty($paymentMethods)): ?>
+            <p class="text-sm text-slate-500">No payment methods available. Please contact admin.</p>
+        <?php else: ?>
+            <?php $first = true; ?>
+            <?php foreach ($paymentMethods as $pm): ?>
+                <?php
+                    $isSelected = $selectedPaymentMethodId > 0
+                        ? ((int) $pm['id'] === $selectedPaymentMethodId)
+                        : $first;
+                ?>
+                <label class="block relative cursor-pointer group">
+                    <input type="radio" 
+                           name="payment_method_id" 
+                           id="payment_method_<?php echo $pm['id']; ?>" 
+                           value="<?php echo $pm['id']; ?>" 
+                           form="checkout-form"
+                           class="sr-only peer payment-radio"
+                           onchange="selectPaymentMethod(<?php echo $pm['id']; ?>)"
+                           <?php echo $isSelected ? 'checked' : ''; ?>>
+                    <div class="payment-option flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 shadow-sm <?php echo $isSelected ? 'selected' : ''; ?>">
+                        <div class="w-6 h-6 rounded-md flex items-center justify-center border-2 border-slate-300 bg-white flex-shrink-0 transition-all duration-200">
+                            <i class="fa-solid fa-check text-xs text-white opacity-0"></i>
+                        </div>
+                        <span class="font-bold text-slate-800 text-sm sm:text-base">
+                            <?php echo htmlspecialchars($pm['method_name']); ?>
+                        </span>
+                    </div>
+                </label>
                 
-                <div class="space-y-3" id="payment-methods-list">
-                    <label class="block relative cursor-pointer group">
-                        <input type="radio" name="payment_method" value="cod" checked onchange="handlePaymentMethodChange(this)" class="sr-only peer">
-                        <div class="flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white peer-checked:border-emerald-500 peer-checked:ring-2 peer-checked:ring-emerald-50 hover:bg-slate-50/50 interactive-transition shadow-sm">
-                            <div class="w-6 h-6 rounded-md flex items-center justify-center border-2 border-slate-300 peer-checked:group-hover:border-emerald-500 bg-white peer-checked:bg-emerald-500 flex-shrink-0 transition-all duration-200">
-                                <i class="fa-solid fa-check text-xs text-white opacity-0"></i>
-                            </div>
-                            <span class="font-bold text-slate-800 text-sm sm:text-base">Cash on Delivery</span>
+                <?php if (!empty($pm['account_name']) || !empty($pm['account_number'])): ?>
+                    <div id="payment-details-<?php echo $pm['id']; ?>" class="payment-method-details <?php echo $isSelected ? 'active' : ''; ?>">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <?php if (!empty($pm['account_name'])): ?>
+                                <div>
+                                    <div class="detail-label">Account Name</div>
+                                    <div class="detail-value"><?php echo htmlspecialchars($pm['account_name']); ?></div>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!empty($pm['account_number'])): ?>
+                                <div>
+                                    <div class="detail-label">Account Number</div>
+                                    <div class="detail-value"><?php echo htmlspecialchars($pm['account_number']); ?></div>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                    </label>
-
-                    <label class="block relative cursor-pointer group">
-                        <input type="radio" name="payment_method" value="card" onchange="handlePaymentMethodChange(this)" class="sr-only peer">
-                        <div class="flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white peer-checked:border-emerald-500 peer-checked:ring-2 peer-checked:ring-emerald-50 hover:bg-slate-50/50 interactive-transition shadow-sm">
-                            <div class="w-6 h-6 rounded-md flex items-center justify-center border-2 border-slate-300 bg-white flex-shrink-0 transition-all duration-200">
-                                <i class="fa-solid fa-check text-xs text-white opacity-0"></i>
-                            </div>
-                            <span class="font-bold text-slate-800 text-sm sm:text-base">Credit / Debit Card</span>
-                        </div>
-                    </label>
-
-                    <label class="block relative cursor-pointer group">
-                        <input type="radio" name="payment_method" value="kpay" onchange="handlePaymentMethodChange(this)" class="sr-only peer">
-                        <div class="flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white peer-checked:border-emerald-500 peer-checked:ring-2 peer-checked:ring-emerald-50 hover:bg-slate-50/50 interactive-transition shadow-sm">
-                            <div class="w-6 h-6 rounded-md flex items-center justify-center border-2 border-slate-300 bg-white flex-shrink-0 transition-all duration-200">
-                                <i class="fa-solid fa-check text-xs text-white opacity-0"></i>
-                            </div>
-                            <span class="font-bold text-slate-800 text-sm sm:text-base">K Pay</span>
-                        </div>
-                    </label>
-
-                    <label class="block relative cursor-pointer group">
-                        <input type="radio" name="payment_method" value="wave" onchange="handlePaymentMethodChange(this)" class="sr-only peer">
-                        <div class="flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white peer-checked:border-emerald-500 peer-checked:ring-2 peer-checked:ring-emerald-50 hover:bg-slate-50/50 interactive-transition shadow-sm">
-                            <div class="w-6 h-6 rounded-md flex items-center justify-center border-2 border-slate-300 bg-white flex-shrink-0 transition-all duration-200">
-                                <i class="fa-solid fa-check text-xs text-white opacity-0"></i>
-                            </div>
-                            <span class="font-bold text-slate-800 text-sm sm:text-base">Wave Pay</span>
-                        </div>
-                    </label>
-                </div>
-            </div>
+                    </div>
+                <?php endif; ?>
+                <?php $first = false; ?>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+</div>
 
             <!-- Right Column: Account Details -->
             <div class="lg:col-span-5">
-                <form method="POST" action="" id="checkout-form">
+                <form method="POST" action="" id="checkout-form" enctype="multipart/form-data">
+                    <input type="hidden" name="place_order" value="1">
                     <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-md shadow-slate-100/40 space-y-6">
                         
                         <div class="border-b border-slate-50 pb-4">
-                            <h3 class="text-base font-bold text-slate-900">Verification & Accounts</h3>
-                            <p class="text-xs text-slate-400 mt-0.5">Please fill your account credentials below.</p>
+                            <h3 class="text-base font-bold text-slate-900">Contact & Delivery Details</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Please fill in your contact information and delivery address.</p>
+                        </div>
+
+                        <!-- Full Name -->
+                        <div class="form-group">
+                            <label>Full Name <span class="text-red-500">*</span></label>
+                            <input type="text" name="full_name" placeholder="Enter your full name" value="<?php echo htmlspecialchars($fullName ?: $currentUser['name'] ?? ''); ?>" required>
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="form-group">
+                            <label>Phone Number <span class="text-red-500">*</span></label>
+                            <input type="tel" name="phone" placeholder="Enter your phone number" value="<?php echo htmlspecialchars($phone ?: $currentUser['phone'] ?? ''); ?>" required>
                         </div>
 
                         <!-- Delivery Address -->
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Delivery Address</label>
-                            <textarea name="delivery_address" rows="2" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all" placeholder="Enter your delivery address..." required>123 Culinary Boulevard, Foodie Town</textarea>
+                        <div class="form-group">
+                            <label>Delivery Address <span class="text-red-500">*</span></label>
+                            <textarea name="delivery_address" rows="2" placeholder="Enter your delivery address..." required><?php echo htmlspecialchars($deliveryAddress ?: '123 Culinary Boulevard, Foodie Town'); ?></textarea>
                         </div>
 
                         <!-- COD Message -->
@@ -271,18 +340,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 
                         <!-- Digital Transfer Fields -->
                         <div id="transfer-input-fields" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Account Name</label>
-                                <input type="text" name="account_name" id="acc-name-input" value="<?php echo htmlspecialchars($currentUser['name'] ?? ''); ?>" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 font-semibold text-sm focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all">
+                            <div class="form-group">
+                                <label>Account Name <span class="text-red-500">*</span></label>
+                                <input type="text" name="account_name" id="acc-name-input" placeholder="Enter account name" value="<?php echo htmlspecialchars($accountName ?: $currentUser['name'] ?? ''); ?>" required>
                             </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Account Number</label>
-                                <input type="text" name="account_number" id="acc-num-input" value="<?php echo htmlspecialchars($currentUser['phone'] ?? ''); ?>" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 font-semibold text-sm focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all">
+
+                            <!-- Transaction Image Upload -->
+                            <div class="form-group">
+                                <label>Transaction Image <span class="text-red-500">*</span></label>
+                                <div class="file-upload-wrapper" id="fileUploadWrapper">
+                                    <input type="file" name="transaction_image" id="transactionImage" accept="image/*,.pdf" onchange="handleFileUpload(event)">
+                                    <i class="fa-regular fa-image file-icon"></i>
+                                    <div class="file-name">Click to upload or drag & drop</div>
+                                    <div class="file-hint">JPG, PNG, GIF, WEBP, PDF (Max 5MB)</div>
+                                </div>
+                                <div class="file-preview" id="filePreview">
+                                    <div class="file-info">
+                                        <i class="fa-regular fa-file-image"></i>
+                                        <span id="fileNameDisplay">No file selected</span>
+                                    </div>
+                                    <span class="remove-file" onclick="removeFile()">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <button type="submit" name="place_order" value="1" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/25 interactive-transition tracking-wide flex items-center justify-center space-x-2">
-                            <span>Proceed to Checkout</span>
+                        <button type="button" onclick="goToStep2()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/25 interactive-transition tracking-wide flex items-center justify-center space-x-2">
+                            <span>Review Order</span>
                             <i class="fa-solid fa-chevron-right text-xs"></i>
                         </button>
                     </div>
@@ -290,7 +375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             </div>
         </div>
 
-        <!-- STEP 2: Review (Hidden by default) -->
+        <!-- STEP 2: Review -->
         <div id="panel-step-2" class="step-view hidden max-w-2xl mx-auto bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-md">
             <div class="border-b border-slate-100 pb-5 mb-6 text-center sm:text-left">
                 <h3 class="text-xl font-bold text-slate-900">Review Your Order</h3>
@@ -300,16 +385,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             <div class="space-y-6">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="bg-slate-50/50 border border-slate-100 rounded-xl p-4">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Billing Details</span>
-                        <p id="review-billing-name" class="text-sm font-bold text-slate-800"><?php echo htmlspecialchars($currentUser['name'] ?? ''); ?></p>
-                        <p id="review-billing-account" class="text-xs text-slate-500 mt-1">Acc No: <?php echo htmlspecialchars($currentUser['phone'] ?? ''); ?></p>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Customer Details</span>
+                        <p id="review-customer-name" class="text-sm font-bold text-slate-800"></p>
+                        <p id="review-customer-phone" class="text-xs text-slate-500 mt-1">Phone: </p>
+                        <p id="review-customer-address" class="text-xs text-slate-500 mt-1">Address: </p>
                     </div>
                     <div class="bg-slate-50/50 border border-slate-100 rounded-xl p-4">
                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Method Chosen</span>
                         <div class="flex items-center space-x-2 mt-1">
                             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                            <p id="review-payment-method-label" class="text-sm font-bold text-slate-800">Cash on Delivery</p>
+                            <p id="review-payment-method-label" class="text-sm font-bold text-slate-800"></p>
                         </div>
+                        <p id="review-file-status" class="text-xs text-slate-500 mt-1">File: No file attached</p>
                     </div>
                 </div>
 
@@ -340,14 +427,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-3 pt-4">
-                    <button onclick="goToStep1()" class="w-full sm:w-1/3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl text-sm transition-colors">Go Back</button>
-                    <button onclick="submitOrder()" class="w-full sm:w-2/3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl text-sm shadow-md shadow-emerald-500/10 transition-all">Submit & Confirm Delivery</button>
+                    <button type="button" onclick="goToStep1()" class="w-full sm:w-1/3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold py-3.5 rounded-xl text-sm transition-colors">Go Back</button>
+                    <button type="button" onclick="submitOrder(this)" class="w-full sm:w-2/3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl text-sm shadow-md shadow-emerald-500/10 transition-all">Submit & Confirm Delivery</button>
                 </div>
             </div>
         </div>
 
         <!-- STEP 3: Success -->
-        <div id="panel-step-3" class="step-view hidden max-w-md mx-auto text-center bg-white border border-slate-100 rounded-3xl p-8 shadow-xl">
+        <div id="panel-step-3" class="step-view <?php echo $orderPlaced ? '' : 'hidden'; ?> max-w-md mx-auto text-center bg-white border border-slate-100 rounded-3xl p-8 shadow-xl">
             <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mx-auto mb-6 ring-8 ring-emerald-500/5">
                 <svg class="w-10 h-10 stroke-current" fill="none" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -389,44 +476,147 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 
     <footer class="bg-white border-t border-slate-100 mt-20 py-8">
         <div class="max-w-6xl mx-auto px-4 text-center text-slate-400 text-xs font-semibold uppercase tracking-wider">
-            &copy; 2026 FOODIE INC. All rights reserved. Delicious Food, Delivered Fast.
+            &copy; <?php echo date('Y'); ?> FOODIE INC. All rights reserved. Delicious Food, Delivered Fast.
         </div>
     </footer>
 
     <script>
-        let selectedPaymentMethod = 'cod';
+        // ============================================
+        // STATE VARIABLES
+        // ============================================
+        let selectedPaymentMethodId = 0;
+        let selectedPaymentMethodName = '';
+        let orderSubmitInProgress = false;
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const selectedRadio = document.querySelector('input[name="payment_method"]:checked');
+        // ============================================
+        // INITIALIZE ON PAGE LOAD
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get the checked radio button
+            const selectedRadio = document.querySelector('input[name="payment_method_id"]:checked');
             if (selectedRadio) {
-                handlePaymentMethodChange(selectedRadio);
+                selectPaymentMethod(parseInt(selectedRadio.value));
+            } else {
+                // If no radio is checked, check the first one
+                const firstRadio = document.querySelector('input[name="payment_method_id"]');
+                if (firstRadio) {
+                    firstRadio.checked = true;
+                    selectPaymentMethod(parseInt(firstRadio.value));
+                }
             }
+            
+            // Add event listeners to all radio buttons
+            document.querySelectorAll('input[name="payment_method_id"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectPaymentMethod(parseInt(this.value));
+                    }
+                });
+            });
         });
 
-        function handlePaymentMethodChange(element) {
-            selectedPaymentMethod = element.value;
+        // ============================================
+        // SELECT PAYMENT METHOD
+        // ============================================
+        function selectPaymentMethod(methodId) {
+            selectedPaymentMethodId = methodId;
             
-            const radios = document.querySelectorAll('input[name="payment_method"]');
-            radios.forEach(radio => {
-                const parentCard = radio.nextElementSibling;
-                parentCard.className = "flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50/50 interactive-transition shadow-sm";
+            // Get method name from the radio label
+            const radio = document.getElementById('payment_method_' + methodId);
+            if (radio) {
+                const label = radio.closest('label');
+                if (label) {
+                    const nameSpan = label.querySelector('.font-bold.text-slate-800');
+                    if (nameSpan) {
+                        selectedPaymentMethodName = nameSpan.textContent.trim();
+                        console.log('Selected method:', selectedPaymentMethodName);
+                    }
+                }
+            }
+            
+            // Update selected class on payment options
+            document.querySelectorAll('.payment-option').forEach(el => {
+                el.classList.remove('selected');
             });
-
-            const activeParent = element.nextElementSibling;
-            activeParent.className = "flex items-center space-x-4 p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/35 ring-4 ring-emerald-50/20 hover:bg-emerald-50/40 interactive-transition shadow-sm";
-
+            
+            // Find the selected payment option and add class
+            const selectedOption = document.querySelector(`#payment_method_${methodId}`)?.closest('label')?.querySelector('.payment-option');
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
+            
+            // Update check icon visibility
+            document.querySelectorAll('.payment-option .fa-check').forEach(icon => {
+                icon.classList.add('opacity-0');
+            });
+            
+            const checkIcon = document.querySelector(`#payment_method_${methodId}`)?.closest('label')?.querySelector('.payment-option .fa-check');
+            if (checkIcon) {
+                checkIcon.classList.remove('opacity-0');
+            }
+            
+            // Show/hide payment details
+            document.querySelectorAll('.payment-method-details').forEach(el => {
+                el.classList.remove('active');
+            });
+            const details = document.getElementById('payment-details-' + methodId);
+            if (details) {
+                details.classList.add('active');
+            }
+            
+            // Show/hide COD message and transfer fields
+            const isCOD = selectedPaymentMethodName === 'Cash on Delivery';
             const codMessage = document.getElementById('cod-friendly-message');
             const transferFields = document.getElementById('transfer-input-fields');
-
-            if (selectedPaymentMethod === 'cod') {
+            const accountNameInput = document.getElementById('acc-name-input');
+            const transactionImageInput = document.getElementById('transactionImage');
+            
+            if (isCOD) {
                 codMessage.classList.remove('hidden');
                 transferFields.classList.add('hidden');
+                accountNameInput.required = false;
+                accountNameInput.disabled = true;
+                transactionImageInput.required = false;
+                transactionImageInput.disabled = true;
             } else {
                 codMessage.classList.add('hidden');
                 transferFields.classList.remove('hidden');
+                accountNameInput.disabled = false;
+                accountNameInput.required = true;
+                transactionImageInput.disabled = false;
+                transactionImageInput.required = true;
             }
         }
 
+        // ============================================
+        // FILE UPLOAD HANDLER
+        // ============================================
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const wrapper = document.getElementById('fileUploadWrapper');
+                const preview = document.getElementById('filePreview');
+                const fileName = document.getElementById('fileNameDisplay');
+                
+                wrapper.classList.add('has-file');
+                fileName.textContent = file.name;
+                preview.classList.add('active');
+            }
+        }
+
+        function removeFile() {
+            const input = document.getElementById('transactionImage');
+            const wrapper = document.getElementById('fileUploadWrapper');
+            const preview = document.getElementById('filePreview');
+            
+            input.value = '';
+            wrapper.classList.remove('has-file');
+            preview.classList.remove('active');
+        }
+
+        // ============================================
+        // TOAST NOTIFICATION
+        // ============================================
         function triggerToast(message, isSuccess = true) {
             const toast = document.getElementById('checkout-toast');
             const text = document.getElementById('toast-message');
@@ -441,28 +631,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             }, 3000);
         }
 
+        // ============================================
+        // STEP NAVIGATION
+        // ============================================
         function goToStep2() {
-            // Validate form
             const form = document.getElementById('checkout-form');
+            
+            // Check if a payment method is selected
+            const selectedRadio = document.querySelector('input[name="payment_method_id"]:checked');
+            if (!selectedRadio) {
+                triggerToast('Please select a payment method.', false);
+                return;
+            }
+            
+            // Get the selected value
+            const selectedValue = selectedRadio ? parseInt(selectedRadio.value) : 0;
+            if (selectedValue === 0) {
+                triggerToast('Please select a payment method.', false);
+                return;
+            }
+            
+            // Check if file is uploaded for non-COD payments
+            if (selectedPaymentMethodName && selectedPaymentMethodName !== 'Cash on Delivery') {
+                const fileInput = document.getElementById('transactionImage');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    triggerToast('Please upload a transaction image.', false);
+                    return;
+                }
+            }
+            
             if (!form.checkValidity()) {
                 form.reportValidity();
                 return;
             }
 
-            // Update review panel
-            const name = document.getElementById('acc-name-input')?.value || 'Doorstep Customer';
-            const account = document.getElementById('acc-num-input')?.value || 'Cash on delivery';
+            const fullName = document.querySelector('input[name="full_name"]')?.value || '';
+            const phone = document.querySelector('input[name="phone"]')?.value || '';
+            const address = document.querySelector('textarea[name="delivery_address"]')?.value || '';
+            const fileInput = document.getElementById('transactionImage');
+            const fileName = fileInput.files && fileInput.files.length > 0 ? fileInput.files[0].name : 'No file attached';
             
-            document.getElementById('review-billing-name').innerText = name;
-            document.getElementById('review-billing-account').innerText = selectedPaymentMethod === 'cod' ? 'Cash collected on spot' : `Account: ${account}`;
-            
-            const methodLabels = {
-                'cod': 'Cash on Delivery',
-                'card': 'Credit / Debit Card',
-                'kpay': 'K Pay E-Wallet',
-                'wave': 'Wave Pay E-Wallet'
-            };
-            document.getElementById('review-payment-method-label').innerText = methodLabels[selectedPaymentMethod] || 'Cash on Delivery';
+            document.getElementById('review-customer-name').innerText = fullName;
+            document.getElementById('review-customer-phone').innerText = 'Phone: ' + phone;
+            document.getElementById('review-customer-address').innerText = 'Address: ' + address;
+            document.getElementById('review-payment-method-label').innerText = selectedPaymentMethodName || 'Cash on Delivery';
+            document.getElementById('review-file-status').innerText = 'File: ' + fileName;
 
             document.getElementById('step-progress-line').style.width = '50%';
             document.getElementById('circle-step-2').className = "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-emerald-500 text-white ring-4 ring-emerald-100 transition-all duration-300";
@@ -482,14 +695,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             document.getElementById('panel-step-1').classList.remove('hidden');
         }
 
-        function submitOrder() {
+        function submitOrder(button) {
+            if (orderSubmitInProgress) {
+                return;
+            }
+
+            const form = document.getElementById('checkout-form');
+            orderSubmitInProgress = true;
+
+            if (button) {
+                button.disabled = true;
+                button.classList.add('opacity-70', 'cursor-not-allowed');
+            }
+
             document.getElementById('step-progress-line').style.width = '100%';
             document.getElementById('circle-step-3').className = "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-emerald-500 text-white ring-4 ring-emerald-100 transition-all duration-300";
             document.getElementById('label-step-3').className = "text-xs font-bold text-slate-900 mt-2 transition-all duration-300";
 
-            document.getElementById('panel-step-2').classList.add('hidden');
-            document.getElementById('panel-step-3').classList.remove('hidden');
-            triggerToast('Order placed successfully! 🎉');
+            triggerToast('Submitting your order...');
+            if (form.requestSubmit) {
+                form.requestSubmit();
+                return;
+            } else {
+                form.submit();
+                return;
+            }
         }
     </script>
 

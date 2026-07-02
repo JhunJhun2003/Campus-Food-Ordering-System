@@ -50,9 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit();
 }
 
+// Check if cart is empty to disable checkout
 $items = $cart['items'] ?? [];
 $total = $cart['total'] ?? 0;
 $itemCount = $cart['item_count'] ?? 0;
+$isCartEmpty = empty($items);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -80,6 +82,11 @@ $itemCount = $cart['item_count'] ?? 0;
         @keyframes fadeOut {
             from { opacity: 1; transform: translateY(0); }
             to { opacity: 0; transform: translateY(12px); height: 0; padding: 0; margin: 0; overflow: hidden; }
+        }
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -217,43 +224,18 @@ $itemCount = $cart['item_count'] ?? 0;
                 <i class="fa-solid fa-arrow-left text-xs"></i>
                 <span>Continue Shopping</span>
             </a>
-            <button onclick="handleProceedToCheckout()" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-10 py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 interactive-transition tracking-wide">
-                Proceed to Checkout
-            </button>
+            
+            <?php if ($isCartEmpty): ?>
+                <button disabled class="w-full sm:w-auto bg-slate-400 text-white font-bold px-10 py-3.5 rounded-xl text-sm cursor-not-allowed btn-disabled">
+                    Proceed to Checkout
+                </button>
+            <?php else: ?>
+                <a href="checkout.php" class="w-full sm:w-auto inline-flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-10 py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 interactive-transition tracking-wide">
+                    Proceed to Checkout
+                </a>
+            <?php endif; ?>
         </div>
     </main>
-
-    <!-- CHECKOUT DRAWER -->
-    <div id="checkout-drawer" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-all duration-300 flex justify-end">
-        <div id="drawer-panel" class="w-full max-w-md bg-white h-full shadow-2xl translate-x-full transition-transform duration-300 flex flex-col justify-between">
-            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-slate-900">Confirm Order Details</h3>
-                <button onclick="toggleCheckoutDrawer(false)" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 interactive-transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            
-            <div class="p-6 flex-grow overflow-y-auto space-y-6">
-                <div class="bg-slate-50 p-4 rounded-xl space-y-3">
-                    <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Order Summary</h4>
-                    <div id="drawer-items-list" class="space-y-2"></div>
-                    <div class="border-t border-slate-200/60 pt-3 flex justify-between font-bold text-slate-900 text-sm">
-                        <span>Total amount due</span>
-                        <span id="drawer-subtotal">$ <?php echo number_format($total, 2); ?></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-6 border-t border-slate-100 bg-slate-50/50 space-y-3">
-                <button onclick="processFinalPayment()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-emerald-500/10 text-sm">
-                    Place Order ($<span id="place-order-price-btn"><?php echo number_format($total, 2); ?></span>)
-                </button>
-                <button onclick="toggleCheckoutDrawer(false)" class="w-full border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl text-sm transition-colors">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- TOAST NOTIFICATION -->
     <div id="notification-toast" class="fixed bottom-6 right-6 bg-slate-950 text-white px-5 py-4 rounded-2xl shadow-2xl flex items-center space-x-3.5 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50 border border-slate-800">
@@ -268,7 +250,7 @@ $itemCount = $cart['item_count'] ?? 0;
 
     <footer class="bg-white border-t border-slate-100 mt-20 py-8">
         <div class="max-w-6xl mx-auto px-4 text-center text-slate-400 text-xs font-semibold uppercase tracking-wider">
-            &copy; 2026 FOODIE INC. All rights reserved. Delicious Food, Delivered Fast.
+            &copy; <?php echo date('Y'); ?> FOODIE INC. All rights reserved. Delicious Food, Delivered Fast.
         </div>
     </footer>
 
@@ -300,6 +282,14 @@ $itemCount = $cart['item_count'] ?? 0;
                 subtotalLabel.innerText = "$ 0";
                 badgeCount.innerText = "0";
                 badgeCount.classList.add('hidden');
+                
+                // Disable checkout button
+                const checkoutBtn = document.querySelector('a[href="checkout.php"]');
+                if (checkoutBtn) {
+                    checkoutBtn.removeAttribute('href');
+                    checkoutBtn.className = 'w-full sm:w-auto bg-slate-400 text-white font-bold px-10 py-3.5 rounded-xl text-sm cursor-not-allowed btn-disabled';
+                    checkoutBtn.textContent = 'Proceed to Checkout';
+                }
                 return;
             }
 
@@ -353,6 +343,14 @@ $itemCount = $cart['item_count'] ?? 0;
             badgeCount.innerText = cartItems.length;
             subtotalLabel.innerText = `$ ${currentSubtotal}`;
             cartTotal = currentSubtotal;
+
+            // Enable checkout button
+            const checkoutBtn = document.querySelector('a[href="checkout.php"]');
+            if (checkoutBtn) {
+                checkoutBtn.href = 'checkout.php';
+                checkoutBtn.className = 'w-full sm:w-auto inline-flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-10 py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 interactive-transition tracking-wide';
+                checkoutBtn.textContent = 'Proceed to Checkout';
+            }
         }
 
         function updateCartItem(foodId, change) {
@@ -360,7 +358,6 @@ $itemCount = $cart['item_count'] ?? 0;
             if (item) {
                 const newQuantity = Math.max(1, item.quantity + change);
                 if (newQuantity !== item.quantity) {
-                    // Send AJAX request
                     fetch('cart.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -400,56 +397,6 @@ $itemCount = $cart['item_count'] ?? 0;
             }
         }
 
-        function toggleCheckoutDrawer(open) {
-            const drawer = document.getElementById('checkout-drawer');
-            const panel = document.getElementById('drawer-panel');
-
-            if (open) {
-                drawer.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => panel.classList.remove('translate-x-full'), 50);
-            } else {
-                panel.classList.add('translate-x-full');
-                setTimeout(() => drawer.classList.add('opacity-0', 'pointer-events-none'), 300);
-            }
-        }
-
-        function handleProceedToCheckout() {
-            if (cartItems.length === 0) {
-                triggerNotification("Cannot proceed with an empty cart.", false);
-                return;
-            }
-
-            const checkoutList = document.getElementById('drawer-items-list');
-            checkoutList.innerHTML = '';
-            let currentSubtotal = 0;
-
-            cartItems.forEach(item => {
-                const total = item.price * item.quantity;
-                currentSubtotal += total;
-                const li = document.createElement('div');
-                li.className = 'flex justify-between text-sm text-slate-600';
-                li.innerHTML = `
-                    <span>${item.food_name} <span class="text-slate-400 font-bold">x${item.quantity}</span></span>
-                    <span class="font-semibold">$ ${total}</span>
-                `;
-                checkoutList.appendChild(li);
-            });
-
-            document.getElementById('drawer-subtotal').innerText = `$ ${currentSubtotal}`;
-            document.getElementById('place-order-price-btn').innerText = currentSubtotal;
-            toggleCheckoutDrawer(true);
-        }
-
-        function processFinalPayment() {
-            toggleCheckoutDrawer(false);
-            triggerNotification("Your delivery order has been successfully placed!");
-            
-            setTimeout(() => {
-                cartItems = [];
-                renderCartUI();
-            }, 1000);
-        }
-
         function triggerNotification(message, isSuccess = true) {
             const toast = document.getElementById('notification-toast');
             const text = document.getElementById('toast-msg-text');
@@ -476,5 +423,6 @@ $itemCount = $cart['item_count'] ?? 0;
             document.getElementById('cart-items-wrapper').scrollIntoView({ behavior: 'smooth' });
         }
     </script>
+
 </body>
 </html>

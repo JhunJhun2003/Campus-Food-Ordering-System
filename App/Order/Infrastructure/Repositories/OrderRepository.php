@@ -21,15 +21,38 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function save(Order $order): int
     {
-        $sql = "INSERT INTO orders (user_id, status_id, total_amount, order_date) 
-                VALUES (:user_id, :status_id, :total_amount, NOW())";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([
+        $columns = ['user_id', 'status_id', 'total_amount', 'order_date'];
+        $values = [':user_id', ':status_id', ':total_amount', 'NOW()'];
+        $params = [
             ':user_id' => $order->getUserId(),
             ':status_id' => $order->getStatusId(),
             ':total_amount' => $order->getTotalAmount()
-        ]);
+        ];
+
+        $optionalColumns = [
+            'delivery_address' => $order->getDeliveryAddress(),
+            'payment_method' => $order->getPaymentMethod(),
+            'customer_name' => $order->getCustomerName(),
+            'customer_phone' => $order->getCustomerPhone(),
+            'account_name' => $order->getAccountName(),
+            'account_number' => $order->getAccountNumber(),
+            'transaction_image' => $order->getTransactionImage()
+        ];
+
+        foreach ($optionalColumns as $column => $value) {
+            if ($this->orderHasColumn($column)) {
+                $param = ':' . $column;
+                $columns[] = $column;
+                $values[] = $param;
+                $params[$param] = $value;
+            }
+        }
+
+        $sql = "INSERT INTO orders (" . implode(', ', $columns) . ") 
+                VALUES (" . implode(', ', $values) . ")";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         
         return (int) $this->db->lastInsertId();
     }
@@ -51,7 +74,7 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function findById(int $id): ?Order
     {
-        $sql = "SELECT o.*, u.name as customer_name, u.phone as customer_phone 
+        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :id";
@@ -64,7 +87,7 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function findAll(): array
     {
-        $sql = "SELECT o.*, u.name as customer_name, u.phone as customer_phone 
+        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 ORDER BY o.order_date DESC";
@@ -76,7 +99,7 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function findByStatus(int $statusId): array
     {
-        $sql = "SELECT o.*, u.name as customer_name, u.phone as customer_phone 
+        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.status_id = :status_id 
@@ -93,8 +116,8 @@ class OrderRepository implements OrderRepositoryInterface
         $sql = "SELECT 
                     o.*,
                     os.status_name,
-                    u.name as customer_name,
-                    u.phone as customer_phone
+                    {$this->customerNameSelect()} as customer_name,
+                    {$this->customerPhoneSelect()} as customer_phone
                 FROM orders o
                 JOIN order_statuses os ON o.status_id = os.id
                 JOIN users u ON o.user_id = u.id
@@ -145,7 +168,7 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function getRecentOrders(int $limit = 10): array
     {
-        $sql = "SELECT o.*, u.name as customer_name, u.phone as customer_phone, os.status_name 
+        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone, os.status_name 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 JOIN order_statuses os ON o.status_id = os.id 
@@ -225,9 +248,41 @@ class OrderRepository implements OrderRepositoryInterface
             (int) $data['user_id'],
             (int) $data['status_id'],
             (float) $data['total_amount'],
+            $data['delivery_address'] ?? null,
+            $data['payment_method'] ?? null,
             $data['customer_name'] ?? null,
-            $data['customer_phone'] ?? null
+            $data['customer_phone'] ?? null,
+            $data['account_name'] ?? null,
+            $data['account_number'] ?? null,
+            $data['transaction_image'] ?? null,
+            !empty($data['order_date']) ? new \DateTime($data['order_date']) : null
         );
+    }
+
+    private function customerNameSelect(): string
+    {
+        return $this->orderHasColumn('customer_name')
+            ? 'COALESCE(NULLIF(o.customer_name, ""), u.name)'
+            : 'u.name';
+    }
+
+    private function customerPhoneSelect(): string
+    {
+        return $this->orderHasColumn('customer_phone')
+            ? 'COALESCE(NULLIF(o.customer_phone, ""), u.phone)'
+            : 'u.phone';
+    }
+
+    private function orderHasColumn(string $column): bool
+    {
+        static $columns = null;
+
+        if ($columns === null) {
+            $stmt = $this->db->query('SHOW COLUMNS FROM orders');
+            $columns = array_flip(array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'Field'));
+        }
+
+        return isset($columns[$column]);
     }
 
     private function getEmojiForFood(int $foodId): string

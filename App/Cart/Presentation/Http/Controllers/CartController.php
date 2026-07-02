@@ -25,22 +25,46 @@ class CartController
         return $useCase->execute($userId);
     }
 
+    /**
+     * Add item to cart with item count in response
+     */
     public function add(int $userId, int $foodId, int $quantity = 1): array
     {
         $useCase = new AddToCartUseCase($this->cartRepository, $this->foodRepository);
-        return $useCase->execute($userId, $foodId, $quantity);
+        $result = $useCase->execute($userId, $foodId, $quantity);
+        
+        // Add item count to response for frontend badge update
+        if ($result['success']) {
+            $result['item_count'] = $this->cartRepository->getItemCount($userId);
+        }
+        
+        return $result;
     }
 
     public function update(int $userId, int $foodId, int $quantity): array
     {
         $useCase = new UpdateCartItemUseCase($this->cartRepository);
-        return $useCase->execute($userId, $foodId, $quantity);
+        $result = $useCase->execute($userId, $foodId, $quantity);
+        
+        // Add item count to response
+        if ($result['success']) {
+            $result['item_count'] = $this->cartRepository->getItemCount($userId);
+        }
+        
+        return $result;
     }
 
     public function remove(int $userId, int $foodId): array
     {
         $useCase = new RemoveFromCartUseCase($this->cartRepository);
-        return $useCase->execute($userId, $foodId);
+        $result = $useCase->execute($userId, $foodId);
+        
+        // Add item count to response
+        if ($result['success']) {
+            $result['item_count'] = $this->cartRepository->getItemCount($userId);
+        }
+        
+        return $result;
     }
 
     public function clear(int $userId): array
@@ -48,7 +72,8 @@ class CartController
         $this->cartRepository->clear($userId);
         return [
             'success' => true,
-            'message' => 'Cart cleared successfully'
+            'message' => 'Cart cleared successfully',
+            'item_count' => 0
         ];
     }
 

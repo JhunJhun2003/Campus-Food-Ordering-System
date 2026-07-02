@@ -64,6 +64,13 @@ CREATE TABLE orders (
     user_id INT NOT NULL,
     status_id INT NOT NULL,
     total_amount DECIMAL(10,2) NOT NULL,
+    delivery_address TEXT,
+    payment_method VARCHAR(50),
+    customer_name VARCHAR(100),
+    customer_phone VARCHAR(20),
+    account_name VARCHAR(100),
+    account_number VARCHAR(50),
+    transaction_image VARCHAR(255),
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (status_id) REFERENCES order_statuses(id)
@@ -89,6 +96,9 @@ CREATE TABLE order_items (
 CREATE TABLE payment_methods (
     id INT PRIMARY KEY AUTO_INCREMENT,
     method_name VARCHAR(50) UNIQUE NOT NULL,
+    account_name VARCHAR(100),
+    account_number VARCHAR(50),
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

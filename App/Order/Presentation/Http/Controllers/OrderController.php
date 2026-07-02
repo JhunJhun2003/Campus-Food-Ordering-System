@@ -49,12 +49,33 @@ class OrderController
     }
 
     /**
-     * Create a new order (checkout)
+     * Create a new order (checkout) - UPDATED with all fields
      */
-    public function createOrder(int $userId, array $items, float $total, string $address, string $paymentMethod): array
-    {
+    public function createOrder(
+        int $userId, 
+        array $items, 
+        float $total, 
+        string $address, 
+        string $paymentMethod, 
+        string $fullName, 
+        string $phone, 
+        string $accountName, 
+        string $accountNumber, 
+        string $transactionImage
+    ): array {
         $useCase = new CreateOrderUseCase($this->orderRepository, $this->cartRepository);
-        return $useCase->execute($userId, $items, $total, $address, $paymentMethod);
+        return $useCase->execute(
+            $userId, 
+            $items, 
+            $total, 
+            $address, 
+            $paymentMethod, 
+            $fullName, 
+            $phone, 
+            $accountName, 
+            $accountNumber, 
+            $transactionImage
+        );
     }
 
     /**
