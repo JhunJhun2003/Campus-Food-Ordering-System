@@ -230,4 +230,63 @@ class FoodRepository implements FoodRepositoryInterface
             return false;
         }
     }
+    /**
+     * Reduce stock for multiple food items
+     */
+    public function reduceStockForItems(array $items): bool
+    {
+        try {
+            $this->db->beginTransaction();
+            
+            foreach ($items as $item) {
+                $foodId = $item['food_id'];
+                $quantity = $item['quantity'];
+                
+                $sql = "UPDATE foods SET stock = stock - :quantity WHERE id = :id AND stock >= :quantity";
+                $stmt = $this->db->prepare($sql);
+                $result = $stmt->execute([
+                    ':quantity' => $quantity,
+                    ':id' => $foodId
+                ]);
+                
+                if (!$result || $stmt->rowCount() === 0) {
+                    throw new \Exception("Not enough stock for food item ID: $foodId");
+                }
+            }
+            
+            $this->db->commit();
+            return true;
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Reduce stock for a single food item
+     */
+    public function reduceStock(int $foodId, int $quantity): bool
+    {
+        $sql = "UPDATE foods SET stock = stock - :quantity WHERE id = :id AND stock >= :quantity";
+        $stmt = $this->db->prepare($sql);
+        $result = $stmt->execute([
+            ':quantity' => $quantity,
+            ':id' => $foodId
+        ]);
+        
+        return $result && $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Get current stock for a food item
+     */
+    public function getStock(int $foodId): int
+    {
+        $sql = "SELECT stock FROM foods WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $foodId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['stock'] ?? 0);
+    }
 }

@@ -8,17 +8,20 @@ use App\Order\Application\Usecases\UpdateOrderStatusUseCase;
 use App\Order\Application\Usecases\ReorderItemsUseCase;
 use App\Order\Infrastructure\Repositories\OrderRepository;
 use App\Cart\Infrastructure\Repositories\CartRepository;
+use App\Food\Infrastructure\Repositories\FoodRepository;
 use Inc\Database;
 
 class OrderController
 {
     private OrderRepository $orderRepository;
     private CartRepository $cartRepository;
+    private FoodRepository $foodRepository;
 
     public function __construct()
     {
         $this->orderRepository = new OrderRepository();
         $this->cartRepository = new CartRepository();
+        $this->foodRepository = new FoodRepository();
     }
 
     /**
@@ -49,7 +52,7 @@ class OrderController
     }
 
     /**
-     * Create a new order (checkout) - UPDATED with all fields
+     * Create a new order (checkout)
      */
     public function createOrder(
         int $userId, 
@@ -63,7 +66,13 @@ class OrderController
         string $accountNumber, 
         string $transactionImage
     ): array {
-        $useCase = new CreateOrderUseCase($this->orderRepository, $this->cartRepository);
+        // ✅ Pass all 3 dependencies: OrderRepository, CartRepository, FoodRepository
+        $useCase = new CreateOrderUseCase(
+            $this->orderRepository,
+            $this->cartRepository,
+            $this->foodRepository
+        );
+        
         return $useCase->execute(
             $userId, 
             $items, 

@@ -5,6 +5,7 @@ use App\Order\Domain\Entities\Order;
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use Inc\Database;
 use PDO;
+use DateTime;
 
 class OrderRepository implements OrderRepositoryInterface
 {
@@ -74,7 +75,9 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function findById(int $id): ?Order
     {
-        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone 
+        $sql = "SELECT o.*, 
+                {$this->customerNameSelect()} as customer_name, 
+                {$this->customerPhoneSelect()} as customer_phone 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :id";
@@ -87,7 +90,9 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function findAll(): array
     {
-        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone 
+        $sql = "SELECT o.*, 
+                {$this->customerNameSelect()} as customer_name, 
+                {$this->customerPhoneSelect()} as customer_phone 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 ORDER BY o.order_date DESC";
@@ -99,7 +104,9 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function findByStatus(int $statusId): array
     {
-        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone 
+        $sql = "SELECT o.*, 
+                {$this->customerNameSelect()} as customer_name, 
+                {$this->customerPhoneSelect()} as customer_phone 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.status_id = :status_id 
@@ -168,7 +175,10 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function getRecentOrders(int $limit = 10): array
     {
-        $sql = "SELECT o.*, {$this->customerNameSelect()} as customer_name, {$this->customerPhoneSelect()} as customer_phone, os.status_name 
+        $sql = "SELECT o.*, 
+                {$this->customerNameSelect()} as customer_name, 
+                {$this->customerPhoneSelect()} as customer_phone, 
+                os.status_name 
                 FROM orders o 
                 JOIN users u ON o.user_id = u.id 
                 JOIN order_statuses os ON o.status_id = os.id 
@@ -255,7 +265,7 @@ class OrderRepository implements OrderRepositoryInterface
             $data['account_name'] ?? null,
             $data['account_number'] ?? null,
             $data['transaction_image'] ?? null,
-            !empty($data['order_date']) ? new \DateTime($data['order_date']) : null
+            !empty($data['order_date']) ? new DateTime($data['order_date']) : null
         );
     }
 

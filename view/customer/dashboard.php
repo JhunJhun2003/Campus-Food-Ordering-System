@@ -210,7 +210,7 @@ $categoryEmojis = [
         });
 
         // ============================================
-        // MENU DATA FROM PHP
+        // MENU DATA FROM PHP (WITH STOCK INFO)
         // ============================================
         const menuDatabase = <?php 
             $menuData = [];
@@ -243,7 +243,7 @@ $categoryEmojis = [
         let cartItemCount = <?php echo $itemCount; ?>;
 
         // ============================================
-        // RENDER FUNCTION
+        // RENDER FUNCTION - WITH STOCK DISPLAY
         // ============================================
         function renderMenuGrid() {
             const container = document.getElementById('menu-grid-container');
@@ -270,6 +270,7 @@ $categoryEmojis = [
                 card.className = 'menu-card-anim bg-white border border-slate-150 rounded-2xl shadow-sm p-4 hover:shadow-md hover:border-slate-200 transition-all flex items-center justify-between';
                 
                 const isOutOfStock = (item.stock || 0) <= 0;
+                const stockDisplay = item.stock || 0;
                 
                 card.innerHTML = `
                     <div class="flex items-center space-x-4">
@@ -279,14 +280,19 @@ $categoryEmojis = [
                         <div>
                             <h3 class="text-sm font-bold text-slate-800">${item.name}</h3>
                             <p class="text-sm font-extrabold text-slate-900 mt-1">$ ${item.price}</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs font-medium text-slate-500">Stock: <span class="font-bold ${stockDisplay <= 3 ? 'text-red-500' : 'text-emerald-600'}">${stockDisplay}</span></span>
+                                ${stockDisplay <= 3 && stockDisplay > 0 ? '<span class="text-xs text-red-500 font-bold">⚠️ Low Stock</span>' : ''}
+                            </div>
                         </div>
                     </div>
                     ${isOutOfStock ? 
-                        `<span class="text-xs font-bold text-red-500">Out of Stock</span>` :
+                        `<span class="text-xs font-bold text-red-500 bg-red-50 px-3 py-1 rounded-full">Out of Stock</span>` :
                         `<button 
                             class="w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/10 interactive-transition hover:scale-105 active:scale-95 add-to-cart-btn"
                             data-id="${item.id}"
                             data-name="${item.name}"
+                            data-stock="${item.stock}"
                         >
                             <i class="fa-solid fa-plus text-sm"></i>
                         </button>`
@@ -303,7 +309,15 @@ $categoryEmojis = [
                 btn.addEventListener('click', function() {
                     const foodId = this.dataset.id;
                     const foodName = this.dataset.name;
-                    addToCart(foodName, foodId);
+                    const stock = parseInt(this.dataset.stock);
+                    
+                    // Check if stock is available
+                    if (stock <= 0) {
+                        showToast('Sorry, this item is out of stock!', false);
+                        return;
+                    }
+                    
+                    addToCart(foodName, foodId, stock);
                 });
             });
         }
@@ -346,9 +360,9 @@ $categoryEmojis = [
         }
 
         // ============================================
-        // ADD TO CART
+        // ADD TO CART - WITH STOCK CHECK
         // ============================================
-        function addToCart(dishName, foodId) {
+        function addToCart(dishName, foodId, availableStock) {
             // Show loading state on button
             const buttons = document.querySelectorAll('.add-to-cart-btn');
             buttons.forEach(btn => {
@@ -357,6 +371,19 @@ $categoryEmojis = [
                     btn.disabled = true;
                 }
             });
+
+            // Check if stock is available
+            if (availableStock <= 0) {
+                showToast(`"${dishName}" is out of stock!`, false);
+                // Reset button
+                buttons.forEach(btn => {
+                    if (btn.dataset.id == foodId) {
+                        btn.innerHTML = '<i class="fa-solid fa-plus text-sm"></i>';
+                        btn.disabled = false;
+                    }
+                });
+                return;
+            }
 
             fetch('add-to-cart.php', {
                 method: 'POST',
@@ -376,6 +403,15 @@ $categoryEmojis = [
                 if (data.success) {
                     cartItemCount = data.item_count || cartItemCount + 1;
                     updateCartBadge();
+                    
+                    // Update stock in the menu database
+                    const item = menuDatabase.find(i => i.id == foodId);
+                    if (item) {
+                        item.stock = (item.stock || 0) - 1;
+                        // Re-render the grid to update stock display
+                        renderMenuGrid();
+                    }
+                    
                     showToast(`"${dishName}" added to cart! 🛒`);
                 } else {
                     showToast(data.message || 'Failed to add item', false);

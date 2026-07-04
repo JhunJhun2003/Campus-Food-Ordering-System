@@ -10,6 +10,25 @@ $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
 
 $orderController = new OrderController();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_status') {
+    header('Content-Type: application/json');
+
+    $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
+    $statusId = isset($_POST['status_id']) ? (int) $_POST['status_id'] : 0;
+
+    if ($orderId <= 0 || $statusId <= 0) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid order or status.'
+        ]);
+        exit();
+    }
+
+    echo json_encode($orderController->updateStatus($orderId, $statusId));
+    exit();
+}
+
 $orders = $orderController->index();
 $statuses = $orderController->getStatuses();
 ?>
@@ -36,15 +55,43 @@ $statuses = $orderController->getStatuses();
             background-color: #F9FAFB;
             color: #111827;
         }
-        .status-dropdown {
+        .status-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            background: #F9FAFB;
+        }
+        .status-select {
+            min-width: 132px;
+            border: 0;
+            background: transparent;
+            color: #374151;
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+        .status-save-btn {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: #4F46E5;
+            color: white;
             transition: all 0.2s ease;
         }
-        .status-dropdown:hover .dropdown-menu {
-            display: block;
+        .status-save-btn:hover:not(:disabled) {
+            background: #4338CA;
         }
-        .dropdown-menu {
-            display: none;
-            min-width: 120px;
+        .status-save-btn:disabled {
+            background: #E5E7EB;
+            color: #9CA3AF;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -211,22 +258,22 @@ $statuses = $orderController->getStatuses();
                                         <?php echo $order->getOrderDate()->format('M d, Y h:i A'); ?>
                                     </td>
                                     <td class="py-4 px-6">
-                                        <div class="relative inline-block text-left status-dropdown">
-                                            <button class="inline-flex items-center space-x-1.5 px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-md hover:bg-indigo-200 transition-colors focus:outline-none">
-                                                <span>Update</span>
-                                                <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                                            </button>
-                                            
-                                            <div class="dropdown-menu absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg border border-gray-100 z-10 p-1 space-y-1">
+                                        <div class="status-action">
+                                            <select class="status-select" data-original-status-id="<?php echo $order->getStatusId(); ?>" aria-label="Order #<?php echo $order->getId(); ?> status">
                                                 <?php foreach ($statuses as $status): ?>
-                                                    <button class="w-full text-left block px-2 py-1 text-xs font-semibold rounded hover:bg-gray-50 transition-colors status-btn" 
-                                                            data-order-id="<?php echo $order->getId(); ?>"
-                                                            data-status-id="<?php echo $status['id']; ?>"
-                                                            data-status-name="<?php echo $status['status_name']; ?>">
+                                                    <option value="<?php echo $status['id']; ?>" <?php echo $status['id'] == $order->getStatusId() ? 'selected' : ''; ?>>
                                                         <?php echo ucfirst($status['status_name']); ?>
-                                                    </button>
+                                                    </option>
                                                 <?php endforeach; ?>
-                                            </div>
+                                            </select>
+                                            <button type="button"
+                                                    class="status-save-btn"
+                                                    data-order-id="<?php echo $order->getId(); ?>"
+                                                    title="Save status"
+                                                    aria-label="Save order #<?php echo $order->getId(); ?> status"
+                                                    disabled>
+                                                <i class="fa-solid fa-check text-xs"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -294,14 +341,31 @@ $statuses = $orderController->getStatuses();
             });
         });
 
+        document.querySelectorAll('.status-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const action = this.closest('.status-action');
+                const button = action?.querySelector('.status-save-btn');
+                if (!button) return;
+
+                button.disabled = this.value === this.dataset.originalStatusId;
+            });
+        });
+
         // Update status via AJAX
-        document.querySelectorAll('.status-btn').forEach(btn => {
+        document.querySelectorAll('.status-save-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+                const action = this.closest('.status-action');
+                const select = action?.querySelector('.status-select');
+                if (!select) return;
+
                 const orderId = this.dataset.orderId;
-                const statusId = this.dataset.statusId;
-                const statusName = this.dataset.statusName;
+                const statusId = select.value;
+                const statusName = select.options[select.selectedIndex]?.textContent?.trim() || 'selected status';
                 
                 if (confirm(`Update order #${orderId} status to "${statusName}"?`)) {
+                    this.disabled = true;
+                    this.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>';
+
                     // AJAX call to update status
                     fetch('admin-orders.php', {
                         method: 'POST',
@@ -310,17 +374,27 @@ $statuses = $orderController->getStatuses();
                         },
                         body: `action=update_status&order_id=${orderId}&status_id=${statusId}`
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Request failed with status ' + response.status);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.success) {
+                            select.dataset.originalStatusId = statusId;
                             alert('Order status updated successfully!');
                             location.reload();
                         } else {
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fa-solid fa-check text-xs"></i>';
                             alert('Error: ' + data.message);
                         }
                     })
                     .catch(error => {
-                        alert('Error updating order status');
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fa-solid fa-check text-xs"></i>';
+                        alert('Error updating order status: ' + error.message);
                     });
                 }
             });
