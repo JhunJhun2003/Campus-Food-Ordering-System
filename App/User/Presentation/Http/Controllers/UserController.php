@@ -147,4 +147,26 @@ class UserController
             exit();
         }
     }
+
+    /**
+ * Get user profile
+ */
+public function getProfile(int $userId): ?array
+{
+    $useCase = new \App\User\Application\Usecases\GetProfileUseCase(
+        new \App\User\Infrastructure\Repositories\UserRepository()
+    );
+    return $useCase->execute($userId);
+}
+
+/**
+ * Update user profile
+ */
+public function updateProfile(int $userId, array $data): array
+{
+    $useCase = new \App\User\Application\Usecases\UpdateProfileUseCase(
+        new \App\User\Infrastructure\Repositories\UserRepository()
+    );
+    return $useCase->execute($userId, $data);
+}
 }

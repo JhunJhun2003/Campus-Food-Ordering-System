@@ -46,4 +46,6 @@ interface UserRepositoryInterface
     public function updateUser(int $userId, array $data): bool;
     public function getUserForEdit(int $userId): ?array;
 public function emailExistsExcluding(string $email, int $userId): bool;
+
+
 }

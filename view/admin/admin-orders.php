@@ -11,22 +11,82 @@ $currentUser = $adminController->getCurrentUser();
 
 $orderController = new OrderController();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_status') {
+// Handle AJAX request for order details
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
+    
+    $action = $_POST['action'] ?? '';
+    
+    // Update status
+    if ($action === 'update_status') {
+        $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
+        $statusId = isset($_POST['status_id']) ? (int) $_POST['status_id'] : 0;
 
-    $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
-    $statusId = isset($_POST['status_id']) ? (int) $_POST['status_id'] : 0;
+        if ($orderId <= 0 || $statusId <= 0) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Invalid order or status.'
+            ]);
+            exit();
+        }
 
-    if ($orderId <= 0 || $statusId <= 0) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Invalid order or status.'
-        ]);
+        echo json_encode($orderController->updateStatus($orderId, $statusId));
         exit();
     }
-
-    echo json_encode($orderController->updateStatus($orderId, $statusId));
-    exit();
+    
+    // Get order details for modal
+    if ($action === 'get_order_details') {
+        $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
+        
+        if ($orderId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid order ID.']);
+            exit();
+        }
+        
+        try {
+            // Get order from repository
+            $orderRepository = new \App\Order\Infrastructure\Repositories\OrderRepository();
+            $order = $orderRepository->findById($orderId);
+            
+            if (!$order) {
+                echo json_encode(['success' => false, 'message' => 'Order not found.']);
+                exit();
+            }
+            
+            // Get order items
+            $items = $orderRepository->getOrderItems($orderId);
+            
+            $orderData = [
+                'id' => $order->getId(),
+                'order_date' => $order->getOrderDate()->format('Y-m-d H:i:s'),
+                'customer_name' => $order->getCustomerName() ?? 'Unknown',
+                'customer_phone' => $order->getCustomerPhone() ?? 'N/A',
+                'delivery_address' => $order->getDeliveryAddress() ?? 'N/A',
+                'payment_method' => $order->getPaymentMethod() ?? 'N/A',
+                'account_name' => $order->getAccountName() ?? 'N/A',
+                'account_number' => $order->getAccountNumber() ?? 'N/A',
+                'transaction_image' => $order->getTransactionImage() ?? null,
+                'total_amount' => $order->getTotalAmount(),
+                'items' => $items,
+                'status_id' => $order->getStatusId()
+            ];
+            
+            // Get status name
+            $statuses = $orderController->getStatuses();
+            foreach ($statuses as $status) {
+                if ($status['id'] == $order->getStatusId()) {
+                    $orderData['status_name'] = $status['status_name'];
+                    break;
+                }
+            }
+            
+            echo json_encode(['success' => true, 'order' => $orderData]);
+            
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit();
+    }
 }
 
 $orders = $orderController->index();
@@ -43,7 +103,7 @@ $statuses = $orderController->getStatuses();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
+ <style>
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -93,6 +153,114 @@ $statuses = $orderController->getStatuses();
             color: #9CA3AF;
             cursor: not-allowed;
         }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F172A;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #94A3B8;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .detail-row {
+            display: flex;
+            padding: 8px 0;
+            border-bottom: 1px solid #F1F5F9;
+        }
+        .detail-label {
+            width: 140px;
+            font-weight: 600;
+            color: #475569;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+        .detail-value {
+            flex: 1;
+            color: #1E293B;
+            font-size: 13px;
+        }
+        .detail-value .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .order-item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #F1F5F9;
+        }
+        .order-item-row:last-child {
+            border-bottom: none;
+        }
+        .modal .btn-view-details {
+            color: #4F46E5;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .modal .btn-view-details:hover {
+            color: #4338CA;
+        }
+        .transaction-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            border: 1px solid #E2E8F0;
+        }
+        .transaction-image-placeholder {
+            color: #94A3B8;
+            font-size: 13px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen text-gray-800 antialiased">
@@ -116,27 +284,22 @@ $statuses = $orderController->getStatuses();
                     <i class="fa-solid fa-house text-lg w-6 text-center"></i>
                     <span>Dashboard</span>
                 </a>
-
                 <a href="admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-regular fa-user text-lg w-6 text-center"></i>
                     <span>Users</span>
                 </a>
-
                 <a href="admin-menu.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-book-open text-lg w-6 text-center"></i>
                     <span>Menu</span>
                 </a>
-
                 <a href="admin-orders.php" class="sidebar-link active flex items-center space-x-4 px-4 py-3 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
-
                 <a href="admin-reports.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-chart-simple text-lg w-6 text-center"></i>
                     <span>Reports</span>
                 </a>
-
                 <a href="admin-settings.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
                     <span>Settings</span>
@@ -169,7 +332,7 @@ $statuses = $orderController->getStatuses();
                 <p class="text-gray-400 text-sm mt-1">Manage all customer orders</p>
             </div>
             <div class="flex items-center space-x-3">
-                <select class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white">
+                <select class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white" id="statusFilter">
                     <option value="">All Status</option>
                     <?php foreach ($statuses as $status): ?>
                         <option value="<?php echo $status['id']; ?>">
@@ -177,7 +340,7 @@ $statuses = $orderController->getStatuses();
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <button class="flex items-center space-x-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+                <button class="flex items-center space-x-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium" onclick="location.reload()">
                     <i class="fa-solid fa-rotate"></i>
                     <span>Refresh</span>
                 </button>
@@ -211,7 +374,7 @@ $statuses = $orderController->getStatuses();
                             <th class="py-3 px-6">Total</th>
                             <th class="py-3 px-6">Status</th>
                             <th class="py-3 px-6">Date</th>
-                            <th class="py-3 px-6 text-center">Action</th>
+                            <th class="py-3 px-6 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
@@ -258,22 +421,31 @@ $statuses = $orderController->getStatuses();
                                         <?php echo $order->getOrderDate()->format('M d, Y h:i A'); ?>
                                     </td>
                                     <td class="py-4 px-6">
-                                        <div class="status-action">
-                                            <select class="status-select" data-original-status-id="<?php echo $order->getStatusId(); ?>" aria-label="Order #<?php echo $order->getId(); ?> status">
-                                                <?php foreach ($statuses as $status): ?>
-                                                    <option value="<?php echo $status['id']; ?>" <?php echo $status['id'] == $order->getStatusId() ? 'selected' : ''; ?>>
-                                                        <?php echo ucfirst($status['status_name']); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <button type="button"
-                                                    class="status-save-btn"
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <!-- View Details Button -->
+                                            <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium btn-view-details" 
                                                     data-order-id="<?php echo $order->getId(); ?>"
-                                                    title="Save status"
-                                                    aria-label="Save order #<?php echo $order->getId(); ?> status"
-                                                    disabled>
-                                                <i class="fa-solid fa-check text-xs"></i>
+                                                    title="View Order Details">
+                                                <i class="fa-regular fa-eye"></i>
                                             </button>
+                                            <!-- Status Update -->
+                                            <div class="status-action">
+                                                <select class="status-select" data-original-status-id="<?php echo $order->getStatusId(); ?>" aria-label="Order #<?php echo $order->getId(); ?> status">
+                                                    <?php foreach ($statuses as $status): ?>
+                                                        <option value="<?php echo $status['id']; ?>" <?php echo $status['id'] == $order->getStatusId() ? 'selected' : ''; ?>>
+                                                            <?php echo ucfirst($status['status_name']); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="button"
+                                                        class="status-save-btn"
+                                                        data-order-id="<?php echo $order->getId(); ?>"
+                                                        title="Save status"
+                                                        aria-label="Save order #<?php echo $order->getId(); ?> status"
+                                                        disabled>
+                                                    <i class="fa-solid fa-check text-xs"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -304,8 +476,29 @@ $statuses = $orderController->getStatuses();
         </div>
     </main>
 
+    <!-- ===== ORDER DETAILS MODAL ===== -->
+    <div id="orderDetailsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Order Details</h2>
+                <button onclick="closeOrderDetails()" class="modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div id="orderDetailsContent">
+                <div class="text-center py-8">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-500"></i>
+                    <p class="text-sm text-gray-400 mt-2">Loading order details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Search functionality
+        // ============================================
+        // SEARCH
+        // ============================================
         document.getElementById('searchInput').addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
             const rows = document.querySelectorAll('tbody tr');
@@ -322,18 +515,18 @@ $statuses = $orderController->getStatuses();
             });
         });
 
-        // Status filter
-        document.querySelector('select')?.addEventListener('change', function() {
-            const status = this.value.toLowerCase();
+        // ============================================
+        // STATUS FILTER
+        // ============================================
+        document.getElementById('statusFilter')?.addEventListener('change', function() {
+            const statusId = this.value;
             const rows = document.querySelectorAll('tbody tr');
             
             rows.forEach(row => {
                 const statusCell = row.querySelector('td:nth-child(6) span');
                 if (!statusCell) return;
                 
-                const rowStatus = statusCell.textContent?.toLowerCase() || '';
-                
-                if (status === '' || rowStatus.includes(status)) {
+                if (statusId === '' || statusCell.textContent?.toLowerCase().includes(statusId)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -341,6 +534,9 @@ $statuses = $orderController->getStatuses();
             });
         });
 
+        // ============================================
+        // STATUS UPDATE
+        // ============================================
         document.querySelectorAll('.status-select').forEach(select => {
             select.addEventListener('change', function() {
                 const action = this.closest('.status-action');
@@ -351,7 +547,6 @@ $statuses = $orderController->getStatuses();
             });
         });
 
-        // Update status via AJAX
         document.querySelectorAll('.status-save-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const action = this.closest('.status-action');
@@ -366,7 +561,6 @@ $statuses = $orderController->getStatuses();
                     this.disabled = true;
                     this.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>';
 
-                    // AJAX call to update status
                     fetch('admin-orders.php', {
                         method: 'POST',
                         headers: {
@@ -374,12 +568,7 @@ $statuses = $orderController->getStatuses();
                         },
                         body: `action=update_status&order_id=${orderId}&status_id=${statusId}`
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Request failed with status ' + response.status);
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
                             select.dataset.originalStatusId = statusId;
@@ -400,9 +589,184 @@ $statuses = $orderController->getStatuses();
             });
         });
 
-        // Refresh button
-        document.querySelector('.bg-indigo-600')?.addEventListener('click', function() {
-            location.reload();
+        // ============================================
+        // VIEW ORDER DETAILS
+        // ============================================
+        document.querySelectorAll('.btn-view-details').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const orderId = this.dataset.orderId;
+                openOrderDetails(orderId);
+            });
+        });
+
+        function openOrderDetails(orderId) {
+            const modal = document.getElementById('orderDetailsModal');
+            const content = document.getElementById('orderDetailsContent');
+            
+            // Show loading
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-500"></i>
+                    <p class="text-sm text-gray-400 mt-2">Loading order details...</p>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Fetch order details
+            fetch('admin-orders.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=get_order_details&order_id=${orderId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.order) {
+                    renderOrderDetails(data.order);
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8 text-red-500">
+                            <i class="fa-solid fa-circle-exclamation text-3xl"></i>
+                            <p class="text-sm mt-2">${data.message || 'Failed to load order details.'}</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                content.innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <i class="fa-solid fa-circle-exclamation text-3xl"></i>
+                        <p class="text-sm mt-2">Error loading order details: ${error.message}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function renderOrderDetails(order) {
+            const statusColors = {
+                'pending': 'bg-yellow-100 text-yellow-800',
+                'accepted': 'bg-blue-100 text-blue-800',
+                'preparing': 'bg-purple-100 text-purple-800',
+                'ready': 'bg-cyan-100 text-cyan-800',
+                'completed': 'bg-green-100 text-green-800',
+                'cancelled': 'bg-red-100 text-red-800'
+            };
+            
+            const statusColor = statusColors[order.status_name?.toLowerCase()] || 'bg-gray-100 text-gray-800';
+            
+            // Format items HTML
+            let itemsHtml = '';
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    itemsHtml += `
+                        <div class="order-item-row">
+                            <span>${item.food_name} (Qty: ${item.quantity})</span>
+                            <span class="font-medium">$${parseFloat(item.subtotal).toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                itemsHtml = `<p class="text-sm text-gray-400">No items found</p>`;
+            }
+            
+            // Transaction image
+            let imageHtml = '';
+            if (order.transaction_image) {
+                imageHtml = `
+                    <img src="/Campus-Food-Ordering-System/Public/${order.transaction_image}" 
+                         class="transaction-image" 
+                         alt="Transaction Image"
+                         onerror="this.style.display='none'">
+                `;
+            } else {
+                imageHtml = `<span class="transaction-image-placeholder">No transaction image uploaded</span>`;
+            }
+            
+            const content = document.getElementById('orderDetailsContent');
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <!-- Status -->
+                    <div class="detail-row">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value">
+                            <span class="status-badge ${statusColor}">${order.status_name || 'N/A'}</span>
+                        </span>
+                    </div>
+                    
+                    <!-- Customer Info -->
+                    <div class="detail-row">
+                        <span class="detail-label">Order ID</span>
+                        <span class="detail-value font-medium">#${order.id}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Customer Name</span>
+                        <span class="detail-value">${order.customer_name}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Phone</span>
+                        <span class="detail-value">${order.customer_phone}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Delivery Address</span>
+                        <span class="detail-value">${order.delivery_address}</span>
+                    </div>
+                    
+                    <!-- Payment Info -->
+                    <div class="detail-row">
+                        <span class="detail-label">Payment Method</span>
+                        <span class="detail-value">${order.payment_method}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Account Name</span>
+                        <span class="detail-value">${order.account_name}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Account Number</span>
+                        <span class="detail-value">${order.account_number}</span>
+                    </div>
+                    
+                    <!-- Transaction Image -->
+                    <div class="detail-row">
+                        <span class="detail-label">Transaction Image</span>
+                        <span class="detail-value">${imageHtml}</span>
+                    </div>
+                    
+                    <!-- Order Items -->
+                    <div class="border-t border-gray-100 pt-3">
+                        <h3 class="font-semibold text-gray-900 text-sm mb-2">Order Items</h3>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                    
+                    <!-- Total -->
+                    <div class="border-t border-gray-100 pt-3 flex justify-between font-bold text-gray-900">
+                        <span>Total Amount</span>
+                        <span class="text-emerald-600">$${parseFloat(order.total_amount).toFixed(2)}</span>
+                    </div>
+                    
+                    <!-- Date -->
+                    <div class="text-xs text-gray-400 text-right border-t border-gray-100 pt-3">
+                        Order placed: ${new Date(order.order_date).toLocaleString()}
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeOrderDetails() {
+            const modal = document.getElementById('orderDetailsModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on overlay click
+        document.getElementById('orderDetailsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeOrderDetails();
+            }
         });
     </script>
 

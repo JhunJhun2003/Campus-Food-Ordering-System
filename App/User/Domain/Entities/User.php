@@ -113,4 +113,6 @@ class User
             'updated_at' => $this->updatedAt ? $this->updatedAt->format('Y-m-d H:i:s') : null
         ];
     }
+
+    
 }
