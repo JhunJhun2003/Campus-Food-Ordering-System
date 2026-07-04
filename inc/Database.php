@@ -5,7 +5,7 @@ class Database
 {
     private static ?PDO $connection = null;
     private static string $host   = '127.0.0.1';
-    private static string $dbname = 'campus_food_ordering_system';
+    private static string $dbname = 'campus_food_ordering_system1';
     private static string $user   = 'root';
     private static string $pass   = 'root123';
 

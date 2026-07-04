@@ -358,3 +358,17 @@ INSERT IGNORE INTO settings (setting_key, setting_value, setting_group) VALUES
 
 -- Verify settings
 SELECT * FROM settings;
+
+CREATE TABLE IF NOT EXISTS email_verifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    verification_code VARCHAR(10) NOT NULL,
+    is_verified BOOLEAN DEFAULT FALSE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN email_verified_at TIMESTAMP NULL;
