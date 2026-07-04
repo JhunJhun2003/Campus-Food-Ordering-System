@@ -17,6 +17,15 @@ if (!$userController->isLoggedIn()) {
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'];
 
+// Get cart item count
+$itemCount = 0;
+try {
+    $cartController = new \App\Cart\Presentation\Http\Controllers\CartController();
+    $itemCount = $cartController->getItemCount($userId);
+} catch (\Exception $e) {
+    $itemCount = 0;
+}
+
 // Get orders from OrderController
 $orderController = new OrderController();
 $orders = $orderController->getUserOrders($userId);
@@ -119,11 +128,11 @@ $statusColors = [
             </nav>
 
             <div class="flex items-center space-x-6">
-                <button class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
-                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
-                </button>
                 <a href="cart.php" class="relative text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
                     <i class="fa-solid fa-cart-shopping text-lg"></i>
+                    <span id="header-cart-badge" class="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm transition-all scale-100 <?php echo $itemCount > 0 ? '' : 'hidden'; ?>">
+                        <?php echo $itemCount; ?>
+                    </span>
                 </a>
                 <a href="profile.php" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
                     <i class="fa-regular fa-user text-lg"></i>

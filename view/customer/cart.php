@@ -113,12 +113,12 @@ $isCartEmpty = empty($items);
             </nav>
 
             <div class="flex items-center space-x-6">
-                <button class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
+                <!-- <button class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
                     <i class="fa-solid fa-magnifying-glass text-lg"></i>
-                </button>
+                </button> -->
                 <button onclick="scrollToCart()" class="relative text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
                     <i class="fa-solid fa-cart-shopping text-lg"></i>
-                    <span id="header-cart-badge" class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm <?php echo $itemCount > 0 ? '' : 'hidden'; ?>">
+                    <span id="header-cart-badge" class="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm <?php echo $itemCount > 0 ? '' : 'hidden'; ?>">
                         <?php echo $itemCount; ?>
                     </span>
                 </button>

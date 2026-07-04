@@ -83,8 +83,8 @@ $categoryEmojis = [
 
             <!-- Right Interfaces -->
             <div class="flex items-center space-x-6">
-                <button onclick="focusSearch()" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
-                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                <!-- <button onclick="focusSearch()" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50"> -->
+                    <!-- <i class="fa-solid fa-magnifying-glass text-lg"></i>    -->
                 </button>
                 <a href="cart.php" class="relative text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
                     <i class="fa-solid fa-cart-shopping text-lg"></i>
