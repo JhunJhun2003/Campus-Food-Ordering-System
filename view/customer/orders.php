@@ -49,15 +49,6 @@ $statusColors = [
     'completed' => 'bg-emerald-50 border-emerald-100 text-emerald-700',
     'cancelled' => 'bg-rose-50 border-rose-100 text-rose-600'
 ];
-
-$statusIcons = [
-    'pending' => 'fa-clock',
-    'accepted' => 'fa-check-circle',
-    'preparing' => 'fa-utensils',
-    'ready' => 'fa-box',
-    'completed' => 'fa-circle-check',
-    'cancelled' => 'fa-circle-xmark'
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -258,7 +249,7 @@ $statusIcons = [
                     </div>
                 <?php endforeach; ?>
 
-                <!-- Completed Orders -->
+                <!-- Completed Orders (Reorder Button Removed) -->
                 <?php foreach ($groupedOrders['completed'] as $order): ?>
                     <div class="order-card bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden" data-status="completed">
                         <div class="bg-slate-50/30 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
@@ -287,16 +278,13 @@ $statusIcons = [
                                     <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Total</span>
                                     <span class="text-xl font-extrabold text-slate-900">$<?php echo number_format($order['total_amount'], 2); ?></span>
                                 </div>
-                                <button onclick="reorderItems(<?php echo $order['id']; ?>)" class="border border-emerald-500 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold px-5 py-3 rounded-xl text-xs interactive-transition flex items-center justify-center space-x-2">
-                                    <i class="fa-solid fa-rotate-left"></i>
-                                    <span>Reorder</span>
-                                </button>
+                                <!-- ❌ Reorder Button Removed -->
                             </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
 
-                <!-- Cancelled Orders -->
+                <!-- Cancelled Orders (Reorder Button Removed) -->
                 <?php foreach ($groupedOrders['cancelled'] as $order): ?>
                     <div class="order-card bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden" data-status="cancelled">
                         <div class="bg-slate-50/30 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
@@ -325,9 +313,7 @@ $statusIcons = [
                                     <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Total</span>
                                     <span class="text-xl font-extrabold text-slate-900">$<?php echo number_format($order['total_amount'], 2); ?></span>
                                 </div>
-                                <button onclick="reorderItems(<?php echo $order['id']; ?>)" class="border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold px-5 py-3 rounded-xl text-xs interactive-transition">
-                                    Reorder
-                                </button>
+                                <!-- ❌ Reorder Button Removed -->
                             </div>
                         </div>
                     </div>
@@ -465,30 +451,6 @@ $statusIcons = [
             });
         }
 
-        function reorderItems(orderId) {
-            fetch('orders.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=reorder&order_id=${orderId}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const toast = document.getElementById('reorder-toast');
-                    const label = document.getElementById('toast-item-label');
-                    label.innerText = data.message || 'Items added to cart!';
-
-                    toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
-                    toast.classList.add('translate-y-0', 'opacity-100');
-
-                    setTimeout(() => {
-                        toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
-                        toast.classList.remove('translate-y-0', 'opacity-100');
-                    }, 3000);
-                }
-            });
-        }
-
         function openLiveTracking(orderId, statusCode) {
             document.getElementById('live-order-id').innerText = `Tracking Order ${orderId}`;
             
@@ -545,14 +507,7 @@ $statusIcons = [
             bullet.className = "absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center border-2 border-slate-200 bg-white z-10";
             bullet.innerHTML = "<div class='w-2 h-2 rounded-full bg-slate-200'></div>";
         }
-
-        // Reorder AJAX handler
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle reorder via button clicks
-            document.querySelectorAll('[onclick*="reorderItems"]').forEach(btn => {
-                // The onclick already handles it via the function above
-            });
-        });
     </script>
+
 </body>
 </html>

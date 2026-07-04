@@ -656,7 +656,7 @@ if (isset($_GET['edit_payment'])) {
                 
                 <div class="form-group">
                     <label>Payment Method Name <span class="text-red-500">*</span></label>
-                    <input type="text" name="payment_name" value="<?php echo htmlspecialchars($editPayment['name']); ?>" required>
+                    <input type="text" name="payment_name" value="<?php echo htmlspecialchars($editPayment['method_name']); ?>" required>
                 </div>
                 
                 <div class="form-group">
