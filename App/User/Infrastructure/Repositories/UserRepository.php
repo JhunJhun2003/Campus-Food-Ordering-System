@@ -8,6 +8,7 @@ use App\User\Domain\ValueObjects\Email;
 use App\User\Domain\ValueObjects\Password;
 use Inc\Database;
 use PDO;
+use DateTime;
 
 class UserRepository implements UserRepositoryInterface
 {
@@ -22,43 +23,52 @@ class UserRepository implements UserRepositoryInterface
     // USER CRUD METHODS
     // ============================================
 
-    public function save(User $user): void
-    {
-        if ($user->getId()->isEmpty()) {
-            $sql = "INSERT INTO users (role_id, name, email, password, phone, address) 
-                    VALUES (:role_id, :name, :email, :password, :phone, :address)";
-            
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([
-                ':role_id' => $user->getRoleId(),
-                ':name' => $user->getName(),
-                ':email' => $user->getEmail()->getValue(),
-                ':password' => $user->getPassword()->getValue(),
-                ':phone' => $user->getPhone(),
-                ':address' => $user->getAddress()
-            ]);
-        } else {
-            $sql = "UPDATE users SET 
-                    role_id = :role_id,
-                    name = :name, 
-                    email = :email, 
-                    password = :password, 
-                    phone = :phone, 
-                    address = :address 
-                    WHERE id = :id";
-            
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([
-                ':role_id' => $user->getRoleId(),
-                ':name' => $user->getName(),
-                ':email' => $user->getEmail()->getValue(),
-                ':password' => $user->getPassword()->getValue(),
-                ':phone' => $user->getPhone(),
-                ':address' => $user->getAddress(),
-                ':id' => $user->getId()->getValue()
-            ]);
-        }
+public function save(User $user): int
+{
+    if ($user->getId()->isEmpty()) {
+        $sql = "INSERT INTO users (role_id, name, email, password, phone, address, is_verified) 
+                VALUES (:role_id, :name, :email, :password, :phone, :address, :is_verified)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':role_id' => $user->getRoleId(),
+            ':name' => $user->getName(),
+            ':email' => $user->getEmail()->getValue(),
+            ':password' => $user->getPassword()->getValue(),
+            ':phone' => $user->getPhone(),
+            ':address' => $user->getAddress(),
+            ':is_verified' => $user->isVerified() ? 1 : 0
+        ]);
+        
+        return (int) $this->db->lastInsertId(); // ✅ Return the ID
+    } else {
+        $sql = "UPDATE users SET 
+                role_id = :role_id,
+                name = :name, 
+                email = :email, 
+                password = :password, 
+                phone = :phone, 
+                address = :address,
+                is_verified = :is_verified,
+                email_verified_at = :email_verified_at
+                WHERE id = :id";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':role_id' => $user->getRoleId(),
+            ':name' => $user->getName(),
+            ':email' => $user->getEmail()->getValue(),
+            ':password' => $user->getPassword()->getValue(),
+            ':phone' => $user->getPhone(),
+            ':address' => $user->getAddress(),
+            ':is_verified' => $user->isVerified() ? 1 : 0,
+            ':email_verified_at' => $user->getEmailVerifiedAt() ? $user->getEmailVerifiedAt()->format('Y-m-d H:i:s') : null,
+            ':id' => $user->getId()->getValue()
+        ]);
+        
+        return $user->getId()->getValue(); // ✅ Return the ID
     }
+}
 
     public function findById(UserId $id): ?User
     {
@@ -130,7 +140,7 @@ class UserRepository implements UserRepositoryInterface
     }
 
     // ============================================
-    // ADMIN USER MANAGEMENT METHODS (NEW)
+    // ADMIN USER MANAGEMENT METHODS
     // ============================================
 
     public function getAllRoles(): array
@@ -152,8 +162,8 @@ class UserRepository implements UserRepositoryInterface
     {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         
-        $sql = "INSERT INTO users (role_id, name, email, password, phone) 
-                VALUES (:role_id, :name, :email, :password, :phone)";
+        $sql = "INSERT INTO users (role_id, name, email, password, phone, is_verified) 
+                VALUES (:role_id, :name, :email, :password, :phone, 0)";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -169,7 +179,6 @@ class UserRepository implements UserRepositoryInterface
 
     public function deleteUser(int $userId): bool
     {
-        // Prevent deleting main admin (ID = 1)
         if ($userId === 1) {
             return false;
         }
@@ -203,6 +212,10 @@ class UserRepository implements UserRepositoryInterface
         if (isset($data['password']) && !empty($data['password'])) {
             $fields[] = "password = :password";
             $params[':password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+        if (isset($data['is_verified'])) {
+            $fields[] = "is_verified = :is_verified";
+            $params[':is_verified'] = $data['is_verified'] ? 1 : 0;
         }
         
         if (empty($fields)) {
@@ -268,32 +281,28 @@ class UserRepository implements UserRepositoryInterface
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-/**
- * Get user by ID for editing (with role info)
- */
-public function getUserForEdit(int $userId): ?array
-{
-    $sql = "SELECT u.*, r.role_name 
-            FROM users u 
-            JOIN user_roles r ON u.role_id = r.id 
-            WHERE u.id = :id";
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([':id' => $userId]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    return $result ?: null;
-}
 
-/**
- * Check if email exists excluding a specific user
- */
-public function emailExistsExcluding(string $email, int $userId): bool
-{
-    $sql = "SELECT id FROM users WHERE email = :email AND id != :user_id";
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([':email' => $email, ':user_id' => $userId]);
-    return $stmt->fetch() !== false;
-}
+    public function getUserForEdit(int $userId): ?array
+    {
+        $sql = "SELECT u.*, r.role_name 
+                FROM users u 
+                JOIN user_roles r ON u.role_id = r.id 
+                WHERE u.id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
+    public function emailExistsExcluding(string $email, int $userId): bool
+    {
+        $sql = "SELECT id FROM users WHERE email = :email AND id != :user_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':email' => $email, ':user_id' => $userId]);
+        return $stmt->fetch() !== false;
+    }
+
     // ============================================
     // REPORTS METHODS
     // ============================================
@@ -443,7 +452,9 @@ public function emailExistsExcluding(string $email, int $userId): bool
             new Email($data['email']),
             new Password($data['password'], true),
             $data['phone'] ?? null,
-            $data['address'] ?? null
+            $data['address'] ?? null,
+            (bool) ($data['is_verified'] ?? false),
+            !empty($data['email_verified_at']) ? new DateTime($data['email_verified_at']) : null
         );
     }
 }

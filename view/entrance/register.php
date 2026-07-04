@@ -4,6 +4,9 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
+use App\User\Application\Usecases\SendVerificationUseCase;
+use App\User\Infrastructure\Repositories\EmailVerificationRepository;
+use App\User\Infrastructure\Repositories\UserRepository;
 
 $controller = new UserController();
 
@@ -18,14 +21,35 @@ if ($controller->isLoggedIn()) {
 }
 
 $error = '';
-$success = '';
 
 // Handle Registration
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $result = $controller->register();
     
     if ($result['success']) {
-        $success = $result['message'];
+        // Get the user ID and email
+        $user = $result['user'];
+        $registeredUserId = $user->getId()->getValue();
+        $registeredEmail = $user->getEmail()->getValue();
+        
+        // Send verification code
+        $verificationRepo = new EmailVerificationRepository();
+        $userRepo = new UserRepository();
+        $sendVerification = new SendVerificationUseCase($userRepo, $verificationRepo);
+        $verifyResult = $sendVerification->execute($registeredUserId);
+        
+        if ($verifyResult['success']) {
+            // Store user info in session
+            $_SESSION['user_id'] = $registeredUserId;
+            $_SESSION['user_email'] = $registeredEmail;
+            $_SESSION['test_code'] = $verifyResult['code']; // For testing
+            
+            // Redirect to verification page
+            header('Location: verify-email.php');
+            exit();
+        } else {
+            $error = $verifyResult['message'];
+        }
     } else {
         if (isset($result['errors'])) {
             $error = implode('<br>', $result['errors']);
@@ -55,11 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background-color: #FEE2E2;
             border: 1px solid #FCA5A5;
             color: #991B1B;
-        }
-        .alert-success {
-            background-color: #D1FAE5;
-            border: 1px solid #6EE7B7;
-            color: #065F46;
         }
     </style>
 </head>
@@ -93,76 +112,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span><?php echo htmlspecialchars($error); ?></span>
                 </div>
             <?php endif; ?>
-            
-            <?php if ($success): ?>
-                <div class="alert-success px-4 py-3 rounded-xl mb-4 text-sm font-medium flex items-center space-x-2">
-                    <i class="fa-solid fa-circle-check"></i>
-                    <span><?php echo htmlspecialchars($success); ?></span>
-                </div>
-                <div class="text-center mt-2">
-                    <a href="login.php" class="text-emerald-600 hover:text-emerald-700 font-semibold text-sm">Click here to login →</a>
-                </div>
-            <?php else: ?>
-                <div class="mb-6">
-                    <h2 class="text-2xl font-bold text-slate-900">Register</h2>
-                    <p class="text-sm text-slate-500">Create your account to start ordering</p>
-                </div>
 
-                <form method="POST" action="" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-800 mb-1.5">Full Name</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-regular fa-user"></i>
-                            </span>
-                            <input name="name" type="text" placeholder="Enter full name" value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>" required class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-                        </div>
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-900">Register</h2>
+                <p class="text-sm text-slate-500">Create your account to start ordering</p>
+            </div>
+
+            <form method="POST" action="" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-800 mb-1.5">Email Address</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-regular fa-envelope"></i>
+                        </span>
+                        <input name="email" type="email" placeholder="Enter email address" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-800 mb-1.5">Email Address</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-regular fa-envelope"></i>
-                            </span>
-                            <input name="email" type="email" placeholder="Enter email address" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-800 mb-1.5">Phone Number</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-phone"></i>
-                            </span>
-                            <input name="phone" type="tel" placeholder="Enter phone number" value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : ''; ?>" class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-                        </div>
-                        <p class="text-xs text-slate-400 mt-1">Optional but recommended for delivery updates</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-800 mb-1.5">Password</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-lock"></i>
-                            </span>
-                            <input name="password" type="password" placeholder="Enter password" required class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
-                        </div>
-                        <p class="text-xs text-slate-400 mt-1">Must be at least 8 characters with uppercase, lowercase, and a number</p>
-                    </div>
-
-                    <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 text-sm tracking-wide">
-                        Create Account
-                    </button>
-                </form>
-
-                <div class="mt-6 text-center">
-                    <p class="text-xs text-slate-500 font-medium">
-                        Already have an account? 
-                        <a href="login.php" class="text-slate-800 hover:text-emerald-600 font-bold underline transition-colors decoration-1 underline-offset-2">Login</a>
-                    </p>
                 </div>
-            <?php endif; ?>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-800 mb-1.5">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input name="password" type="password" placeholder="Enter password" required class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Must be at least 8 characters with uppercase, lowercase, and a number</p>
+                </div>
+
+                <button type="submit" name="register" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 text-sm tracking-wide">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <p class="text-xs text-slate-500 font-medium">
+                    Already have an account? 
+                    <a href="login.php" class="text-slate-800 hover:text-emerald-600 font-bold underline transition-colors decoration-1 underline-offset-2">Login</a>
+                </p>
+            </div>
         </div>
     </div>
 

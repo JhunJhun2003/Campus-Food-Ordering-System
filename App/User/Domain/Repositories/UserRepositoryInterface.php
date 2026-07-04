@@ -8,7 +8,7 @@ use App\User\Domain\ValueObjects\Email;
 interface UserRepositoryInterface
 {
     // ===== USER CRUD =====
-    public function save(User $user): void;
+    public function save(User $user): int;
     public function findById(UserId $id): ?User;
     public function findByEmail(Email $email): ?User;
     public function findAll(): array;

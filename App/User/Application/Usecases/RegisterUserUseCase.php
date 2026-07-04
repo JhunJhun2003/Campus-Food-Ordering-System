@@ -21,6 +21,8 @@ class RegisterUserUseCase
     public function execute(RegisterUserRequest $request): RegisterUserResponse
     {
         $errors = [];
+        $email = null;
+        $password = null;
 
         // Validate name
         if (empty($request->name) || strlen($request->name) < 2) {
@@ -42,7 +44,7 @@ class RegisterUserUseCase
         }
 
         // Check if user exists
-        if (isset($email) && $this->userRepository->exists($email)) {
+        if ($email !== null && $this->userRepository->exists($email)) {
             $errors['email'] = 'Email already registered';
         }
 
@@ -51,10 +53,10 @@ class RegisterUserUseCase
             return new RegisterUserResponse(false, 'Validation failed', null, $errors);
         }
 
-        // Get role_id from repository (NO SQL HERE!)
+        // Get role_id from repository
         $roleId = $this->userRepository->getRoleId('user');
 
-        // Create user
+        // Create user (not verified yet)
         $user = new User(
             new UserId(null),
             $roleId,
@@ -63,16 +65,32 @@ class RegisterUserUseCase
             $email,
             $password,
             $request->phone,
-            null // address
+            null, // address
+            false, // isVerified
+            null // emailVerifiedAt
         );
 
-        // Save user
-        $this->userRepository->save($user);
+        // Save user and get the ID ✅
+        $userId = $this->userRepository->save($user);
+
+        // Create a new User object with the ID
+        $userWithId = new User(
+            new UserId($userId),
+            $roleId,
+            'user',
+            $request->name,
+            $email,
+            $password,
+            $request->phone,
+            null,
+            false,
+            null
+        );
 
         return new RegisterUserResponse(
             true,
-            'Registration successful! Please login.',
-            $user
+            'Registration successful! Please verify your email.',
+            $userWithId
         );
     }
 }

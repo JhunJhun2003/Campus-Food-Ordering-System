@@ -4,9 +4,21 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
+use App\User\Application\Usecases\SendVerificationUseCase;
+use App\User\Infrastructure\Repositories\EmailVerificationRepository;
+use App\User\Infrastructure\Repositories\UserRepository;
 
 $controller = new UserController();
-$controller->requireGuest();
+
+// Redirect if already logged in
+if ($controller->isLoggedIn()) {
+    if ($_SESSION['user_role'] === 'admin') {
+        header('Location: ../admin/admin-dashboard.php');
+    } else {
+        header('Location: ../customer/dashboard.php');
+    }
+    exit();
+}
 
 $error = $_SESSION['error'] ?? '';
 $success = $_SESSION['success'] ?? '';
@@ -29,7 +41,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $result = $controller->register();
     
     if ($result['success']) {
-        $success = $result['message'];
+        // Get the user from response
+        $user = $result['user'];
+        $registeredUserId = $user->getId()->getValue();
+        $registeredEmail = $user->getEmail()->getValue();
+        
+        // Send verification code
+        $verificationRepo = new EmailVerificationRepository();
+        $userRepo = new UserRepository();
+        $sendVerification = new SendVerificationUseCase($userRepo, $verificationRepo);
+        $verifyResult = $sendVerification->execute($registeredUserId);
+        
+        if ($verifyResult['success']) {
+            // Store user info in session for verification page
+            $_SESSION['user_id'] = $registeredUserId;
+            $_SESSION['user_email'] = $registeredEmail;
+            $_SESSION['test_code'] = $verifyResult['code']; // For testing only
+            
+            // Redirect to verification page
+            header('Location: verify-email.php');
+            exit();
+        } else {
+            $error = $verifyResult['message'];
+        }
     } else {
         if (isset($result['errors'])) {
             $error = implode('<br>', $result['errors']);

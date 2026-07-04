@@ -15,5 +15,7 @@
             "email": "kokyaw3482@gamil.com"
         }
     ],
-    "require": {}
+    "require": {
+        "phpmailer/phpmailer": "^7.1"
+    }
 }

@@ -18,6 +18,8 @@ class User
     private ?string $address;
     private DateTime $createdAt;
     private ?DateTime $updatedAt;
+    private bool $isVerified;  // ✅ ADD THIS
+    private ?DateTime $emailVerifiedAt;  // ✅ ADD THIS
 
     public function __construct(
         UserId $id,
@@ -27,7 +29,9 @@ class User
         Email $email,
         Password $password,
         ?string $phone = null,
-        ?string $address = null
+        ?string $address = null,
+        bool $isVerified = false,  // ✅ ADD THIS
+        ?DateTime $emailVerifiedAt = null  // ✅ ADD THIS
     ) {
         $this->id = $id;
         $this->roleId = $roleId;
@@ -37,6 +41,8 @@ class User
         $this->password = $password;
         $this->phone = $phone;
         $this->address = $address;
+        $this->isVerified = $isVerified;
+        $this->emailVerifiedAt = $emailVerifiedAt;
         $this->createdAt = new DateTime();
         $this->updatedAt = null;
     }
@@ -52,6 +58,8 @@ class User
     public function getAddress(): ?string { return $this->address; }
     public function getCreatedAt(): DateTime { return $this->createdAt; }
     public function getUpdatedAt(): ?DateTime { return $this->updatedAt; }
+    public function isVerified(): bool { return $this->isVerified; }  // ✅ ADD THIS
+    public function getEmailVerifiedAt(): ?DateTime { return $this->emailVerifiedAt; }  // ✅ ADD THIS
 
     // Role Check Methods
     public function isAdmin(): bool { return $this->roleName === 'admin'; }
@@ -99,6 +107,13 @@ class User
         $this->updatedAt = new DateTime();
     }
 
+    public function markAsVerified(): void  // ✅ ADD THIS
+    {
+        $this->isVerified = true;
+        $this->emailVerifiedAt = new DateTime();
+        $this->updatedAt = new DateTime();
+    }
+
     public function toArray(): array
     {
         return [
@@ -109,10 +124,10 @@ class User
             'email' => $this->email->getValue(),
             'phone' => $this->phone,
             'address' => $this->address,
+            'is_verified' => $this->isVerified,
+            'email_verified_at' => $this->emailVerifiedAt ? $this->emailVerifiedAt->format('Y-m-d H:i:s') : null,
             'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $this->updatedAt ? $this->updatedAt->format('Y-m-d H:i:s') : null
         ];
     }
-
-    
 }

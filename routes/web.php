@@ -373,5 +373,31 @@ $routes[] = [
     },
     'method' => 'GET'
 ];
+
+// Email Verification Page
+$routes[] = [
+    'pattern' => '/^\/verify-email$/',
+    'callback' => function() {
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit();
+        }
+        require_once __DIR__ . '/../view/entrance/verify-email.php';
+    },
+    'method' => 'GET'
+];
+
+// Email Verification POST
+$routes[] = [
+    'pattern' => '/^\/verify-email$/',
+    'callback' => function() {
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit();
+        }
+        require_once __DIR__ . '/../view/entrance/verify-email.php';
+    },
+    'method' => 'POST'
+];
 // Return routes
 return $routes;
