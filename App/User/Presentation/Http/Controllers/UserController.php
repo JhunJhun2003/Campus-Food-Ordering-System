@@ -91,7 +91,9 @@ class UserController
 
     public function isLoggedIn(): bool
     {
-        return isset($_SESSION['user_id']);
+        return !empty($_SESSION['user_id'])
+            && !empty($_SESSION['user_name'])
+            && !empty($_SESSION['user_role']);
     }
 
     public function getCurrentUser(): ?array
@@ -101,10 +103,10 @@ class UserController
         }
 
         return [
-            'id' => $_SESSION['user_id'],
-            'name' => $_SESSION['user_name'],
-            'email' => $_SESSION['user_email'],
-            'role' => $_SESSION['user_role']
+            'id' => $_SESSION['user_id'] ?? null,
+            'name' => $_SESSION['user_name'] ?? '',
+            'email' => $_SESSION['user_email'] ?? '',
+            'role' => $_SESSION['user_role'] ?? 'user'
         ];
     }
 
@@ -137,7 +139,7 @@ class UserController
     public function requireGuest(): void
     {
         if ($this->isLoggedIn()) {
-            $role = $_SESSION['user_role'];
+            $role = $_SESSION['user_role'] ?? 'user';
             $redirect = match ($role) {
                 'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
                 'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',

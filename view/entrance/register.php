@@ -42,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
             // Store user info in session
             $_SESSION['user_id'] = $registeredUserId;
             $_SESSION['user_email'] = $registeredEmail;
-            $_SESSION['test_code'] = $verifyResult['code']; // For testing
             
             // Redirect to verification page
             header('Location: verify-email.php');

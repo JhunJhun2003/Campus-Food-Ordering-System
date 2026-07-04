@@ -6,21 +6,28 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use App\User\Infrastructure\Repositories\EmailVerificationRepository;
 use App\User\Infrastructure\Repositories\UserRepository;
 
-// Check if user is logged in
+// Allow verification flow to continue even if the user is not fully logged in yet.
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit();
+    $userId = 0;
+    $userEmail = $_SESSION['user_email'] ?? '';
+} else {
+    $userId = $_SESSION['user_id'];
+    $userEmail = $_SESSION['user_email'] ?? '';
 }
 
-$userId = $_SESSION['user_id'];
-$userEmail = $_SESSION['user_email'] ?? '';
-
-// Get user email from database if not in session
-if (empty($userEmail)) {
+// Resolve the current user from the session or the stored email.
+if (empty($userEmail) || $userId === 0) {
     $userRepo = new UserRepository();
-    $user = $userRepo->findById(new \App\User\Domain\ValueObjects\UserId($userId));
+    if ($userId > 0) {
+        $user = $userRepo->findById(new \App\User\Domain\ValueObjects\UserId($userId));
+    } else {
+        $user = !empty($userEmail) ? $userRepo->findByEmail(new \App\User\Domain\ValueObjects\Email($userEmail)) : null;
+    }
+
     if ($user) {
+        $userId = $user->getId()->getValue();
         $userEmail = $user->getEmail()->getValue();
+        $_SESSION['user_id'] = $userId;
         $_SESSION['user_email'] = $userEmail;
     }
 }
@@ -30,8 +37,15 @@ $success = '';
 $isVerified = false;
 
 // Handle Verification
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_email'])) {
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST' &&
+    !isset($_POST['resend_code']) &&
+    (!empty($_POST['verification_code']) || isset($_POST['verify_email']))
+) {
     $email = trim($_POST['email'] ?? '');
+    if (empty($email)) {
+        $email = $userEmail;
+    }
     $code = trim($_POST['verification_code'] ?? '');
     
     if (empty($email) || empty($code)) {
@@ -39,13 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_email'])) {
     } else {
         $verificationRepo = new EmailVerificationRepository();
         $userRepo = new UserRepository();
+        
         $verifyEmail = new \App\User\Application\Usecases\VerifyEmailUseCase($userRepo, $verificationRepo);
         $result = $verifyEmail->execute($email, $code);
         
         if ($result['success']) {
             $success = 'Email verified successfully! You can now login.';
             $isVerified = true;
-            // Clear session and redirect to login
             echo '<meta http-equiv="refresh" content="3;url=login.php">';
         } else {
             $error = $result['message'];
@@ -62,6 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_code'])) {
     } else {
         $verificationRepo = new EmailVerificationRepository();
         $userRepo = new UserRepository();
+        if ($userId === 0) {
+            $user = $userRepo->findByEmail(new \App\User\Domain\ValueObjects\Email($email));
+            if ($user) {
+                $userId = $user->getId()->getValue();
+            }
+        }
         $sendVerification = new \App\User\Application\Usecases\SendVerificationUseCase($userRepo, $verificationRepo);
         $result = $sendVerification->execute($userId);
         
@@ -72,6 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_code'])) {
         }
     }
 }
+
+// Add this method to EmailVerificationRepository
+// public function getAllVerificationsByEmail(string $email): array
+// {
+//     $sql = "SELECT * FROM email_verifications WHERE email = :email ORDER BY id DESC";
+//     $stmt = $this->db->prepare($sql);
+//     $stmt->execute([':email' => $email]);
+//     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+// }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -117,6 +146,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_code'])) {
         .code-hint {
             color: #94A3B8;
             font-size: 13px;
+        }
+        .debug-box {
+            background: #1E293B;
+            color: #A5B4FC;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -185,6 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_code'])) {
                     </div>
 
                     <input type="hidden" name="email" value="<?php echo htmlspecialchars($userEmail); ?>">
+                    <input type="hidden" name="verify_email" value="1">
 
                     <button type="submit" name="verify_email" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 text-sm tracking-wide">
                         Verify Email
@@ -197,6 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_code'])) {
                         </button>
                     </div>
                 </form>
+
             <?php endif; ?>
         </div>
 
@@ -209,14 +252,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_code'])) {
     </div>
 
     <script>
-        // Auto-format verification code input
         const codeInput = document.querySelector('input[name="verification_code"]');
         if (codeInput) {
             codeInput.addEventListener('input', function() {
                 this.value = this.value.replace(/\D/g, '').slice(0, 4);
             });
             
-            // Auto-submit when 4 digits are entered
             codeInput.addEventListener('keyup', function() {
                 if (this.value.length === 4) {
                     this.form.submit();

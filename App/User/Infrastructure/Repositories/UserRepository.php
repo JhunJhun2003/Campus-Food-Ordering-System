@@ -23,52 +23,58 @@ class UserRepository implements UserRepositoryInterface
     // USER CRUD METHODS
     // ============================================
 
-public function save(User $user): int
-{
-    if ($user->getId()->isEmpty()) {
-        $sql = "INSERT INTO users (role_id, name, email, password, phone, address, is_verified) 
-                VALUES (:role_id, :name, :email, :password, :phone, :address, :is_verified)";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            ':role_id' => $user->getRoleId(),
-            ':name' => $user->getName(),
-            ':email' => $user->getEmail()->getValue(),
-            ':password' => $user->getPassword()->getValue(),
-            ':phone' => $user->getPhone(),
-            ':address' => $user->getAddress(),
-            ':is_verified' => $user->isVerified() ? 1 : 0
-        ]);
-        
-        return (int) $this->db->lastInsertId(); // ✅ Return the ID
-    } else {
-        $sql = "UPDATE users SET 
-                role_id = :role_id,
-                name = :name, 
-                email = :email, 
-                password = :password, 
-                phone = :phone, 
-                address = :address,
-                is_verified = :is_verified,
-                email_verified_at = :email_verified_at
-                WHERE id = :id";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            ':role_id' => $user->getRoleId(),
-            ':name' => $user->getName(),
-            ':email' => $user->getEmail()->getValue(),
-            ':password' => $user->getPassword()->getValue(),
-            ':phone' => $user->getPhone(),
-            ':address' => $user->getAddress(),
-            ':is_verified' => $user->isVerified() ? 1 : 0,
-            ':email_verified_at' => $user->getEmailVerifiedAt() ? $user->getEmailVerifiedAt()->format('Y-m-d H:i:s') : null,
-            ':id' => $user->getId()->getValue()
-        ]);
-        
-        return $user->getId()->getValue(); // ✅ Return the ID
+    public function save(User $user): int
+    {
+        if ($user->getId()->isEmpty()) {
+            $sql = "INSERT INTO users (role_id, name, email, password, phone, address, is_verified, verification_code, verification_expires_at) 
+                    VALUES (:role_id, :name, :email, :password, :phone, :address, :is_verified, :verification_code, :verification_expires_at)";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':role_id' => $user->getRoleId(),
+                ':name' => $user->getName(),
+                ':email' => $user->getEmail()->getValue(),
+                ':password' => $user->getPassword()->getValue(),
+                ':phone' => $user->getPhone(),
+                ':address' => $user->getAddress(),
+                ':is_verified' => $user->isVerified() ? 1 : 0,
+                ':verification_code' => $user->getVerificationCode(),
+                ':verification_expires_at' => $user->getVerificationExpiresAt() ? $user->getVerificationExpiresAt()->format('Y-m-d H:i:s') : null
+            ]);
+            
+            return (int) $this->db->lastInsertId();
+        } else {
+            $sql = "UPDATE users SET 
+                    role_id = :role_id,
+                    name = :name, 
+                    email = :email, 
+                    password = :password, 
+                    phone = :phone, 
+                    address = :address,
+                    is_verified = :is_verified,
+                    verification_code = :verification_code,
+                    verification_expires_at = :verification_expires_at,
+                    email_verified_at = :email_verified_at
+                    WHERE id = :id";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                ':role_id' => $user->getRoleId(),
+                ':name' => $user->getName(),
+                ':email' => $user->getEmail()->getValue(),
+                ':password' => $user->getPassword()->getValue(),
+                ':phone' => $user->getPhone(),
+                ':address' => $user->getAddress(),
+                ':is_verified' => $user->isVerified() ? 1 : 0,
+                ':verification_code' => $user->getVerificationCode(),
+                ':verification_expires_at' => $user->getVerificationExpiresAt() ? $user->getVerificationExpiresAt()->format('Y-m-d H:i:s') : null,
+                ':email_verified_at' => $user->getEmailVerifiedAt() ? $user->getEmailVerifiedAt()->format('Y-m-d H:i:s') : null,
+                ':id' => $user->getId()->getValue()
+            ]);
+            
+            return $user->getId()->getValue();
+        }
     }
-}
 
     public function findById(UserId $id): ?User
     {
@@ -135,7 +141,6 @@ public function save(User $user): int
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':role_name' => $roleName]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
         return $result['id'] ?? 3;
     }
 
@@ -227,6 +232,27 @@ public function save(User $user): int
         return $stmt->execute($params);
     }
 
+    public function getUserForEdit(int $userId): ?array
+    {
+        $sql = "SELECT u.*, r.role_name 
+                FROM users u 
+                JOIN user_roles r ON u.role_id = r.id 
+                WHERE u.id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
+    public function emailExistsExcluding(string $email, int $userId): bool
+    {
+        $sql = "SELECT id FROM users WHERE email = :email AND id != :user_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':email' => $email, ':user_id' => $userId]);
+        return $stmt->fetch() !== false;
+    }
+
     // ============================================
     // ADMIN DASHBOARD METHODS
     // ============================================
@@ -280,27 +306,6 @@ public function save(User $user): int
         $stmt->execute();
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function getUserForEdit(int $userId): ?array
-    {
-        $sql = "SELECT u.*, r.role_name 
-                FROM users u 
-                JOIN user_roles r ON u.role_id = r.id 
-                WHERE u.id = :id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':id' => $userId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        return $result ?: null;
-    }
-
-    public function emailExistsExcluding(string $email, int $userId): bool
-    {
-        $sql = "SELECT id FROM users WHERE email = :email AND id != :user_id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':email' => $email, ':user_id' => $userId]);
-        return $stmt->fetch() !== false;
     }
 
     // ============================================
@@ -454,6 +459,8 @@ public function save(User $user): int
             $data['phone'] ?? null,
             $data['address'] ?? null,
             (bool) ($data['is_verified'] ?? false),
+            $data['verification_code'] ?? null,
+            !empty($data['verification_expires_at']) ? new DateTime($data['verification_expires_at']) : null,
             !empty($data['email_verified_at']) ? new DateTime($data['email_verified_at']) : null
         );
     }

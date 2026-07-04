@@ -4,9 +4,19 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
-use App\User\Application\Usecases\SendVerificationUseCase;
-use App\User\Infrastructure\Repositories\EmailVerificationRepository;
-use App\User\Infrastructure\Repositories\UserRepository;
+
+// ✅ Check for verification success message from session
+$success = $_SESSION['verification_success'] ?? '';
+unset($_SESSION['verification_success']);
+
+// Check for other messages
+if (empty($success)) {
+    $success = $_SESSION['success'] ?? '';
+    unset($_SESSION['success']);
+}
+
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
 
 $controller = new UserController();
 
@@ -19,10 +29,6 @@ if ($controller->isLoggedIn()) {
     }
     exit();
 }
-
-$error = $_SESSION['error'] ?? '';
-$success = $_SESSION['success'] ?? '';
-unset($_SESSION['error'], $_SESSION['success']);
 
 // Handle Login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
@@ -47,16 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $registeredEmail = $user->getEmail()->getValue();
         
         // Send verification code
-        $verificationRepo = new EmailVerificationRepository();
-        $userRepo = new UserRepository();
-        $sendVerification = new SendVerificationUseCase($userRepo, $verificationRepo);
+        $userRepo = new \App\User\Infrastructure\Repositories\UserRepository();
+        $sendVerification = new \App\User\Application\Usecases\SendVerificationUseCase($userRepo);
         $verifyResult = $sendVerification->execute($registeredUserId);
         
         if ($verifyResult['success']) {
             // Store user info in session for verification page
             $_SESSION['user_id'] = $registeredUserId;
             $_SESSION['user_email'] = $registeredEmail;
-            $_SESSION['test_code'] = $verifyResult['code']; // For testing only
+            $_SESSION['test_code'] = $verifyResult['code'];
             
             // Redirect to verification page
             header('Location: verify-email.php');
@@ -73,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     }
 }
 ?>
+<!-- Rest of HTML -->
 <!DOCTYPE html>
 <html lang="en">
 <head>

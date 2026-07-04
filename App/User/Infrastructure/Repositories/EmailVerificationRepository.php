@@ -87,4 +87,11 @@ class EmailVerificationRepository
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result && $result['is_verified'] == 1;
     }
+    public function getAllVerificationsByEmail(string $email): array
+{
+    $sql = "SELECT * FROM email_verifications WHERE email = :email ORDER BY id DESC";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':email' => $email]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 }

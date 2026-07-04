@@ -2,57 +2,55 @@
 namespace App\User\Application\Usecases;
 
 use App\User\Domain\Repositories\UserRepositoryInterface;
-use App\User\Infrastructure\Repositories\EmailVerificationRepository;
 use App\User\Domain\ValueObjects\Email;
 use App\User\Domain\ValueObjects\UserId;
 
 class VerifyEmailUseCase
 {
     private UserRepositoryInterface $userRepository;
-    private EmailVerificationRepository $verificationRepository;
 
-    public function __construct(
-        UserRepositoryInterface $userRepository,
-        EmailVerificationRepository $verificationRepository
-    ) {
+    public function __construct(UserRepositoryInterface $userRepository)
+    {
         $this->userRepository = $userRepository;
-        $this->verificationRepository = $verificationRepository;
     }
 
     public function execute(string $email, string $code): array
     {
-        // Validate email
         try {
             $emailObj = new Email($email);
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'Invalid email address.'];
         }
 
-        // Check if already verified
-        if ($this->verificationRepository->isEmailVerified($email)) {
+        // Find user by email
+        $user = $this->userRepository->findByEmail($emailObj);
+        
+        if (!$user) {
+            return ['success' => false, 'message' => 'User not found.'];
+        }
+
+        if ($user->isVerified()) {
             return ['success' => false, 'message' => 'Email already verified.'];
         }
 
-        // Get verification record
-        $verification = $this->verificationRepository->getVerification($email, $code);
-        
-        if (!$verification) {
+        // Check if verification code is valid
+        if (!$user->isVerificationCodeValid($code)) {
             return ['success' => false, 'message' => 'Invalid or expired verification code.'];
         }
 
-        // Mark as verified
-        $verified = $this->verificationRepository->markAsVerified(
-            $verification['id'],
-            $verification['user_id']
-        );
+        // Verify the user
+        $user->verifyEmail();
+        
+        // Save user
+        $this->userRepository->save($user);
 
-        if (!$verified) {
-            return ['success' => false, 'message' => 'Failed to verify email. Please try again.'];
-        }
+        // ✅ REMOVED: Auto-login session setting
+        // No session is set here - user must login manually
 
-        // Delete the verification record (optional)
-        $this->verificationRepository->deleteVerification($verification['user_id']);
-
-        return ['success' => true, 'message' => 'Email verified successfully!'];
+        return [
+            'success' => true,
+            'message' => 'Email verified successfully! Please login to continue.',
+            'user' => $user
+        ];
     }
 }
