@@ -78,9 +78,10 @@ class UserRepository implements UserRepositoryInterface
 
     public function findById(UserId $id): ?User
     {
-        $sql = "SELECT u.*, r.role_name 
+        // Fixed: Using 'roles' table instead of 'user_roles'
+        $sql = "SELECT u.*, r.name as role_name 
                 FROM users u 
-                JOIN user_roles r ON u.role_id = r.id 
+                LEFT JOIN roles r ON u.role_id = r.id 
                 WHERE u.id = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id' => $id->getValue()]);
@@ -91,9 +92,10 @@ class UserRepository implements UserRepositoryInterface
 
     public function findByEmail(Email $email): ?User
     {
-        $sql = "SELECT u.*, r.role_name 
+        // Fixed: Using 'roles' table instead of 'user_roles'
+        $sql = "SELECT u.*, r.name as role_name 
                 FROM users u 
-                JOIN user_roles r ON u.role_id = r.id 
+                LEFT JOIN roles r ON u.role_id = r.id 
                 WHERE u.email = :email";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':email' => $email->getValue()]);
@@ -104,9 +106,10 @@ class UserRepository implements UserRepositoryInterface
 
     public function findAll(): array
     {
-        $sql = "SELECT u.*, r.role_name 
+        // Fixed: Using 'roles' table instead of 'user_roles'
+        $sql = "SELECT u.*, r.name as role_name 
                 FROM users u 
-                JOIN user_roles r ON u.role_id = r.id 
+                LEFT JOIN roles r ON u.role_id = r.id 
                 ORDER BY u.created_at DESC";
         $stmt = $this->db->query($sql);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -132,16 +135,17 @@ class UserRepository implements UserRepositoryInterface
     }
 
     // ============================================
-    // ROLE METHODS
+    // ROLE METHODS - FIXED
     // ============================================
 
     public function getRoleId(string $roleName): int
     {
-        $sql = "SELECT id FROM user_roles WHERE role_name = :role_name";
+        // Fixed: Using 'roles' table instead of 'user_roles'
+        $sql = "SELECT id FROM roles WHERE name = :role_name";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':role_name' => $roleName]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['id'] ?? 3;
+        return $result['id'] ?? 3; // Default to 'user' role (id=3)
     }
 
     // ============================================
@@ -150,7 +154,8 @@ class UserRepository implements UserRepositoryInterface
 
     public function getAllRoles(): array
     {
-        $sql = "SELECT * FROM user_roles ORDER BY id";
+        // Fixed: Using 'roles' table instead of 'user_roles'
+        $sql = "SELECT * FROM roles ORDER BY id";
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -234,9 +239,10 @@ class UserRepository implements UserRepositoryInterface
 
     public function getUserForEdit(int $userId): ?array
     {
-        $sql = "SELECT u.*, r.role_name 
+        // Fixed: Using 'roles' table instead of 'user_roles'
+        $sql = "SELECT u.*, r.name as role_name 
                 FROM users u 
-                JOIN user_roles r ON u.role_id = r.id 
+                LEFT JOIN roles r ON u.role_id = r.id 
                 WHERE u.id = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id' => $userId]);
@@ -449,10 +455,14 @@ class UserRepository implements UserRepositoryInterface
 
     private function hydrate(array $data): User
     {
+        // Handle case where role_name might be null (user has no role assigned)
+        $roleName = $data['role_name'] ?? 'user';
+        $roleId = (int) ($data['role_id'] ?? 3); // Default to 'user' role
+        
         return new User(
             new UserId((int) $data['id']),
-            (int) $data['role_id'],
-            $data['role_name'],
+            $roleId,
+            $roleName,
             $data['name'],
             new Email($data['email']),
             new Password($data['password'], true),

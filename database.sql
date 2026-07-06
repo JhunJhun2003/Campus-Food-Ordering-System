@@ -1,6 +1,6 @@
-CREATE DATABASE IF NOT EXISTS campus_food_ordering_system;
+CREATE DATABASE IF NOT EXISTS campus_food_ordering_system1;
 
-USE campus_food_ordering_system;
+USE campus_food_ordering_system1;
 
 CREATE TABLE user_roles (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -264,9 +264,9 @@ INSERT INTO foods (category_id, name, description, price, stock, preparation_tim
 
 -- Users (password: admin123, staff123, user123)
 INSERT INTO users (role_id, name, email, password, phone, address) VALUES 
-(1, 'Admin User', 'admin@foodie.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0912345678', 'Admin Office'),
-(2, 'Staff User', 'staff@foodie.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0912345679', 'Restaurant'),
-(3, 'John Student', 'john@foodie.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0912345680', 'Dormitory A');
+(1, 'Admin User', 'admin@foodie.com', '$2y$12$w/5unCs2AaDn5nKLN9nwYOfD67tWiEhCuLa3O0Yld0ktMYwGKDXWa', '0912345678', 'Admin Office'),
+(2, 'Staff User', 'staff@foodie.com', '$2y$12$F/ONKXixdkfEqZclqtAyneZtDGYpvZDiUxstUxsvojL9C3esiYBma', '0912345679', 'Restaurant'),
+(3, 'John Student', 'john@foodie.com', '$2y$12$F/ONKXixdkfEqZclqtAyneZtDGYpvZDiUxstUxsvojL9C3esiYBma', '0912345680', 'Dormitory A');
 
 -- Cart for John (user_id = 3)
 INSERT INTO carts (user_id) VALUES (3);
