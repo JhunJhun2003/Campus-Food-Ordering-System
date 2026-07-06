@@ -15,7 +15,6 @@ class SyncRolePermissionsUseCase
 
     public function execute(int $roleId, array $permissionIds): bool
     {
-        // Validate role exists
         $role = $this->repository->getRoleById($roleId);
         if (!$role) {
             throw new \RuntimeException("Role with ID {$roleId} not found");

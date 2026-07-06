@@ -36,15 +36,11 @@ class AccessControlRepository implements AccessControlRepositoryInterface
 
     public function deleteRole(int $roleId): bool
     {
-        // Start transaction
         $this->db->beginTransaction();
-        
         try {
-            // First remove all role-permission associations
             $stmt = $this->db->prepare("DELETE FROM role_permissions WHERE role_id = :role_id");
             $stmt->execute([':role_id' => $roleId]);
             
-            // Then delete the role
             $stmt = $this->db->prepare("DELETE FROM roles WHERE id = :id");
             $stmt->execute([':id' => $roleId]);
             
@@ -111,13 +107,18 @@ class AccessControlRepository implements AccessControlRepositoryInterface
         $stmt = $this->db->query("SELECT id, name, created_at, updated_at FROM roles ORDER BY id");
         $roles = [];
         while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $role = new Role(
+            $permissions = $this->getPermissionsByRoleId((int) $data['id']);
+            $permissionsArray = array_map(function($p) {
+                return $p->toArray();
+            }, $permissions);
+
+            $roles[] = new Role(
                 (int) $data['id'],
                 $data['name'],
                 $data['created_at'],
-                $data['updated_at']
+                $data['updated_at'],
+                $permissionsArray
             );
-            $roles[] = $role;
         }
         return $roles;
     }
@@ -176,15 +177,11 @@ class AccessControlRepository implements AccessControlRepositoryInterface
 
     public function deletePermission(int $permissionId): bool
     {
-        // Start transaction
         $this->db->beginTransaction();
-        
         try {
-            // Remove from role_permissions first
             $stmt = $this->db->prepare("DELETE FROM role_permissions WHERE permission_id = :permission_id");
             $stmt->execute([':permission_id' => $permissionId]);
             
-            // Then delete the permission
             $stmt = $this->db->prepare("DELETE FROM permissions WHERE id = :id");
             $stmt->execute([':id' => $permissionId]);
             
@@ -294,7 +291,6 @@ class AccessControlRepository implements AccessControlRepositoryInterface
     
     public function assignPermissionToRole(int $roleId, int $permissionId): bool
     {
-        // Check if already assigned
         $stmt = $this->db->prepare("
             SELECT * FROM role_permissions 
             WHERE role_id = :role_id AND permission_id = :permission_id
@@ -304,7 +300,7 @@ class AccessControlRepository implements AccessControlRepositoryInterface
             ':permission_id' => $permissionId
         ]);
         if ($stmt->fetch()) {
-            return true; // Already assigned
+            return true;
         }
 
         $stmt = $this->db->prepare("
@@ -331,15 +327,11 @@ class AccessControlRepository implements AccessControlRepositoryInterface
 
     public function syncRolePermissions(int $roleId, array $permissionIds): bool
     {
-        // Start transaction
         $this->db->beginTransaction();
-        
         try {
-            // Remove all existing permissions
             $stmt = $this->db->prepare("DELETE FROM role_permissions WHERE role_id = :role_id");
             $stmt->execute([':role_id' => $roleId]);
             
-            // Add new permissions
             if (!empty($permissionIds)) {
                 $values = [];
                 $params = [];
@@ -375,14 +367,12 @@ class AccessControlRepository implements AccessControlRepositoryInterface
 
     public function removeRoleFromUser(int $userId, int $roleId): bool
     {
-        // Check if user has this role
         $stmt = $this->db->prepare("SELECT id FROM users WHERE id = :user_id AND role_id = :role_id");
         $stmt->execute([':user_id' => $userId, ':role_id' => $roleId]);
         if (!$stmt->fetch()) {
             return false;
         }
 
-        // Set to default role (user role = 3)
         $stmt = $this->db->prepare("UPDATE users SET role_id = 3 WHERE id = :user_id");
         return $stmt->execute([':user_id' => $userId]);
     }

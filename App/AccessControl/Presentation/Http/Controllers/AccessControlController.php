@@ -44,10 +44,18 @@ class AccessControlController
 
     public function index()
     {
-        // Check if user has permission
-        session_start();
+        // Check if user has permission - DON'T start session here, it's already started
+        // session_start(); // REMOVE THIS LINE
+        
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit;
+        }
+        
+        // Check permission
         if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /dashboard');
+            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
             exit;
         }
 
@@ -65,19 +73,29 @@ class AccessControlController
                 $groupedPermissions[$module][] = $permission;
             }
 
-            require_once __DIR__ . '/../../../../view/admin/access-control.php';
+            // Return data instead of loading a view
+            return [
+                'roles' => $roles,
+                'permissions' => $permissions,
+                'groupedPermissions' => $groupedPermissions
+            ];
+            
         } catch (\Exception $e) {
             $_SESSION['error'] = $e->getMessage();
-            header('Location: /dashboard');
-            exit;
+            return null;
         }
     }
 
     public function createRole()
     {
-        session_start();
+        // Don't start session here
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit;
+        }
+        
         if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /dashboard');
+            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
             exit;
         }
 
@@ -87,11 +105,11 @@ class AccessControlController
             try {
                 $roleId = $this->createRoleUseCase->execute($name);
                 $_SESSION['success'] = "Role '{$name}' created successfully";
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             } catch (\Exception $e) {
                 $_SESSION['error'] = $e->getMessage();
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             }
         }
@@ -99,9 +117,14 @@ class AccessControlController
 
     public function updateRole()
     {
-        session_start();
+        // Don't start session here
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit;
+        }
+        
         if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /dashboard');
+            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
             exit;
         }
 
@@ -112,11 +135,11 @@ class AccessControlController
             try {
                 $this->updateRoleUseCase->execute($roleId, $name);
                 $_SESSION['success'] = "Role updated successfully";
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             } catch (\Exception $e) {
                 $_SESSION['error'] = $e->getMessage();
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             }
         }
@@ -124,9 +147,14 @@ class AccessControlController
 
     public function deleteRole()
     {
-        session_start();
+        // Don't start session here
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit;
+        }
+        
         if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /dashboard');
+            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
             exit;
         }
 
@@ -136,11 +164,11 @@ class AccessControlController
             try {
                 $this->deleteRoleUseCase->execute($roleId);
                 $_SESSION['success'] = "Role deleted successfully";
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             } catch (\Exception $e) {
                 $_SESSION['error'] = $e->getMessage();
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             }
         }
@@ -148,9 +176,14 @@ class AccessControlController
 
     public function assignRole()
     {
-        session_start();
+        // Don't start session here
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit;
+        }
+        
         if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /dashboard');
+            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
             exit;
         }
 
@@ -161,11 +194,11 @@ class AccessControlController
             try {
                 $this->assignRoleToUserUseCase->execute($userId, $roleId);
                 $_SESSION['success'] = "Role assigned to user successfully";
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             } catch (\Exception $e) {
                 $_SESSION['error'] = $e->getMessage();
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             }
         }
@@ -173,9 +206,14 @@ class AccessControlController
 
     public function syncPermissions()
     {
-        session_start();
+        // Don't start session here
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit;
+        }
+        
         if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /dashboard');
+            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
             exit;
         }
 
@@ -186,11 +224,11 @@ class AccessControlController
             try {
                 $this->syncRolePermissionsUseCase->execute($roleId, $permissionIds);
                 $_SESSION['success'] = "Permissions synced successfully";
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             } catch (\Exception $e) {
                 $_SESSION['error'] = $e->getMessage();
-                header('Location: /access-control');
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-settings.php?tab=access-control');
                 exit;
             }
         }
@@ -199,7 +237,13 @@ class AccessControlController
     // API endpoint for getting role permissions (AJAX)
     public function getRolePermissions()
     {
-        session_start();
+        // Don't start session here
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+        
         if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
             http_response_code(403);
             echo json_encode(['error' => 'Unauthorized']);
@@ -214,8 +258,8 @@ class AccessControlController
         }
 
         try {
-            $role = $this->getAllRolesUseCase->execute();
-            $roleData = array_filter($role, fn($r) => $r['id'] === $roleId);
+            $roles = $this->getAllRolesUseCase->execute();
+            $roleData = array_filter($roles, fn($r) => $r['id'] === $roleId);
             $roleData = reset($roleData);
             
             echo json_encode([

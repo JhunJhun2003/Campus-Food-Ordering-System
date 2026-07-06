@@ -4,7 +4,7 @@ namespace App\AccessControl\Application\Usecases;
 
 use App\AccessControl\Domain\Repositories\AccessControlRepositoryInterface;
 
-class AssignRoleToUserUseCase
+class GetAllPermissionsUseCase
 {
     private AccessControlRepositoryInterface $repository;
 
@@ -13,13 +13,11 @@ class AssignRoleToUserUseCase
         $this->repository = $repository;
     }
 
-    public function execute(int $userId, int $roleId): bool
+    public function execute(): array
     {
-        $role = $this->repository->getRoleById($roleId);
-        if (!$role) {
-            throw new \RuntimeException("Role with ID {$roleId} not found");
-        }
-
-        return $this->repository->assignRoleToUser($userId, $roleId);
+        $permissions = $this->repository->getAllPermissions();
+        return array_map(function($permission) {
+            return $permission->toArray();
+        }, $permissions);
     }
-}
+}   

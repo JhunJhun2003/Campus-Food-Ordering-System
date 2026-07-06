@@ -16,12 +16,10 @@ class CreateRoleUseCase
 
     public function execute(string $name): int
     {
-        // Validate role name
         if (empty(trim($name))) {
             throw new \InvalidArgumentException('Role name cannot be empty');
         }
 
-        // Check if role already exists
         $existingRole = $this->repository->getRoleByName($name);
         if ($existingRole) {
             throw new \RuntimeException("Role '{$name}' already exists");

@@ -24,14 +24,31 @@ class Permission
         $this->createdAt = $createdAt;
     }
 
-    // Getters
-    public function getId(): ?int { return $this->id; }
-    public function getName(): string { return $this->name; }
-    public function getDisplayName(): string { return $this->displayName; }
-    public function getModule(): string { return $this->module; }
-    public function getCreatedAt(): string { return $this->createdAt; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    // Business logic
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getDisplayName(): string
+    {
+        return $this->displayName;
+    }
+
+    public function getModule(): string
+    {
+        return $this->module;
+    }
+
+    public function getCreatedAt(): string
+    {
+        return $this->createdAt;
+    }
+
     public function belongsToModule(string $module): bool
     {
         return $this->module === $module;

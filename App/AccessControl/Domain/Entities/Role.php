@@ -24,14 +24,31 @@ class Role
         $this->permissions = $permissions;
     }
 
-    // Getters
-    public function getId(): ?int { return $this->id; }
-    public function getName(): string { return $this->name; }
-    public function getCreatedAt(): string { return $this->createdAt; }
-    public function getUpdatedAt(): string { return $this->updatedAt; }
-    public function getPermissions(): array { return $this->permissions; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    // Business logic methods
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getCreatedAt(): string
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): string
+    {
+        return $this->updatedAt;
+    }
+
+    public function getPermissions(): array
+    {
+        return $this->permissions;
+    }
+
     public function hasPermission(string $permissionName): bool
     {
         foreach ($this->permissions as $permission) {
@@ -44,7 +61,6 @@ class Role
 
     public function addPermission(array $permission): void
     {
-        // Check if permission already exists
         foreach ($this->permissions as $existing) {
             if ($existing['id'] === $permission['id']) {
                 return;
