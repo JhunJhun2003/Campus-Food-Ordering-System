@@ -6,9 +6,9 @@ class UserId extends ValueObject
 {
     private int $value;
 
-    public function __construct(int $value)
+    public function __construct(?int $value = null)
     {
-        $this->value = $value;
+        $this->value = $value ?? 0;
     }
 
     public function getValue(): int
@@ -18,7 +18,7 @@ class UserId extends ValueObject
 
     public function isEmpty(): bool
     {
-        return $this->value === 0 || $this->value === null;
+        return $this->value === 0;
     }
 
     public function equals(ValueObject $other): bool

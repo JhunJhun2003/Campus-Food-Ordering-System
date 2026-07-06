@@ -36,9 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
             if ($userRepository->emailExists($email)) {
                 $addError = 'Email already registered.';
             } else {
-                $userId = $userRepository->createUser($name, $email, $password, $phone, $roleId);
+                // Create user with is_verified = 1 (auto-verified by admin)
+                $userId = $userRepository->createUser($name, $email, $password, $phone, $roleId, true); // true = verified
                 if ($userId > 0) {
-                    $addSuccess = 'User added successfully!';
+                    $addSuccess = 'User added successfully! (Auto-verified)';
                     $users = $userRepository->findAll();
                 } else {
                     $addError = 'Failed to add user.';
@@ -219,8 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
                     <select id="roleFilter" class="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white">
                         <option value="">All Roles</option>
                         <?php foreach ($roles as $role): ?>
-                            <option value="<?php echo strtolower($role['role_name']); ?>">
-                                <?php echo ucfirst($role['role_name']); ?>
+                            <option value="<?php echo strtolower($role['name']); ?>">
+                                <?php echo ucfirst($role['name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -237,6 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
                             <th class="py-3 px-6">User</th>
                             <th class="py-3 px-6">Email</th>
                             <th class="py-3 px-6">Role</th>
+                            <th class="py-3 px-6">Status</th>
                             <th class="py-3 px-6">Joined</th>
                             <th class="py-3 px-6 text-center">Actions</th>
                         </tr>
@@ -244,13 +246,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
                     <tbody id="usersTableBody" class="divide-y divide-gray-100 text-sm text-gray-700">
                         <?php if (empty($users)): ?>
                             <tr>
-                                <td colspan="5" class="py-12 text-center text-gray-400">
+                                <td colspan="6" class="py-12 text-center text-gray-400">
                                     <i class="fa-regular fa-user text-4xl block mb-3"></i>
                                     <p class="text-sm font-medium">No users found</p>
                                 </td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($users as $user): ?>
+                                <?php 
+                                    $isVerified = $user->isVerified();
+                                    $emailVerifiedAt = $user->getEmailVerifiedAt();
+                                ?>
                                 <tr class="hover:bg-gray-50/50 transition-colors" data-role="<?php echo $user->getRoleName(); ?>">
                                     <td class="py-4 px-6">
                                         <div class="flex items-center space-x-3">
@@ -281,6 +287,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
                                         ">
                                             <?php echo ucfirst($user->getRoleName()); ?>
                                         </span>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <?php if ($isVerified): ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                                <i class="fa-solid fa-check-circle mr-1"></i> Verified
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                <i class="fa-solid fa-clock mr-1"></i> Pending
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="py-4 px-6 text-gray-400 text-xs">
                                         <?php echo $user->getCreatedAt()->format('M d, Y'); ?>
@@ -377,10 +394,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
                     <select name="role_id">
                         <?php foreach ($roles as $role): ?>
                             <option value="<?php echo $role['id']; ?>">
-                                <?php echo ucfirst($role['role_name']); ?>
+                                <?php echo ucfirst($role['name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+
+                <div class="form-group bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700">
+                    <i class="fa-solid fa-info-circle mr-2"></i>
+                    <span>User will be <strong>auto-verified</strong> and can login immediately.</span>
                 </div>
                 
                 <button type="submit" class="btn-submit">Add User</button>
@@ -442,7 +464,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
                         <select name="role_id">
                             <?php foreach ($roles as $role): ?>
                                 <option value="<?php echo $role['id']; ?>" <?php echo $role['id'] == $editUser['role_id'] ? 'selected' : ''; ?>>
-                                    <?php echo ucfirst($role['role_name']); ?>
+                                    <?php echo ucfirst($role['name']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -457,6 +479,160 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
 
     <!-- ===== TOAST ===== -->
     <div id="toast" class="toast"></div>
+
+    <style>
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F172A;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #94A3B8;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: #F1F5F9;
+            color: #0F172A;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1E293B;
+            margin-bottom: 4px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-family: inherit;
+            background: white;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover {
+            background: #4338CA;
+        }
+        .btn-cancel {
+            width: 100%;
+            padding: 12px;
+            background: #F1F5F9;
+            color: #475569;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .btn-cancel:hover {
+            background: #E2E8F0;
+        }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            z-index: 2000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success {
+            background: #10B981;
+        }
+        .toast.error {
+            background: #EF4444;
+        }
+        .sidebar-link.active {
+            background-color: #EEF2FF;
+            color: #4F46E5;
+        }
+        .sidebar-link:hover {
+            background-color: #F9FAFB;
+            color: #111827;
+        }
+    </style>
 
     <script>
         // ============================================
@@ -493,11 +669,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
         function closeAddUserModal() {
             document.getElementById('addUserModal').classList.remove('active');
             document.body.style.overflow = '';
-            // Clear any error/success messages
-            const errorDiv = document.querySelector('#addUserModal .bg-red-50');
-            const successDiv = document.querySelector('#addUserModal .bg-green-50');
-            if (errorDiv) errorDiv.remove();
-            if (successDiv) successDiv.remove();
         }
 
         document.getElementById('addUserModal').addEventListener('click', function(e) {
@@ -508,16 +679,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
         // EDIT USER MODAL
         // ============================================
         function openEditUserModal(userId) {
-            // Fetch user data via GET parameter
             window.location.href = 'admin-users.php?edit=' + userId;
         }
 
         function closeEditUserModal() {
-            // Redirect to remove edit parameter
             window.location.href = 'admin-users.php';
         }
 
-        // Check if edit modal should be open
         <?php if ($editUser): ?>
             document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('editUserModal').classList.add('active');

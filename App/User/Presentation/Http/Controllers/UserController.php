@@ -68,6 +68,7 @@ class UserController
 
     private function getRedirectUrl(string $role): string
     {
+        $role = strtolower($role);
         return match ($role) {
             'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
             'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
@@ -122,7 +123,7 @@ class UserController
     {
         $this->requireAuth();
         if ($_SESSION['user_role'] !== 'admin') {
-            header('Location: /Campus-Food-Ordering-System/view/customer/menu.php');
+            header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
             exit();
         }
     }
@@ -131,7 +132,7 @@ class UserController
     {
         $this->requireAuth();
         if (!in_array($_SESSION['user_role'], ['admin', 'staff'])) {
-            header('Location: /Campus-Food-Ordering-System/view/customer/menu.php');
+            header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
             exit();
         }
     }
@@ -151,24 +152,24 @@ class UserController
     }
 
     /**
- * Get user profile
- */
-public function getProfile(int $userId): ?array
-{
-    $useCase = new \App\User\Application\Usecases\GetProfileUseCase(
-        new \App\User\Infrastructure\Repositories\UserRepository()
-    );
-    return $useCase->execute($userId);
-}
+     * Get user profile
+     */
+    public function getProfile(int $userId): ?array
+    {
+        $useCase = new \App\User\Application\Usecases\GetProfileUseCase(
+            new \App\User\Infrastructure\Repositories\UserRepository()
+        );
+        return $useCase->execute($userId);
+    }
 
-/**
- * Update user profile
- */
-public function updateProfile(int $userId, array $data): array
-{
-    $useCase = new \App\User\Application\Usecases\UpdateProfileUseCase(
-        new \App\User\Infrastructure\Repositories\UserRepository()
-    );
-    return $useCase->execute($userId, $data);
-}
+    /**
+     * Update user profile
+     */
+    public function updateProfile(int $userId, array $data): array
+    {
+        $useCase = new \App\User\Application\Usecases\UpdateProfileUseCase(
+            new \App\User\Infrastructure\Repositories\UserRepository()
+        );
+        return $useCase->execute($userId, $data);
+    }
 }

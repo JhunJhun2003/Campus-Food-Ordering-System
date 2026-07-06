@@ -168,24 +168,26 @@ class UserRepository implements UserRepositoryInterface
         return $stmt->fetch() !== false;
     }
 
-    public function createUser(string $name, string $email, string $password, string $phone, int $roleId): int
-    {
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        
-        $sql = "INSERT INTO users (role_id, name, email, password, phone, is_verified) 
-                VALUES (:role_id, :name, :email, :password, :phone, 0)";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            ':role_id' => $roleId,
-            ':name' => $name,
-            ':email' => $email,
-            ':password' => $hashedPassword,
-            ':phone' => $phone
-        ]);
-        
-        return (int) $this->db->lastInsertId();
-    }
+public function createUser(string $name, string $email, string $password, string $phone, int $roleId, bool $isVerified = false): int
+{
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+    
+    $sql = "INSERT INTO users (role_id, name, email, password, phone, is_verified, email_verified_at, created_at, updated_at) 
+            VALUES (:role_id, :name, :email, :password, :phone, :is_verified, :email_verified_at, NOW(), NOW())";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([
+        ':role_id' => $roleId,
+        ':name' => $name,
+        ':email' => $email,
+        ':password' => $hashedPassword,
+        ':phone' => $phone,
+        ':is_verified' => $isVerified ? 1 : 0,
+        ':email_verified_at' => $isVerified ? date('Y-m-d H:i:s') : null
+    ]);
+    
+    return (int) $this->db->lastInsertId();
+}
 
     public function deleteUser(int $userId): bool
     {
@@ -474,4 +476,8 @@ class UserRepository implements UserRepositoryInterface
             !empty($data['email_verified_at']) ? new DateTime($data['email_verified_at']) : null
         );
     }
+    public function getConnection(): PDO
+{
+    return $this->db;
+}
 }

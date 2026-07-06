@@ -30,7 +30,7 @@ class LoginUserUseCase
             return new LoginUserResponse(false, 'Invalid credentials', null);
         }
 
-        // ✅ Check if user is verified
+        // Check if user is verified
         if (!$user->isVerified()) {
             return new LoginUserResponse(false, 'Please verify your email first. Check your inbox for the verification code.', null);
         }
@@ -41,7 +41,9 @@ class LoginUserUseCase
         }
 
         // Determine redirect URL based on role
-        $roleName = $user->getRoleName();
+        $roleName = strtolower($user->getRoleName());
+        
+        // Check if staff-dashboard.php exists, if not redirect to admin orders
         $redirectUrl = match ($roleName) {
             'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
             'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
