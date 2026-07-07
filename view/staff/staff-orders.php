@@ -17,9 +17,33 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
 use App\Order\Presentation\Http\Controllers\OrderController;
+use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
+use App\AccessControl\Application\Usecases\CheckPermissionUseCase;
+use Inc\Database;
 
 $adminController = new AdminController();
 $currentUser = $adminController->getCurrentUser();
+
+$userRole = $_SESSION['user_role'] ?? 'staff';
+$isAdmin = $userRole === 'admin';
+
+// ============================================
+// ACCESS CONTROL - PERMISSION CHECKS
+// ============================================
+$db = Database::getConnection();
+$accessControlRepo = new AccessControlRepository($db);
+$checkPermissionUseCase = new CheckPermissionUseCase($accessControlRepo);
+
+$userId = $_SESSION['user_id'] ?? 0;
+$canViewOrders = $checkPermissionUseCase->execute($userId, 'view_orders') || $checkPermissionUseCase->execute($userId, 'manage_orders');
+$canUpdateOrderStatus = $checkPermissionUseCase->execute($userId, 'update_order_status') || $checkPermissionUseCase->execute($userId, 'manage_orders');
+$canViewMenu = $checkPermissionUseCase->execute($userId, 'view_menu') || $checkPermissionUseCase->execute($userId, 'manage_menu');
+
+if (!$canViewOrders) {
+    $_SESSION['error'] = "You don't have permission to access orders management.";
+    header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+    exit();
+}
 
 $orderController = new OrderController();
 
@@ -31,6 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     
     // Update status - Staff can also update status
     if ($action === 'update_status') {
+        if (!$canUpdateOrderStatus) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'You do not have permission to update order status.'
+            ]);
+            exit();
+        }
         $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
         $statusId = isset($_POST['status_id']) ? (int) $_POST['status_id'] : 0;
 
@@ -315,14 +346,18 @@ $isStaff = $userRole === 'staff';
                     <i class="fa-solid fa-house text-lg w-6 text-center"></i>
                     <span>Dashboard</span>
                 </a>
+                <?php if ($canViewOrders): ?>
                 <a href="staff-orders.php" class="sidebar-link active flex items-center space-x-4 px-4 py-3 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
+                <?php endif; ?>
+                <?php if ($canViewMenu): ?>
                 <a href="staff-menu.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-book-open text-lg w-6 text-center"></i>
                     <span>Menu</span>
                 </a>
+                <?php endif; ?>
                 <?php if ($isAdmin): ?>
                 <a href="../admin/admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-regular fa-user text-lg w-6 text-center"></i>
@@ -457,26 +492,30 @@ $isStaff = $userRole === 'staff';
                                                     title="View Order Details">
                                                 <i class="fa-regular fa-eye"></i>
                                             </button>
-                                            <!-- Status Update - Both Staff and Admin can update -->
-                                            <div class="status-action">
-                                                <select class="status-select" data-original-status-id="<?php echo $order->getStatusId(); ?>" aria-label="Order #<?php echo $order->getId(); ?> status">
-                                                    <?php foreach ($statuses as $status): ?>
-                                                        <option value="<?php echo $status['id']; ?>" <?php echo $status['id'] == $order->getStatusId() ? 'selected' : ''; ?>>
-                                                            <?php echo ucfirst($status['status_name']); ?>
-                                                        </option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                                <button type="button"
-                                                        class="status-save-btn"
-                                                        data-order-id="<?php echo $order->getId(); ?>"
-                                                        title="Save status"
-                                                        aria-label="Save order #<?php echo $order->getId(); ?> status"
-                                                        disabled>
-                                                    <i class="fa-solid fa-check text-xs"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </td>
+                                             <!-- Status Update - Both Staff and Admin can update -->
+                                             <?php if ($canUpdateOrderStatus): ?>
+                                             <div class="status-action">
+                                                 <select class="status-select" data-original-status-id="<?php echo $order->getStatusId(); ?>" aria-label="Order #<?php echo $order->getId(); ?> status">
+                                                     <?php foreach ($statuses as $status): ?>
+                                                         <option value="<?php echo $status['id']; ?>" <?php echo $status['id'] == $order->getStatusId() ? 'selected' : ''; ?>>
+                                                             <?php echo ucfirst($status['status_name']); ?>
+                                                         </option>
+                                                     <?php endforeach; ?>
+                                                 </select>
+                                                 <button type="button"
+                                                         class="status-save-btn"
+                                                         data-order-id="<?php echo $order->getId(); ?>"
+                                                         title="Save status"
+                                                         aria-label="Save order #<?php echo $order->getId(); ?> status"
+                                                         disabled>
+                                                     <i class="fa-solid fa-check text-xs"></i>
+                                                 </button>
+                                             </div>
+                                             <?php else: ?>
+                                             <span class="text-xs text-gray-400 font-medium">Read-only</span>
+                                             <?php endif; ?>
+                                         </div>
+                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>

@@ -300,11 +300,11 @@ INSERT INTO settings (setting_key, setting_value, setting_group) VALUES
 
 -- Admin User (password: admin123)
 INSERT INTO users (role_id, name, email, password, phone, address, is_verified, email_verified_at) VALUES 
-(1, 'Admin User', 'admin@foodie.com', '$2y$12$w/5unCs2AaDn5nKLN9nwYOfD67tWiEhCuLa3O0Yld0ktMYwGKDXWa', '0912345678', 'Admin Office', 1, NOW());
+(1, 'Admin User', 'admin@gmail.com', '$2y$12$w/5unCs2AaDn5nKLN9nwYOfD67tWiEhCuLa3O0Yld0ktMYwGKDXWa', '0912345678', 'Admin Office', 1, NOW());
 
 -- Sample User (password: user123)
 INSERT INTO users (role_id, name, email, password, phone, address, is_verified, email_verified_at) VALUES 
-(3, 'John Student', 'john@foodie.com', '$2y$12$F/ONKXixdkfEqZclqtAyneZtDGYpvZDiUxstUxsvojL9C3esiYBma', '0912345680', 'Dormitory A', 1, NOW());
+(3, 'John Student', 'john@gmail.com', '$2y$12$F/ONKXixdkfEqZclqtAyneZtDGYpvZDiUxstUxsvojL9C3esiYBma', '0912345680', 'Dormitory A', 1, NOW());
 
 -- Categories
 INSERT INTO categories (name, description) VALUES 

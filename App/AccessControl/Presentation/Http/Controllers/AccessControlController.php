@@ -235,42 +235,60 @@ class AccessControlController
     }
 
     // API endpoint for getting role permissions (AJAX)
-    public function getRolePermissions()
-    {
-        // Don't start session here
-        if (!isset($_SESSION['user_id'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Unauthorized']);
+public function getRolePermissions()
+{
+    // Set JSON header
+    header('Content-Type: application/json');
+    
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+    
+    // Check permission
+    if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Forbidden']);
+        exit;
+    }
+
+    // Get role_id from GET parameters
+    $roleId = isset($_GET['role_id']) ? (int) $_GET['role_id'] : 0;
+    
+    if ($roleId <= 0) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid role ID']);
+        exit;
+    }
+
+    try {
+        $roles = $this->getAllRolesUseCase->execute();
+        $roleData = null;
+        
+        foreach ($roles as $role) {
+            if ($role['id'] === $roleId) {
+                $roleData = $role;
+                break;
+            }
+        }
+        
+        if (!$roleData) {
+            echo json_encode(['success' => false, 'error' => 'Role not found']);
             exit;
         }
         
-        if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Unauthorized']);
-            exit;
-        }
-
-        $roleId = (int) ($_GET['role_id'] ?? 0);
-        if ($roleId <= 0) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid role ID']);
-            exit;
-        }
-
-        try {
-            $roles = $this->getAllRolesUseCase->execute();
-            $roleData = array_filter($roles, fn($r) => $r['id'] === $roleId);
-            $roleData = reset($roleData);
-            
-            echo json_encode([
-                'success' => true,
-                'permissions' => $roleData['permissions'] ?? []
-            ]);
-            exit;
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
-            exit;
-        }
+        echo json_encode([
+            'success' => true,
+            'permissions' => $roleData['permissions'] ?? []
+        ]);
+        exit;
+        
+    } catch (\Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+        exit;
     }
+}
 }

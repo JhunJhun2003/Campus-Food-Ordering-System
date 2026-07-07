@@ -784,101 +784,101 @@ $activeTab = $_GET['tab'] ?? 'general';
             </div>
         </div>
 
-        <!-- ============================================ -->
-        <!-- TAB 3: ACCESS CONTROL -->
-        <!-- ============================================ -->
-        <div id="tab-access-control" class="tab-content <?php echo $activeTab === 'access-control' ? '' : 'hidden'; ?>">
-            <div class="space-y-6">
-                <!-- Roles Section -->
-                <div class="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
-                                <i class="fa-solid fa-users text-indigo-500"></i>
-                                <span>Roles & Permissions</span>
-                            </h2>
-                            <p class="text-sm text-slate-500">Manage user roles and their permissions</p>
-                        </div>
-                        <button onclick="openCreateRoleModal()" class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors">
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Create Role</span>
-                        </button>
-                    </div>
+<!-- ============================================ -->
+<!-- TAB 3: ACCESS CONTROL -->
+<!-- ============================================ -->
+<div id="tab-access-control" class="tab-content <?php echo $activeTab === 'access-control' ? '' : 'hidden'; ?>">
+    <div class="space-y-6">
+        <!-- Roles Section -->
+        <div class="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-users text-indigo-500"></i>
+                        <span>Roles & Permissions</span>
+                    </h2>
+                    <p class="text-sm text-slate-500">Manage user roles and their permissions</p>
+                </div>
+                <button onclick="openCreateRoleModal()" class="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Create Role</span>
+                </button>
+            </div>
 
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <?php foreach ($roles as $role): ?>
-                                <div class="role-card">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <div>
-                                            <span class="font-semibold text-slate-900"><?php echo htmlspecialchars(ucfirst($role['name'])); ?></span>
-                                            <span class="role-badge ml-2"><?php echo count($role['permissions']); ?> perms</span>
-                                        </div>
-                                        <div class="role-actions flex space-x-1">
-                                            <button onclick="editRole(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-edit" title="Edit Role">
-                                                <i class="fa-solid fa-pen"></i>
-                                            </button>
-                                            <?php if (!in_array($role['id'], [1, 2, 3])): ?>
-                                                <button onclick="deleteRole(<?php echo $role['id']; ?>, '<?php echo htmlspecialchars($role['name']); ?>')" class="btn-icon btn-icon-delete" title="Delete Role">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                            <button onclick="managePermissions(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-permissions" title="Manage Permissions">
-                                                <i class="fa-solid fa-key"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-wrap gap-1">
-                                        <?php 
-                                        $displayPermissions = array_slice($role['permissions'], 0, 5);
-                                        foreach ($displayPermissions as $perm): 
-                                        ?>
-                                            <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
-                                                <?php echo htmlspecialchars($perm['display_name']); ?>
-                                            </span>
-                                        <?php endforeach; ?>
-                                        <?php if (count($role['permissions']) > 5): ?>
-                                            <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-xs">
-                                                +<?php echo count($role['permissions']) - 5; ?> more
-                                            </span>
-                                        <?php endif; ?>
-                                    </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <?php foreach ($roles as $role): ?>
+                        <div class="role-card" data-role-id="<?php echo $role['id']; ?>">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <span class="font-semibold text-slate-900"><?php echo htmlspecialchars(ucfirst($role['name'])); ?></span>
+                                    <span class="role-badge ml-2"><?php echo count($role['permissions']); ?> perms</span>
+                                </div>
+                                <div class="role-actions flex space-x-1">
+                                    <button onclick="editRole(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-edit" title="Edit Role">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <?php if (!in_array($role['id'], [1, 2, 3])): ?>
+                                        <button onclick="deleteRole(<?php echo $role['id']; ?>, '<?php echo htmlspecialchars($role['name']); ?>')" class="btn-icon btn-icon-delete" title="Delete Role">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                    <button onclick="managePermissions(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-permissions" title="Manage Permissions">
+                                        <i class="fa-solid fa-key"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-1">
+                                <?php 
+                                $displayPermissions = array_slice($role['permissions'], 0, 5);
+                                foreach ($displayPermissions as $perm): 
+                                ?>
+                                    <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
+                                        <?php echo htmlspecialchars($perm['display_name']); ?>
+                                    </span>
+                                <?php endforeach; ?>
+                                <?php if (count($role['permissions']) > 5): ?>
+                                    <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-xs">
+                                        +<?php echo count($role['permissions']) - 5; ?> more
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Permissions Section -->
+        <div class="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-100">
+                <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-list text-indigo-500"></i>
+                    <span>All Permissions by Module</span>
+                </h2>
+                <p class="text-sm text-slate-500">Available permissions grouped by module</p>
+            </div>
+            <div class="p-6">
+                <?php foreach ($groupedPermissions as $module => $perms): ?>
+                    <div class="mb-4 last:mb-0">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                            <i class="fa-solid fa-folder text-indigo-400 mr-2"></i>
+                            <?php echo htmlspecialchars(ucfirst($module)); ?>
+                        </h3>
+                        <div class="permission-grid">
+                            <?php foreach ($perms as $perm): ?>
+                                <div class="permission-item">
+                                    <span class="text-sm text-slate-700"><?php echo htmlspecialchars($perm['display_name']); ?></span>
+                                    <span class="text-xs text-slate-400 ml-auto"><?php echo htmlspecialchars($perm['name']); ?></span>
                                 </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
-                </div>
-
-                <!-- All Permissions Section -->
-                <div class="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-slate-100">
-                        <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
-                            <i class="fa-solid fa-list text-indigo-500"></i>
-                            <span>All Permissions by Module</span>
-                        </h2>
-                        <p class="text-sm text-slate-500">Available permissions grouped by module</p>
-                    </div>
-                    <div class="p-6">
-                        <?php foreach ($groupedPermissions as $module => $perms): ?>
-                            <div class="mb-4 last:mb-0">
-                                <h3 class="text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                                    <i class="fa-solid fa-folder text-indigo-400 mr-2"></i>
-                                    <?php echo htmlspecialchars(ucfirst($module)); ?>
-                                </h3>
-                                <div class="permission-grid">
-                                    <?php foreach ($perms as $perm): ?>
-                                        <div class="permission-item">
-                                            <span class="text-sm text-slate-700"><?php echo htmlspecialchars($perm['display_name']); ?></span>
-                                            <span class="text-xs text-slate-400 ml-auto"><?php echo htmlspecialchars($perm['name']); ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
+    </div>
+</div>
 
         <!-- ============================================ -->
         <!-- TAB 4: SYSTEM SETTINGS -->
@@ -1006,77 +1006,77 @@ $activeTab = $_GET['tab'] ?? 'general';
     </div>
     <?php endif; ?>
 
-    <!-- CREATE ROLE MODAL -->
-    <div id="createRoleModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-plus-circle text-indigo-500"></i> Create New Role</h2>
-                <button onclick="closeModal('createRoleModal')" class="modal-close">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <form method="POST" action="/Campus-Food-Ordering-System/access-control/create-role">
-                <div class="form-group">
-                    <label for="role_name">Role Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="role_name" name="name" placeholder="e.g., manager, editor" required>
-                    <p class="text-muted">Use lowercase letters and underscores (e.g., content_manager)</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="closeModal('createRoleModal')">Cancel</button>
-                    <button type="submit" class="btn-submit">Create Role</button>
-                </div>
-            </form>
+<!-- CREATE ROLE MODAL -->
+<div id="createRoleModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-plus-circle text-indigo-500"></i> Create New Role</h2>
+            <button onclick="closeModal('createRoleModal')" class="modal-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
+        <form method="POST" action="/Campus-Food-Ordering-System/access-control/create-role">
+            <div class="form-group">
+                <label for="role_name">Role Name <span class="text-red-500">*</span></label>
+                <input type="text" id="role_name" name="name" placeholder="e.g., manager, editor" required>
+                <p class="text-muted">Use lowercase letters and underscores (e.g., content_manager)</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('createRoleModal')">Cancel</button>
+                <button type="submit" class="btn-submit">Create Role</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <!-- EDIT ROLE MODAL -->
-    <div id="editRoleModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-pen text-indigo-500"></i> Edit Role</h2>
-                <button onclick="closeModal('editRoleModal')" class="modal-close">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <form method="POST" action="/Campus-Food-Ordering-System/access-control/update-role">
-                <input type="hidden" name="role_id" id="edit_role_id" value="">
-                <div class="form-group">
-                    <label for="edit_role_name">Role Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="edit_role_name" name="name" required>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="closeModal('editRoleModal')">Cancel</button>
-                    <button type="submit" class="btn-submit">Update Role</button>
-                </div>
-            </form>
+<!-- EDIT ROLE MODAL -->
+<div id="editRoleModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-pen text-indigo-500"></i> Edit Role</h2>
+            <button onclick="closeModal('editRoleModal')" class="modal-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
+        <form method="POST" action="/Campus-Food-Ordering-System/access-control/update-role">
+            <input type="hidden" name="role_id" id="edit_role_id" value="">
+            <div class="form-group">
+                <label for="edit_role_name">Role Name <span class="text-red-500">*</span></label>
+                <input type="text" id="edit_role_name" name="name" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('editRoleModal')">Cancel</button>
+                <button type="submit" class="btn-submit">Update Role</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <!-- MANAGE PERMISSIONS MODAL -->
-    <div id="managePermissionsModal" class="modal-overlay">
-        <div class="modal modal-large">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-key text-indigo-500"></i> Manage Permissions</h2>
-                <button onclick="closeModal('managePermissionsModal')" class="modal-close">
-                    <i class="fa-solid fa-xmark"></i>
+<!-- MANAGE PERMISSIONS MODAL -->
+<div id="managePermissionsModal" class="modal-overlay">
+    <div class="modal modal-large">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-key text-indigo-500"></i> Manage Permissions</h2>
+            <button onclick="closeModal('managePermissionsModal')" class="modal-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form method="POST" action="/Campus-Food-Ordering-System/access-control/sync-permissions">
+            <input type="hidden" name="role_id" id="perm_role_id" value="">
+            <div id="permissionsContainer" class="permissions-container">
+                <div class="loading">
+                    <i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading permissions...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('managePermissionsModal')">Cancel</button>
+                <button type="submit" class="btn-submit">
+                    <i class="fa-solid fa-save mr-2"></i> Save Permissions
                 </button>
             </div>
-            <form method="POST" action="/Campus-Food-Ordering-System/access-control/sync-permissions">
-                <input type="hidden" name="role_id" id="perm_role_id" value="">
-                <div id="permissionsContainer" class="permissions-container">
-                    <div class="loading">
-                        <i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading permissions...
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="closeModal('managePermissionsModal')">Cancel</button>
-                    <button type="submit" class="btn-submit">
-                        <i class="fa-solid fa-save mr-2"></i> Save Permissions
-                    </button>
-                </div>
-            </form>
-        </div>
+        </form>
     </div>
+</div>
 
     <!-- ===== TOAST ===== -->
     <div id="toast" class="toast"></div>
@@ -1145,100 +1145,115 @@ $activeTab = $_GET['tab'] ?? 'general';
             closeModal('addPaymentModal');
         }
 
-        // ============================================
-        // ACCESS CONTROL FUNCTIONS
-        // ============================================
-        function openCreateRoleModal() {
-            openModal('createRoleModal');
-        }
+// ============================================
+// ACCESS CONTROL FUNCTIONS
+// ============================================
+function openCreateRoleModal() {
+    openModal('createRoleModal');
+}
 
-        function editRole(roleId) {
-            // Fetch role data
-            fetch(`/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=${roleId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const roles = <?php echo json_encode($roles); ?>;
-                        const role = roles.find(r => r.id === roleId);
-                        
-                        document.getElementById('edit_role_id').value = roleId;
-                        document.getElementById('edit_role_name').value = role ? role.name : '';
-                        openModal('editRoleModal');
-                    }
-                })
-                .catch(error => {
-                    showToast('Error loading role data', 'error');
-                    console.error(error);
-                });
-        }
-
-        function deleteRole(roleId, roleName) {
-            if (confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/Campus-Food-Ordering-System/access-control/delete-role';
+function editRole(roleId) {
+    // Fetch role data
+    fetch(`/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=${roleId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const roles = <?php echo json_encode($roles); ?>;
+                const role = roles.find(r => r.id == roleId);
                 
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'role_id';
-                input.value = roleId;
-                
-                form.appendChild(input);
-                document.body.appendChild(form);
-                form.submit();
+                document.getElementById('edit_role_id').value = roleId;
+                document.getElementById('edit_role_name').value = role ? role.name : '';
+                openModal('editRoleModal');
             }
-        }
+        })
+        .catch(error => {
+            showToast('Error loading role data', 'error');
+            console.error(error);
+        });
+}
 
-        function managePermissions(roleId) {
-            document.getElementById('perm_role_id').value = roleId;
-            const container = document.getElementById('permissionsContainer');
-            container.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading permissions...</div>';
-            openModal('managePermissionsModal');
-            
-            // Fetch role permissions
-            fetch(`/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=${roleId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const allPermissions = <?php echo json_encode($permissions); ?>;
-                        
-                        // Group permissions by module
-                        const grouped = {};
-                        allPermissions.forEach(p => {
-                            if (!grouped[p.module]) {
-                                grouped[p.module] = [];
-                            }
-                            grouped[p.module].push(p);
-                        });
-                        
-                        let html = '';
-                        for (const [module, perms] of Object.entries(grouped)) {
-                            html += `<div class="mb-4">
-                                <h4 class="text-sm font-semibold text-slate-700 mb-2">${module.charAt(0).toUpperCase() + module.slice(1)}</h4>
-                                <div class="permission-grid">`;
-                            
-                            perms.forEach(p => {
-                                const checked = data.permissions.some(rp => rp.id === p.id) ? 'checked' : '';
-                                html += `<div class="permission-item">
-                                    <input type="checkbox" id="perm_${p.id}" name="permissions[]" value="${p.id}" ${checked}>
-                                    <label for="perm_${p.id}">${p.display_name}</label>
-                                </div>`;
-                            });
-                            
-                            html += `</div></div>`;
-                        }
-                        
-                        container.innerHTML = html;
-                    } else {
-                        container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions: ${data.error}</div>`;
+function deleteRole(roleId, roleName) {
+    if (confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/Campus-Food-Ordering-System/access-control/delete-role';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'role_id';
+        input.value = roleId;
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function managePermissions(roleId) {
+    document.getElementById('perm_role_id').value = roleId;
+    const container = document.getElementById('permissionsContainer');
+    container.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading permissions...</div>';
+    openModal('managePermissionsModal');
+    
+    // Define supported permissions for each system role to match UI/UX design capabilities
+    const allowedPermissionsByRole = {
+        1: ['view_dashboard', 'manage_users', 'manage_menu', 'manage_orders', 'view_reports', 'view_orders', 'update_order_status', 'view_menu', 'add_to_cart', 'place_orders', 'update_profile'], // Admin
+        2: ['view_dashboard', 'manage_menu', 'manage_orders', 'view_orders', 'update_order_status', 'view_menu', 'update_profile'], // Staff
+        3: ['view_menu', 'add_to_cart', 'place_orders', 'view_orders', 'update_profile'] // Customer / User
+    };
+    
+    // Fetch role permissions
+    fetch(`/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=${roleId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const allPermissions = <?php echo json_encode($permissions); ?>;
+                
+                // Group permissions by module
+                const grouped = {};
+                allPermissions.forEach(p => {
+                    if (!grouped[p.module]) {
+                        grouped[p.module] = [];
                     }
-                })
-                .catch(error => {
-                    container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions</div>`;
-                    console.error(error);
+                    grouped[p.module].push(p);
                 });
-        }
-
+                
+                let html = '';
+                for (const [module, perms] of Object.entries(grouped)) {
+                    // Filter permissions based on role capabilities/UI design limits
+                    const filteredPerms = perms.filter(p => {
+                        return !allowedPermissionsByRole[roleId] || allowedPermissionsByRole[roleId].includes(p.name);
+                    });
+                    
+                    if (filteredPerms.length === 0) {
+                        continue; // Hide module section if no permissions are allowed/supported
+                    }
+                    
+                    html += `<div class="mb-4">
+                        <h4 class="text-sm font-semibold text-slate-700 mb-2">${module.charAt(0).toUpperCase() + module.slice(1)}</h4>
+                        <div class="permission-grid">`;
+                    
+                    filteredPerms.forEach(p => {
+                        const checked = data.permissions.some(rp => rp.id == p.id) ? 'checked' : '';
+                        html += `<div class="permission-item">
+                            <input type="checkbox" id="perm_${p.id}" name="permissions[]" value="${p.id}" ${checked}>
+                            <label for="perm_${p.id}">${p.display_name}</label>
+                        </div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                }
+                
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions</div>`;
+            console.error(error);
+        });
+}
         // ============================================
         // TOAST
         // ============================================

@@ -54,18 +54,7 @@ class AccessControlRepository implements AccessControlRepositoryInterface
 
     public function getRoleById(int $roleId): ?Role
     {
-        $stmt = $this->db->prepare("
-            SELECT r.*, 
-                   GROUP_CONCAT(DISTINCT p.id) as permission_ids,
-                   GROUP_CONCAT(DISTINCT p.name) as permission_names,
-                   GROUP_CONCAT(DISTINCT p.display_name) as permission_display_names,
-                   GROUP_CONCAT(DISTINCT p.module) as permission_modules
-            FROM roles r
-            LEFT JOIN role_permissions rp ON r.id = rp.role_id
-            LEFT JOIN permissions p ON rp.permission_id = p.id
-            WHERE r.id = :id
-            GROUP BY r.id
-        ");
+        $stmt = $this->db->prepare("SELECT id, name, created_at, updated_at FROM roles WHERE id = :id");
         $stmt->execute([':id' => $roleId]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -73,14 +62,17 @@ class AccessControlRepository implements AccessControlRepositoryInterface
             return null;
         }
 
-        $permissions = $this->formatPermissionsFromData($data);
+        $permissions = $this->getPermissionsByRoleId($roleId);
+        $permissionsArray = array_map(function($p) {
+            return $p->toArray();
+        }, $permissions);
         
         return new Role(
             (int) $data['id'],
             $data['name'],
             $data['created_at'],
             $data['updated_at'],
-            $permissions
+            $permissionsArray
         );
     }
 

@@ -10,6 +10,9 @@ use App\Food\Presentation\Http\Controllers\FoodController;
 use App\Cart\Presentation\Http\Controllers\CartController;
 use App\Order\Presentation\Http\Controllers\OrderController;
 use App\Payment\Presentation\Http\Controllers\PaymentController;
+use App\AccessControl\Presentation\Http\Controllers\AccessControlController;
+use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
+use Inc\Database;
 
 // Initialize routes array
 $routes = [];
@@ -103,8 +106,10 @@ $routes[] = [
             exit();
         }
         
-        if ($_SESSION['user_role'] === 'admin' || $_SESSION['user_role'] === 'staff') {
+        if ($_SESSION['user_role'] === 'admin') {
             header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
+        } else if ($_SESSION['user_role'] === 'staff') {
+            header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
         } else {
             header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
         }
@@ -298,6 +303,98 @@ $routes[] = [
 ];
 
 // ============================================
+// ACCESS CONTROL ROUTES
+// ============================================
+
+// Helper function to initialize AccessControlController
+function getAccessControlController() {
+    // Import necessary classes inside the function
+    require_once __DIR__ . '/../App/AccessControl/Infrastructure/Repositories/AccessControlRepository.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/GetAllRolesUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/GetAllPermissionsUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/AssignRoleToUserUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/CheckPermissionUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/CreateRoleUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/UpdateRoleUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/DeleteRoleUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Application/Usecases/SyncRolePermissionsUseCase.php';
+    require_once __DIR__ . '/../App/AccessControl/Presentation/Http/Controllers/AccessControlController.php';
+    
+    $db = Database::getConnection();
+    $accessControlRepo = new App\AccessControl\Infrastructure\Repositories\AccessControlRepository($db);
+    
+    $getAllRolesUseCase = new App\AccessControl\Application\Usecases\GetAllRolesUseCase($accessControlRepo);
+    $getAllPermissionsUseCase = new App\AccessControl\Application\Usecases\GetAllPermissionsUseCase($accessControlRepo);
+    $assignRoleToUserUseCase = new App\AccessControl\Application\Usecases\AssignRoleToUserUseCase($accessControlRepo);
+    $checkPermissionUseCase = new App\AccessControl\Application\Usecases\CheckPermissionUseCase($accessControlRepo);
+    $createRoleUseCase = new App\AccessControl\Application\Usecases\CreateRoleUseCase($accessControlRepo);
+    $updateRoleUseCase = new App\AccessControl\Application\Usecases\UpdateRoleUseCase($accessControlRepo);
+    $deleteRoleUseCase = new App\AccessControl\Application\Usecases\DeleteRoleUseCase($accessControlRepo);
+    $syncRolePermissionsUseCase = new App\AccessControl\Application\Usecases\SyncRolePermissionsUseCase($accessControlRepo);
+    
+    return new App\AccessControl\Presentation\Http\Controllers\AccessControlController(
+        $getAllRolesUseCase,
+        $getAllPermissionsUseCase,
+        $assignRoleToUserUseCase,
+        $checkPermissionUseCase,
+        $createRoleUseCase,
+        $updateRoleUseCase,
+        $deleteRoleUseCase,
+        $syncRolePermissionsUseCase
+    );
+}
+
+// Create Role
+$routes[] = [
+    'pattern' => '/^\/access-control\/create-role$/',
+    'callback' => function() {
+        $controller = getAccessControlController();
+        $controller->createRole();
+    },
+    'method' => 'POST'
+];
+
+// Update Role
+$routes[] = [
+    'pattern' => '/^\/access-control\/update-role$/',
+    'callback' => function() {
+        $controller = getAccessControlController();
+        $controller->updateRole();
+    },
+    'method' => 'POST'
+];
+
+// Delete Role
+$routes[] = [
+    'pattern' => '/^\/access-control\/delete-role$/',
+    'callback' => function() {
+        $controller = getAccessControlController();
+        $controller->deleteRole();
+    },
+    'method' => 'POST'
+];
+
+// Sync Permissions
+$routes[] = [
+    'pattern' => '/^\/access-control\/sync-permissions$/',
+    'callback' => function() {
+        $controller = getAccessControlController();
+        $controller->syncPermissions();
+    },
+    'method' => 'POST'
+];
+
+// Get Role Permissions (AJAX)
+$routes[] = [
+    'pattern' => '/^\/access-control\/get-role-permissions$/',
+    'callback' => function() {
+        $controller = getAccessControlController();
+        $controller->getRolePermissions();
+    },
+    'method' => 'GET'
+];
+
+// ============================================
 // API ROUTES (AJAX)
 // ============================================
 
@@ -340,7 +437,25 @@ $routes[] = [
     'method' => 'GET'
 ];
 
-// 404 Not Found - Keep this at the end
+// Debug: Show all routes
+$routes[] = [
+    'pattern' => '/^\/debug-routes$/',
+    'callback' => function() use ($routes) {
+        echo '<h1>All Registered Routes</h1>';
+        echo '<pre>';
+        foreach ($routes as $route) {
+            echo $route['method'] . ' - ' . $route['pattern'] . "\n";
+        }
+        echo '</pre>';
+        echo '<hr>';
+        echo '<h2>Test Access Control Route</h2>';
+        echo '<a href="/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=3">Test get-role-permissions</a>';
+        exit;
+    },
+    'method' => 'GET'
+];
+
+// 404 Not Found - Keep this at the END
 $routes[] = [
     'pattern' => '/.*/',
     'callback' => function() {
@@ -399,5 +514,6 @@ $routes[] = [
     },
     'method' => 'POST'
 ];
+
 // Return routes
 return $routes;

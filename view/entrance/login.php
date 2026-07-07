@@ -24,6 +24,8 @@ $controller = new UserController();
 if ($controller->isLoggedIn()) {
     if ($_SESSION['user_role'] === 'admin') {
         header('Location: ../admin/admin-dashboard.php');
+    } else if ($_SESSION['user_role'] === 'staff') {
+        header('Location: ../staff/staff-dashboard.php');
     } else {
         header('Location: ../customer/dashboard.php');
     }

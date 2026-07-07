@@ -32,8 +32,9 @@ $accessControlRepo = new AccessControlRepository($db);
 $checkPermissionUseCase = new CheckPermissionUseCase($accessControlRepo);
 
 $userId = $_SESSION['user_id'] ?? 0;
-$canViewMenu = $checkPermissionUseCase->execute($userId, 'manage_menu');
+$canViewMenu = $checkPermissionUseCase->execute($userId, 'view_menu') || $checkPermissionUseCase->execute($userId, 'manage_menu');
 $canManageMenu = $checkPermissionUseCase->execute($userId, 'manage_menu');
+$canViewOrders = $checkPermissionUseCase->execute($userId, 'view_orders') || $checkPermissionUseCase->execute($userId, 'manage_orders');
 
 // If user doesn't have view permission, redirect
 if (!$canViewMenu) {
@@ -43,6 +44,13 @@ if (!$canViewMenu) {
 
 // Load food data
 $foodController = new FoodController();
+
+// Block modifications if the user does not have management permissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$canManageMenu) {
+    $_SESSION['error'] = "You do not have permission to manage, edit, or delete menu items.";
+    header('Location: /Campus-Food-Ordering-System/view/staff/staff-menu.php');
+    exit();
+}
 
 // Handle all requests through controller
 $result = $foodController->handleRequest();
@@ -278,14 +286,18 @@ $categories = $foodController->getCategories();
                     <i class="fa-solid fa-house text-lg w-6 text-center"></i>
                     <span>Dashboard</span>
                 </a>
+                <?php if ($canViewOrders): ?>
                 <a href="staff-orders.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
+                <?php endif; ?>
+                <?php if ($canViewMenu): ?>
                 <a href="staff-menu.php" class="sidebar-link active flex items-center space-x-4 px-4 py-3 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-book-open text-lg w-6 text-center"></i>
                     <span>Menu</span>
                 </a>
+                <?php endif; ?>
                 <?php if ($isAdmin): ?>
                 <a href="../admin/admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
                     <i class="fa-regular fa-user text-lg w-6 text-center"></i>

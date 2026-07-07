@@ -13,6 +13,60 @@ if (!in_array($_SESSION['user_role'], ['staff', 'admin'])) {
     exit();
 }
 
+require_once __DIR__ . '/../../vendor/autoload.php';
+use App\AccessControl\Application\Usecases\CheckPermissionUseCase;
+use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
+use Inc\Database;
+
+$db = Database::getConnection();
+$accessControlRepo = new AccessControlRepository($db);
+$checkPermissionUseCase = new CheckPermissionUseCase($accessControlRepo);
+
+$userId = $_SESSION['user_id'] ?? 0;
+$canViewDashboard = $checkPermissionUseCase->execute($userId, 'view_dashboard');
+$canViewOrders = $checkPermissionUseCase->execute($userId, 'view_orders') || $checkPermissionUseCase->execute($userId, 'manage_orders');
+$canViewMenu = $checkPermissionUseCase->execute($userId, 'view_menu') || $checkPermissionUseCase->execute($userId, 'manage_menu');
+
+if (!$canViewDashboard) {
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied - Foodie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] flex items-center justify-center h-screen text-slate-800 antialiased">
+    <div class="max-w-md w-full mx-4 bg-white border border-slate-100 rounded-2xl p-8 shadow-sm text-center">
+        <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <i class="fa-solid fa-shield-halved text-2xl"></i>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900 mb-2">No Permissions Allowed</h1>
+        <p class="text-sm text-slate-500 mb-6">
+            Your account does not have any active permissions assigned. Please ask the administrator to grant you access.
+        </p>
+        <div class="space-y-3">
+            <a href="../entrance/logout.php" class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                <i class="fa-solid fa-right-from-bracket mr-2"></i> Logout
+            </a>
+        </div>
+    </div>
+</body>
+</html>
+<?php
+    exit();
+}
+
 // Get user info
 $userName = $_SESSION['user_name'] ?? 'Staff';
 $userRole = $_SESSION['user_role'] ?? 'staff';
@@ -71,14 +125,18 @@ $userRole = $_SESSION['user_role'] ?? 'staff';
                     <i class="fa-solid fa-house text-lg w-6 text-center"></i>
                     <span>Dashboard</span>
                 </a>
+                <?php if ($canViewOrders): ?>
                 <a href="staff-orders.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
+                <?php endif; ?>
+                <?php if ($canViewMenu): ?>
                 <a href="staff-menu.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-book-open text-lg w-6 text-center"></i>
                     <span>Menu</span>
                 </a>
+                <?php endif; ?>
                 <?php if ($userRole === 'admin'): ?>
                 <a href="../admin/admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
                     <i class="fa-regular fa-user text-lg w-6 text-center"></i>
