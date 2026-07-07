@@ -1,301 +1,191 @@
 <?php
+declare(strict_types=1);
+
 session_start();
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-    exit();
-}
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
 
-// Check if user has staff or admin role
-if (!in_array($_SESSION['user_role'], ['staff', 'admin'])) {
+// Load vendor and auth helper first
+require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/auth_helper.php';
+require_once __DIR__ . '/includes/permissions.php';
+
+requireStaffAuth();
+
+$userId = $_SESSION['user_id'] ?? 0;
+$userName = $_SESSION['user_name'] ?? 'Staff';
+$userRole = $_SESSION['user_role'] ?? 'staff';
+
+$permissions = getStaffPermissions($userId);
+
+// Check if user has dashboard access
+if (!$permissions['viewDashboard']) {
+    $_SESSION['error'] = "You do not have permission to access the staff dashboard.";
     header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
     exit();
 }
 
-require_once __DIR__ . '/../../vendor/autoload.php';
-use App\AccessControl\Application\Usecases\CheckPermissionUseCase;
-use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
-use Inc\Database;
+// ============================================
+// 2. BUSINESS LOGIC - GET DATA
+// ============================================
 
-$db = Database::getConnection();
-$accessControlRepo = new AccessControlRepository($db);
-$checkPermissionUseCase = new CheckPermissionUseCase($accessControlRepo);
+// TODO: Replace with actual repository calls
+$stats = [
+    'totalOrders' => 0,
+    'pendingOrders' => 0,
+    'preparingOrders' => 0,
+    'completedOrders' => 0,
+];
 
-$userId = $_SESSION['user_id'] ?? 0;
-$canViewDashboard = $checkPermissionUseCase->execute($userId, 'view_dashboard');
-$canViewOrders = $checkPermissionUseCase->execute($userId, 'view_orders') || $checkPermissionUseCase->execute($userId, 'manage_orders');
-$canViewMenu = $checkPermissionUseCase->execute($userId, 'view_menu') || $checkPermissionUseCase->execute($userId, 'manage_menu');
-$canUpdateProfile = $checkPermissionUseCase->execute($userId, 'update_profile');
+$recentOrders = [];
 
-if (!$canViewDashboard) {
+// ============================================
+// 3. VIEW RENDER
+// ============================================
+
+$pageTitle = 'Staff Dashboard - Foodie';
+$activePage = 'dashboard';
+$customCss = 'css/staff-dashboard.css';
+
+include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/sidebar.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Access Denied - Foodie</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-    </style>
-</head>
-<body class="bg-[#F8FAFC] flex items-center justify-center h-screen text-slate-800 antialiased">
-    <div class="max-w-md w-full mx-4 bg-white border border-slate-100 rounded-2xl p-8 shadow-sm text-center">
-        <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <i class="fa-solid fa-shield-halved text-2xl"></i>
-        </div>
-        <h1 class="text-xl font-bold text-slate-900 mb-2">No Permissions Allowed</h1>
-        <p class="text-sm text-slate-500 mb-6">
-            Your account does not have any active permissions assigned. Please ask the administrator to grant you access.
-        </p>
-        <div class="space-y-3">
-            <a href="../entrance/logout.php" class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors">
-                <i class="fa-solid fa-right-from-bracket mr-2"></i> Logout
-            </a>
-        </div>
-    </div>
-</body>
-</html>
-<?php
-    exit();
-}
 
-// Get user info
-$userName = $_SESSION['user_name'] ?? 'Staff';
-$userRole = $_SESSION['user_role'] ?? 'staff';
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Dashboard - Foodie</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .sidebar-link.active {
-            background-color: #EEF2FF;
-            color: #4F46E5;
-        }
-        .sidebar-link:hover {
-            background-color: #F9FAFB;
-            color: #111827;
-        }
-        .stat-card {
-            transition: all 0.2s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-        }
-    </style>
-</head>
-<body class="bg-[#F8FAFC] flex h-screen text-slate-800 antialiased overflow-hidden">
-
-    <!-- ===== SIDEBAR ===== -->
-    <aside class="w-64 bg-white border-r border-slate-100 flex flex-col justify-between py-6 flex-shrink-0">
+<main class="flex-1 p-8 overflow-y-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
         <div>
-            <div class="flex flex-col items-center justify-center mb-8 px-6">
-                <div class="relative flex items-center justify-center text-slate-900 mb-1">
-                    <span class="fa-stack fa-xl">
-                        <i class="fa-solid fa-building fa-stack-2x opacity-10 -translate-y-1"></i>
-                        <i class="fa-solid fa-hamburger fa-stack-1x text-slate-950"></i>
-                    </span>
-                </div>
-                <span class="text-xl font-black tracking-wider text-slate-950">FOODIE</span>
-                <span class="text-xs text-gray-400 font-medium mt-1">Staff Panel</span>
-            </div>
-
-            <nav class="space-y-1 px-3">
-                <a href="staff-dashboard.php" class="sidebar-link active flex items-center space-x-4 px-4 py-3 rounded-lg font-medium transition-colors relative">
-                    <div class="absolute left-0 top-3 bottom-3 w-1 bg-indigo-600 rounded-r-md"></div>
-                    <i class="fa-solid fa-house text-lg w-6 text-center"></i>
-                    <span>Dashboard</span>
-                </a>
-                <?php if ($canViewOrders): ?>
-                <a href="staff-orders.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
-                    <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
-                    <span>Orders</span>
-                </a>
-                <?php endif; ?>
-                <?php if ($canViewMenu): ?>
-                <a href="staff-menu.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
-                    <i class="fa-solid fa-book-open text-lg w-6 text-center"></i>
-                    <span>Menu</span>
-                </a>
-                <?php endif; ?>
-                <?php if ($userRole === 'admin'): ?>
-                <a href="../admin/admin-users.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
-                    <i class="fa-regular fa-user text-lg w-6 text-center"></i>
-                    <span>Users</span>
-                </a>
-                <a href="../admin/admin-settings.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
-                    <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
-                    <span>Settings</span>
-                </a>
-                <?php endif; ?>
-                <?php if ($canUpdateProfile): ?>
-                <a href="staff-profile.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
-                    <i class="fa-regular fa-user text-lg w-6 text-center"></i>
-                    <span>Profile</span>
-                </a>
-                <?php endif; ?>
-            </nav>
+            <h1 class="text-2xl font-bold text-slate-950">Staff Dashboard</h1>
+            <p class="text-sm text-slate-500">Welcome back, <?php echo htmlspecialchars($userName); ?>!</p>
         </div>
-
-        <div class="px-3">
-            <?php if ($canUpdateProfile): ?>
-            <a href="staff-profile.php" class="block hover:opacity-85 transition-opacity">
-            <?php endif; ?>
-            <div class="flex items-center space-x-3 px-4 py-3 mb-2 rounded-lg bg-gray-50">
-                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                    <?php echo strtoupper(substr($userName, 0, 1)); ?>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($userName); ?></p>
-                    <p class="text-xs text-gray-400"><?php echo ucfirst($userRole); ?></p>
-                </div>
-            </div>
-            <?php if ($canUpdateProfile): ?>
-            </a>
-            <?php endif; ?>
-            <a href="../entrance/logout.php" class="flex items-center space-x-4 px-4 py-3 text-slate-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg font-medium transition-colors">
-                <i class="fa-solid fa-right-from-bracket text-lg w-6 text-center"></i>
-                <span>Logout</span>
-            </a>
+        <div class="flex items-center space-x-3">
+            <span class="text-sm text-slate-500">
+                <i class="fa-regular fa-calendar mr-2"></i>
+                <?php echo date('F d, Y'); ?>
+            </span>
         </div>
-    </aside>
-
-    <!-- ===== MAIN CONTENT ===== -->
-    <main class="flex-1 p-8 overflow-y-auto">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-950">Staff Dashboard</h1>
-                <p class="text-sm text-slate-500">Welcome back, <?php echo htmlspecialchars($userName); ?>!</p>
-            </div>
-            <div class="flex items-center space-x-3">
-                <span class="text-sm text-slate-500">
-                    <i class="fa-regular fa-calendar mr-2"></i>
-                    <?php echo date('F d, Y'); ?>
-                </span>
-            </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Total Orders -->
-            <div class="stat-card bg-white border border-slate-100 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Total Orders</p>
-                        <p class="text-2xl font-bold text-slate-900 mt-1">0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-receipt text-indigo-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pending Orders -->
-            <div class="stat-card bg-white border border-slate-100 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Pending Orders</p>
-                        <p class="text-2xl font-bold text-amber-600 mt-1">0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-clock text-amber-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preparing Orders -->
-            <div class="stat-card bg-white border border-slate-100 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Preparing</p>
-                        <p class="text-2xl font-bold text-blue-600 mt-1">0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-utensils text-blue-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Completed Orders -->
-            <div class="stat-card bg-white border border-slate-100 rounded-xl p-6 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500">Completed</p>
-                        <p class="text-2xl font-bold text-emerald-600 mt-1">0</p>
-                    </div>
-                    <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-check-circle text-emerald-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-<!-- Quick Actions -->
-<div class="bg-white border border-slate-100 rounded-xl shadow-sm p-6">
-    <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
-        <i class="fa-solid fa-bolt text-indigo-500"></i>
-        <span>Quick Actions</span>
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="staff-orders.php" class="flex items-center space-x-3 p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors">
-            <i class="fa-solid fa-receipt text-indigo-600 text-xl"></i>
-            <div>
-                <p class="font-semibold text-slate-900">View Orders</p>
-                <p class="text-sm text-slate-500">Manage all orders</p>
-            </div>
-        </a>
-        <a href="staff-menu.php" class="flex items-center space-x-3 p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
-            <i class="fa-solid fa-book-open text-emerald-600 text-xl"></i>
-            <div>
-                <p class="font-semibold text-slate-900">Manage Menu</p>
-                <p class="text-sm text-slate-500">View food items</p>
-            </div>
-        </a>
-        <?php if ($userRole === 'admin'): ?>
-        <a href="../admin/admin-users.php" class="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors">
-            <i class="fa-regular fa-user text-purple-600 text-xl"></i>
-            <div>
-                <p class="font-semibold text-slate-900">Manage Users</p>
-                <p class="text-sm text-slate-500">User management</p>
-            </div>
-        </a>
-        <?php endif; ?>
     </div>
-</div>
 
-        <!-- Recent Orders -->
-        <div class="mt-6 bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-slate-100">
-                <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
-                    <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
-                    <span>Recent Orders</span>
-                </h2>
-            </div>
-            <div class="p-6">
-                <p class="text-slate-400 text-center py-8">No orders yet.</p>
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <?php 
+        $statsCards = [
+            ['label' => 'Total Orders', 'value' => $stats['totalOrders'], 'icon' => 'fa-receipt', 'color' => 'indigo'],
+            ['label' => 'Pending Orders', 'value' => $stats['pendingOrders'], 'icon' => 'fa-clock', 'color' => 'amber'],
+            ['label' => 'Preparing', 'value' => $stats['preparingOrders'], 'icon' => 'fa-utensils', 'color' => 'blue'],
+            ['label' => 'Completed', 'value' => $stats['completedOrders'], 'icon' => 'fa-check-circle', 'color' => 'emerald'],
+        ];
+        $colorClasses = [
+            'indigo' => 'bg-indigo-50 text-indigo-600',
+            'amber' => 'bg-amber-50 text-amber-600',
+            'blue' => 'bg-blue-50 text-blue-600',
+            'emerald' => 'bg-emerald-50 text-emerald-600',
+        ];
+        foreach ($statsCards as $card): 
+        ?>
+        <div class="bg-white border border-slate-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500"><?php echo $card['label']; ?></p>
+                    <p class="text-2xl font-bold text-slate-900 mt-1"><?php echo $card['value']; ?></p>
+                </div>
+                <div class="w-12 h-12 <?php echo $colorClasses[$card['color']]; ?> rounded-xl flex items-center justify-center">
+                    <i class="fa-solid <?php echo $card['icon']; ?> text-xl"></i>
+                </div>
             </div>
         </div>
-    </main>
+        <?php endforeach; ?>
+    </div>
 
-</body>
-</html>
+    <!-- Quick Actions -->
+    <div class="bg-white border border-slate-100 rounded-xl shadow-sm p-6">
+        <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+            <i class="fa-solid fa-bolt text-indigo-500"></i>
+            <span>Quick Actions</span>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <?php if ($permissions['viewOrders']): ?>
+            <a href="staff-orders.php" class="flex items-center space-x-3 p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors">
+                <i class="fa-solid fa-receipt text-indigo-600 text-xl"></i>
+                <div>
+                    <p class="font-semibold text-slate-900">View Orders</p>
+                    <p class="text-sm text-slate-500">Manage all orders</p>
+                </div>
+            </a>
+            <?php endif; ?>
+            
+            <?php if ($permissions['viewMenu']): ?>
+            <a href="staff-menu.php" class="flex items-center space-x-3 p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
+                <i class="fa-solid fa-book-open text-emerald-600 text-xl"></i>
+                <div>
+                    <p class="font-semibold text-slate-900">Manage Menu</p>
+                    <p class="text-sm text-slate-500">View food items</p>
+                </div>
+            </a>
+            <?php endif; ?>
+            
+            <?php if ($userRole === 'admin'): ?>
+            <a href="../admin/admin-users.php" class="flex items-center space-x-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors">
+                <i class="fa-regular fa-user text-purple-600 text-xl"></i>
+                <div>
+                    <p class="font-semibold text-slate-900">Manage Users</p>
+                    <p class="text-sm text-slate-500">User management</p>
+                </div>
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="mt-6 bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
+                <span>Recent Orders</span>
+            </h2>
+            <?php if ($permissions['viewOrders']): ?>
+            <a href="staff-orders.php" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                View All <i class="fa-solid fa-arrow-right ml-1"></i>
+            </a>
+            <?php endif; ?>
+        </div>
+        <div class="p-6">
+            <?php if (empty($recentOrders)): ?>
+            <p class="text-slate-400 text-center py-8">No orders yet.</p>
+            <?php else: ?>
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Order ID</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <?php foreach ($recentOrders as $order): ?>
+                    <tr>
+                        <td class="px-4 py-3 font-medium text-slate-900">#<?php echo $order['id']; ?></td>
+                        <td class="px-4 py-3 text-slate-600"><?php echo htmlspecialchars($order['customer_name']); ?></td>
+                        <td class="px-4 py-3 font-medium text-slate-900">$<?php echo number_format($order['total_amount'], 2); ?></td>
+                        <td class="px-4 py-3">
+                            <span class="status-badge <?php echo $order['status_class'] ?? 'status-pending'; ?>">
+                                <?php echo ucfirst($order['status_name'] ?? 'Pending'); ?>
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="staff-orders.php" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">View</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+    </div>
+</main>
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
