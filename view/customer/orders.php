@@ -2,12 +2,17 @@
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/auth_helper.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 use App\Order\Presentation\Http\Controllers\OrderController;
 
 $userController = new UserController();
 
+requireLogin();
+
+// Check if user has permission to view orders
+requirePermission('view_orders');
 // Check if user is logged in
 if (!$userController->isLoggedIn()) {
     header('Location: ../entrance/login.php');

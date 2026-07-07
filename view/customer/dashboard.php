@@ -2,12 +2,26 @@
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/auth_helper.php';
 
 use App\Food\Presentation\Http\Controllers\FoodController;
 use App\User\Presentation\Http\Controllers\UserController;
 
 $userController = new UserController();
 
+requireLogin();
+if (!userHasAnyPermission(['view_menu', 'view_orders', 'add_to_cart', 'update_profile', 'place_orders'])) {
+    $_SESSION['error'] = 'You do not have permission to access the dashboard.';
+    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+    exit();
+}
+
+// Get user permissions for conditional display
+$canViewMenu = userHasPermission('view_menu');
+$canAddToCart = userHasPermission('add_to_cart');
+$canPlaceOrders = userHasPermission('place_orders');
+$canViewOrders = userHasPermission('view_orders');
+$canUpdateProfile = userHasPermission('update_profile');
 // Check if user is logged in
 if (!$userController->isLoggedIn()) {
     header('Location: ../entrance/login.php');

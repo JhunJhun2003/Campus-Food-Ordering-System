@@ -2,12 +2,17 @@
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
-
+require_once __DIR__ . '/../../inc/auth_helper.php';
 use App\User\Presentation\Http\Controllers\UserController;
 use App\Cart\Presentation\Http\Controllers\CartController;
 
 $userController = new UserController();
 
+
+requireLogin();
+
+// Check if user has permission to update profile
+requirePermission('update_profile');
 // Check if user is logged in
 if (!$userController->isLoggedIn()) {
     header('Location: ../entrance/login.php');

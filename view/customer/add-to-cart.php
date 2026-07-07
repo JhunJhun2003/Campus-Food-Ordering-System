@@ -2,12 +2,22 @@
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/auth_helper.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 use App\Cart\Presentation\Http\Controllers\CartController;
 
 header('Content-Type: application/json');
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode(['success' => false, 'message' => 'Please login first.']);
+    exit();
+}
 
+// Check if user has permission to add to cart
+if (!userHasPermission('add_to_cart')) {
+    echo json_encode(['success' => false, 'message' => 'You do not have permission to add items to cart.']);
+    exit();
+}
 // Check if user is logged in
 $userController = new UserController();
 if (!$userController->isLoggedIn()) {

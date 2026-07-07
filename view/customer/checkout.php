@@ -2,6 +2,7 @@
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/auth_helper.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 use App\Cart\Presentation\Http\Controllers\CartController;
@@ -10,6 +11,15 @@ use App\Payment\Presentation\Http\Controllers\PaymentController;
 
 $userController = new UserController();
 
+// ============================================
+// PERMISSION CHECKS
+// ============================================
+
+// Check if user is logged in
+requireLogin();
+
+// Check if user has permission to place orders
+requirePermission('place_orders');
 // Check if user is logged in
 if (!$userController->isLoggedIn()) {
     header('Location: ../entrance/login.php');
