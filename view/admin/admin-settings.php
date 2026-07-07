@@ -566,19 +566,25 @@ $activeTab = $_GET['tab'] ?? 'general';
                     <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
                     <span>Settings</span>
                 </a>
+                <a href="admin-profile.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-slate-500 rounded-lg font-medium transition-colors">
+                    <i class="fa-regular fa-user text-lg w-6 text-center"></i>
+                    <span>Profile</span>
+                </a>
             </nav>
         </div>
 
         <div class="px-3">
-            <div class="flex items-center space-x-3 px-4 py-3 mb-2 rounded-lg bg-gray-50">
-                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                    <?php echo strtoupper(substr($currentUser['name'] ?? 'A', 0, 1)); ?>
+            <a href="admin-profile.php" class="block hover:opacity-85 transition-opacity mb-2">
+                <div class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                        <?php echo strtoupper(substr($currentUser['name'] ?? 'A', 0, 1)); ?>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($currentUser['name'] ?? 'Admin'); ?></p>
+                        <p class="text-xs text-gray-400">Administrator</p>
+                    </div>
                 </div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($currentUser['name'] ?? 'Admin'); ?></p>
-                    <p class="text-xs text-gray-400">Administrator</p>
-                </div>
-            </div>
+            </a>
             <a href="../entrance/logout.php" class="flex items-center space-x-4 px-4 py-3 text-slate-500 hover:bg-rose-50 hover:text-rose-600 rounded-lg font-medium transition-colors">
                 <i class="fa-solid fa-right-from-bracket text-lg w-6 text-center"></i>
                 <span>Logout</span>

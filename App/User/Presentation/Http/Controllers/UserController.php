@@ -172,4 +172,30 @@ class UserController
         );
         return $useCase->execute($userId, $data);
     }
+
+    /**
+     * Change user password
+     */
+    public function changePassword(int $userId, string $currentPassword, string $newPassword): array
+    {
+        try {
+            $user = $this->userRepository->findById(new \App\User\Domain\ValueObjects\UserId($userId));
+            if (!$user) {
+                return ['success' => false, 'message' => 'User not found.'];
+            }
+
+            // Verify current password
+            if (!$user->getPassword()->verify($currentPassword)) {
+                return ['success' => false, 'message' => 'Incorrect current password.'];
+            }
+
+            // Change password
+            $user->changePassword(new \App\User\Domain\ValueObjects\Password($newPassword));
+            $this->userRepository->save($user);
+
+            return ['success' => true, 'message' => 'Password changed successfully!'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
 }

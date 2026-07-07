@@ -35,6 +35,7 @@ $userId = $_SESSION['user_id'] ?? 0;
 $canViewMenu = $checkPermissionUseCase->execute($userId, 'view_menu') || $checkPermissionUseCase->execute($userId, 'manage_menu');
 $canManageMenu = $checkPermissionUseCase->execute($userId, 'manage_menu');
 $canViewOrders = $checkPermissionUseCase->execute($userId, 'view_orders') || $checkPermissionUseCase->execute($userId, 'manage_orders');
+$canUpdateProfile = $checkPermissionUseCase->execute($userId, 'update_profile');
 
 // If user doesn't have view permission, redirect
 if (!$canViewMenu) {
@@ -308,10 +309,19 @@ $categories = $foodController->getCategories();
                     <span>Settings</span>
                 </a>
                 <?php endif; ?>
+                <?php if ($canUpdateProfile): ?>
+                <a href="staff-profile.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
+                    <i class="fa-regular fa-user text-lg w-6 text-center"></i>
+                    <span>Profile</span>
+                </a>
+                <?php endif; ?>
             </nav>
         </div>
 
         <div class="px-3">
+            <?php if ($canUpdateProfile): ?>
+            <a href="staff-profile.php" class="block hover:opacity-85 transition-opacity">
+            <?php endif; ?>
             <div class="flex items-center space-x-3 px-4 py-3 mb-2 rounded-lg bg-gray-50">
                 <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
                     <?php echo strtoupper(substr($userName, 0, 1)); ?>
@@ -321,6 +331,9 @@ $categories = $foodController->getCategories();
                     <p class="text-xs text-gray-400"><?php echo ucfirst($userRole); ?></p>
                 </div>
             </div>
+            <?php if ($canUpdateProfile): ?>
+            </a>
+            <?php endif; ?>
             <a href="../entrance/logout.php" class="flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg font-medium transition-colors">
                 <i class="fa-solid fa-right-from-bracket text-lg w-6 text-center"></i>
                 <span>Logout</span>

@@ -304,6 +304,10 @@ $statuses = $orderController->getStatuses();
                     <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
                     <span>Settings</span>
                 </a>
+                <a href="admin-profile.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 text-gray-500 rounded-lg font-medium transition-colors">
+                    <i class="fa-regular fa-user text-lg w-6 text-center"></i>
+                    <span>Profile</span>
+                </a>
             </nav>
         </div>
 
