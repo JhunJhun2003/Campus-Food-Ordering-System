@@ -6,10 +6,6 @@ body {
     font-family: 'Plus Jakarta Sans', sans-serif;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
 }
 
 /* ===== CARD ===== */
@@ -216,19 +212,20 @@ body {
     margin-bottom: 6px;
 }
 
+/* ===== INPUT WITH ICON - RESTORED WORKING STYLES ===== */
 .form-input-wrapper {
     position: relative;
 }
 
 .form-input-icon {
     position: absolute;
-    inset-y: 0;
     left: 0;
-    display: flex;
-    align-items: center;
+    top: 50%;
+    transform: translateY(-50%);
     padding-left: 14px;
     color: #94A3B8;
     pointer-events: none;
+    z-index: 1;
 }
 
 .form-input {
@@ -240,6 +237,7 @@ body {
     font-size: 0.875rem;
     transition: all 0.2s ease;
     color: #1E293B;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .form-input:focus {
@@ -256,17 +254,18 @@ body {
     padding-right: 40px;
 }
 
+/* ===== PASSWORD TOGGLE ===== */
 .password-toggle {
     position: absolute;
-    inset-y: 0;
     right: 0;
-    display: flex;
-    align-items: center;
+    top: 50%;
+    transform: translateY(-50%);
     padding-right: 12px;
     color: #94A3B8;
     background: none;
     border: none;
     cursor: pointer;
+    z-index: 1;
 }
 
 .password-toggle:hover {
@@ -286,7 +285,18 @@ body {
     color: #10B981;
 }
 
-/* ===== REGISTER FIELDS (Hidden by default) ===== */
+.password-field .flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.password-field .flex .form-label {
+    margin-bottom: 0;
+}
+
+/* ===== REGISTER FIELDS ===== */
 .register-fields {
     display: none;
     opacity: 0;
@@ -318,6 +328,7 @@ body {
     transition: all 0.25s ease;
     box-shadow: 0 4px 14px rgba(16, 185, 129, 0.15);
     cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .btn-submit:hover {
@@ -373,6 +384,7 @@ body {
     max-width: 400px;
     margin: 0 auto;
     cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .social-btn:hover {

@@ -3,7 +3,6 @@
  * Entrance Page Footer - Toast notification and closing tags
  */
 ?>
-    <!-- Toast Notification -->
     <div id="toast-notification" class="toast-notification">
         <div id="toast-icon" class="toast-icon-success">
             <i class="fa-solid fa-circle-check text-lg"></i>
@@ -14,6 +13,9 @@
     </div>
 
     <script>
+        // Initialize state
+        let currentMode = 'login';
+
         function showNotification(message, isSuccess = true) {
             const toast = document.getElementById('toast-notification');
             const messageEl = document.getElementById('toast-message');
@@ -83,11 +85,16 @@
                 identityInput.placeholder = "Enter email or username";
                 forgotPassword.style.display = "block";
 
+                // Remove visible class first to allow CSS opacity transition to trigger
                 registerFields.classList.remove('visible');
                 registerPhone.classList.remove('visible');
+                
+                // Wait for transition to complete before applying display none
                 setTimeout(() => {
-                    registerFields.style.display = 'none';
-                    registerPhone.style.display = 'none';
+                    if (currentMode === 'login') {
+                        registerFields.style.display = 'none';
+                        registerPhone.style.display = 'none';
+                    }
                 }, 300);
 
                 bottomHint.innerHTML = 'Don\'t have an account? <a href="#" onclick="switchTab(\'register\'); event.preventDefault();" class="text-slate-800 hover:text-emerald-600 font-bold underline transition-colors decoration-1 underline-offset-2">Register</a>';
@@ -101,19 +108,20 @@
                 identityInput.placeholder = "Enter email address";
                 forgotPassword.style.display = "none";
 
+                // Make elements layout-accessible immediately
                 registerFields.style.display = 'block';
                 registerPhone.style.display = 'block';
-                setTimeout(() => {
-                    registerFields.classList.add('visible');
-                    registerPhone.classList.add('visible');
-                }, 50);
+                
+                // Force a browser reflow so transition plays nicely with input positions
+                registerFields.offsetHeight; 
+                
+                // Add class to scale layout gracefully
+                registerFields.classList.add('visible');
+                registerPhone.classList.add('visible');
 
                 bottomHint.innerHTML = 'Already have an account? <a href="#" onclick="switchTab(\'login\'); event.preventDefault();" class="text-slate-800 hover:text-emerald-600 font-bold underline transition-colors decoration-1 underline-offset-2">Login</a>';
             }
         }
-
-        // Initialize
-        let currentMode = 'login';
     </script>
 </body>
 </html>

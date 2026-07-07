@@ -26,6 +26,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="<?php echo htmlspecialchars($customCss); ?>">
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8"></body>
+<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">

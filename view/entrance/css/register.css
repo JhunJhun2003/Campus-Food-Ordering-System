@@ -10,6 +10,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    margin: 0;
 }
 
 .register-card {
@@ -153,30 +154,34 @@ body {
     margin-bottom: 6px;
 }
 
+/* ===== INPUT WITH ICON ===== */
 .form-input-wrapper {
     position: relative;
 }
 
 .form-input-icon {
     position: absolute;
-    inset-y: 0;
-    left: 0;
-    display: flex;
-    align-items: center;
-    padding-left: 14px;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
     color: #94A3B8;
+    font-size: 16px;
+    z-index: 1;
     pointer-events: none;
+    width: 20px;
+    text-align: center;
 }
 
 .form-input {
     width: 100%;
-    padding: 10px 16px 10px 42px;
+    padding: 12px 16px 12px 44px;
     background: white;
-    border: 1px solid #E2E8F0;
+    border: 1.5px solid #E2E8F0;
     border-radius: 12px;
     font-size: 0.875rem;
     transition: all 0.2s ease;
     color: #1E293B;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .form-input:focus {
@@ -191,7 +196,7 @@ body {
 
 .btn-submit {
     width: 100%;
-    padding: 12px 0;
+    padding: 14px 0;
     background: #10B981;
     color: white;
     border: none;
@@ -201,6 +206,7 @@ body {
     transition: all 0.25s ease;
     box-shadow: 0 4px 14px rgba(16, 185, 129, 0.15);
     cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .btn-submit:hover {
