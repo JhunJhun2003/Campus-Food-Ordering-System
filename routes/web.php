@@ -101,18 +101,18 @@ $routes[] = [
 $routes[] = [
     'pattern' => '/^\/$/',
     'callback' => function() {
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit();
+        if (isset($_SESSION['user_id'])) {
+            if ($_SESSION['user_role'] === 'admin') {
+                header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
+                exit();
+            } else if ($_SESSION['user_role'] === 'staff') {
+                header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+                exit();
+            }
         }
         
-        if ($_SESSION['user_role'] === 'admin') {
-            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-        } else if ($_SESSION['user_role'] === 'staff') {
-            header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
-        } else {
-            header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
-        }
+        // Serve customer dashboard directly on the root URL
+        require_once __DIR__ . '/../view/customer/dashboard.php';
         exit();
     },
     'method' => 'GET'
@@ -122,10 +122,6 @@ $routes[] = [
 $routes[] = [
     'pattern' => '/^\/dashboard$/',
     'callback' => function() {
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit();
-        }
         require_once __DIR__ . '/../view/customer/dashboard.php';
     },
     'method' => 'GET'
@@ -514,6 +510,33 @@ $routes[] = [
     },
     'method' => 'POST'
 ];
-
+// ============================================
+// HOME / LANDING PAGE ROUTE
+// ============================================
+$routes[] = [
+    'pattern' => '/^\/$/',
+    'callback' => function() {
+        // Check if user is logged in
+        if (isset($_SESSION['user_id'])) {
+            // Redirect to appropriate dashboard based on role
+            $role = $_SESSION['user_role'] ?? 'user';
+            switch ($role) {
+                case 'admin':
+                    header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
+                    break;
+                case 'staff':
+                    header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+                    break;
+                default:
+                    header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
+                    break;
+            }
+            exit();
+        }
+        // Show landing page for non-logged-in users
+        require_once dirname(__DIR__) . '/view/public/landing.php';
+    },
+    'method' => 'GET'
+];
 // Return routes
 return $routes;

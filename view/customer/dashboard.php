@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/auth_helper.php';
@@ -8,44 +10,49 @@ use App\Food\Presentation\Http\Controllers\FoodController;
 use App\User\Presentation\Http\Controllers\UserController;
 
 $userController = new UserController();
+$isLoggedIn = $userController->isLoggedIn();
+$currentUser = null;
+$itemCount = 0;
 
-requireLogin();
-if (!userHasAnyPermission(['view_menu', 'view_orders', 'add_to_cart', 'update_profile', 'place_orders'])) {
-    $_SESSION['error'] = 'You do not have permission to access the dashboard.';
-    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-    exit();
+if ($isLoggedIn) {
+    if (!userHasAnyPermission(['view_menu', 'view_orders', 'add_to_cart', 'update_profile', 'place_orders'])) {
+        $_SESSION['error'] = 'You do not have permission to access the dashboard.';
+        header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+        exit();
+    }
+    
+    // Get user permissions for conditional display
+    $canViewMenu = userHasPermission('view_menu');
+    $canAddToCart = userHasPermission('add_to_cart');
+    $canPlaceOrders = userHasPermission('place_orders');
+    $canViewOrders = userHasPermission('view_orders');
+    $canUpdateProfile = userHasPermission('update_profile');
+
+    $currentUser = $userController->getCurrentUser();
+
+    // Get cart item count
+    $userId = $currentUser['id'] ?? null;
+    if ($userId) {
+        try {
+            $cartController = new \App\Cart\Presentation\Http\Controllers\CartController();
+            $itemCount = $cartController->getItemCount($userId);
+        } catch (\Exception $e) {
+            $itemCount = 0;
+        }
+    }
+} else {
+    // Guest defaults
+    $canViewMenu = true;
+    $canAddToCart = false;
+    $canPlaceOrders = false;
+    $canViewOrders = false;
+    $canUpdateProfile = false;
 }
-
-// Get user permissions for conditional display
-$canViewMenu = userHasPermission('view_menu');
-$canAddToCart = userHasPermission('add_to_cart');
-$canPlaceOrders = userHasPermission('place_orders');
-$canViewOrders = userHasPermission('view_orders');
-$canUpdateProfile = userHasPermission('update_profile');
-// Check if user is logged in
-if (!$userController->isLoggedIn()) {
-    header('Location: ../entrance/login.php');
-    exit();
-}
-
-$currentUser = $userController->getCurrentUser();
 
 // Get foods from FoodController
 $foodController = new FoodController();
 $foods = $foodController->index();
 $categories = $foodController->getCategories();
-
-// Get cart item count
-$userId = $currentUser['id'] ?? null;
-$itemCount = 0;
-if ($userId) {
-    try {
-        $cartController = new \App\Cart\Presentation\Http\Controllers\CartController();
-        $itemCount = $cartController->getItemCount($userId);
-    } catch (\Exception $e) {
-        $itemCount = 0;
-    }
-}
 
 // Map categories for filter buttons
 $categoryNames = array_map(fn($cat) => $cat['name'], $categories);
@@ -68,7 +75,7 @@ $categoryEmojis = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="/Campus-Food-Ordering-System/view/customer/dashboard.css">
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
@@ -77,7 +84,7 @@ $categoryEmojis = [
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             
             <!-- Brand Logo -->
-            <a href="dashboard.php" class="flex items-center space-x-3 group">
+            <a href="/Campus-Food-Ordering-System/" class="flex items-center space-x-3 group">
                 <div class="relative flex items-center justify-center text-slate-950">
                     <svg viewBox="0 0 100 100" class="w-11 h-11 fill-current text-slate-950 group-hover:scale-105 interactive-transition">
                         <path d="M42,28 C26,28 22,35 22,41 C22,43 23,45 25,45 L59,45 C61,45 62,43 62,41 C62,35 58,28 42,28 Z M22,49 C21,49 20,50 20,51 C20,53 23,55 25,55 L59,55 C61,55 64,53 64,51 C64,50 63,49 62,49 L22,49 Z M25,59 C21,59 21,63 21,65 C21,72 29,76 42,76 C55,76 63,72 63,65 C63,63 63,59 59,59 L25,59 Z" />
@@ -90,35 +97,41 @@ $categoryEmojis = [
 
             <!-- Navigation Links -->
             <nav class="hidden md:flex items-center space-x-10">
-                <a href="dashboard.php" class="text-sm font-bold text-emerald-500 border-b-2 border-emerald-500 pb-1.5 interactive-transition">Home</a>
-                <a href="cart.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Cart</a>
-                <a href="orders.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Order</a>
+                <a href="/Campus-Food-Ordering-System/" class="text-sm font-bold text-emerald-500 border-b-2 border-emerald-500 pb-1.5 interactive-transition">Home</a>
+                <?php if ($isLoggedIn): ?>
+                    <a href="/Campus-Food-Ordering-System/view/customer/cart.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Cart</a>
+                    <a href="/Campus-Food-Ordering-System/view/customer/orders.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Order</a>
+                <?php endif; ?>
             </nav>
 
             <!-- Right Interfaces -->
             <div class="flex items-center space-x-6">
-                <!-- <button onclick="focusSearch()" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50"> -->
-                    <!-- <i class="fa-solid fa-magnifying-glass text-lg"></i>    -->
-                </button>
-                <a href="cart.php" class="relative text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
-                    <i class="fa-solid fa-cart-shopping text-lg"></i>
-                    <span id="header-cart-badge" class="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm transition-all scale-100 <?php echo $itemCount > 0 ? '' : 'hidden'; ?>">
-                        <?php echo $itemCount; ?>
-                    </span>
-                </a>
-                <div class="user-dropdown relative">
-                    <button onclick="toggleDropdown()" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50 flex items-center gap-2">
-                        <i class="fa-regular fa-user text-lg"></i>
-                        <span class="text-sm font-medium text-slate-600 hidden sm:inline"><?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?></span>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
-                    </button>
-                    <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50">
-                        <a href="profile.php" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Profile</a>
-                        <a href="orders.php" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">My Orders</a>
-                        <hr class="my-1 border-slate-100">
-                        <a href="../entrance/logout.php" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</a>
+                <?php if ($isLoggedIn): ?>
+                    <a href="/Campus-Food-Ordering-System/view/customer/cart.php" class="relative text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50">
+                        <i class="fa-solid fa-cart-shopping text-lg"></i>
+                        <span id="header-cart-badge" class="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm transition-all scale-100 <?php echo $itemCount > 0 ? '' : 'hidden'; ?>">
+                            <?php echo $itemCount; ?>
+                        </span>
+                    </a>
+                    <div class="user-dropdown relative">
+                        <button onclick="toggleDropdown()" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50 flex items-center gap-2">
+                            <i class="fa-regular fa-user text-lg"></i>
+                            <span class="text-sm font-medium text-slate-600 hidden sm:inline"><?php echo htmlspecialchars($currentUser['name'] ?? 'User'); ?></span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                        </button>
+                        <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50">
+                            <a href="/Campus-Food-Ordering-System/view/customer/profile.php" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Profile</a>
+                            <a href="/Campus-Food-Ordering-System/view/customer/orders.php" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">My Orders</a>
+                            <hr class="my-1 border-slate-100">
+                            <a href="/Campus-Food-Ordering-System/view/entrance/logout.php" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</a>
+                        </div>
                     </div>
-                </div>
+                <?php else: ?>
+                    <div class="flex items-center space-x-3">
+                        <a href="/Campus-Food-Ordering-System/view/entrance/login.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 px-4 py-2 rounded-xl hover:bg-slate-50 interactive-transition">Log In</a>
+                        <a href="/Campus-Food-Ordering-System/view/entrance/register.php" class="text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl shadow-md shadow-emerald-500/10 interactive-transition hover:scale-105">Register</a>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </header>
@@ -377,6 +390,13 @@ $categoryEmojis = [
         // ADD TO CART - WITH STOCK CHECK
         // ============================================
         function addToCart(dishName, foodId, availableStock) {
+            // If user is not logged in, redirect to login page
+            const isLoggedIn = <?php echo $isLoggedIn ? 'true' : 'false'; ?>;
+            if (!isLoggedIn) {
+                window.location.href = '/Campus-Food-Ordering-System/view/entrance/login.php';
+                return;
+            }
+
             // Show loading state on button
             const buttons = document.querySelectorAll('.add-to-cart-btn');
             buttons.forEach(btn => {
@@ -399,7 +419,7 @@ $categoryEmojis = [
                 return;
             }
 
-            fetch('add-to-cart.php', {
+            fetch('/Campus-Food-Ordering-System/view/customer/add-to-cart.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `food_id=${foodId}&quantity=1`
