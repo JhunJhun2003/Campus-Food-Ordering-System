@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
@@ -6,6 +8,10 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use App\User\Application\Usecases\SendVerificationUseCase;
 use App\User\Infrastructure\Repositories\EmailVerificationRepository;
 use App\User\Infrastructure\Repositories\UserRepository;
+
+// ============================================
+// 1. API ENDPOINT - RESEND VERIFICATION
+// ============================================
 
 header('Content-Type: application/json');
 

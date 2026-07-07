@@ -1,33 +1,36 @@
 <?php
+declare(strict_types=1);
+
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/includes/helpers.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 use App\User\Application\Usecases\SendVerificationUseCase;
 use App\User\Infrastructure\Repositories\EmailVerificationRepository;
 use App\User\Infrastructure\Repositories\UserRepository;
 
-$controller = new UserController();
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
 
 // Redirect if already logged in
-if ($controller->isLoggedIn()) {
-    if ($_SESSION['user_role'] === 'admin') {
-        header('Location: ../admin/admin-dashboard.php');
-    } else {
-        header('Location: ../customer/dashboard.php');
-    }
-    exit();
-}
+redirectIfLoggedIn();
 
-$error = '';
+// ============================================
+// 2. BUSINESS LOGIC - HANDLE REQUESTS
+// ============================================
+
+$controller = new UserController();
+$error = getErrorMessage();
+$success = getSuccessMessage();
 
 // Handle Registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     $result = $controller->register();
     
     if ($result['success']) {
-        // Get the user ID and email
         $user = $result['user'];
         $registeredUserId = $user->getId()->getValue();
         $registeredEmail = $user->getEmail()->getValue();
@@ -39,11 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $verifyResult = $sendVerification->execute($registeredUserId);
         
         if ($verifyResult['success']) {
-            // Store user info in session
             $_SESSION['user_id'] = $registeredUserId;
             $_SESSION['user_email'] = $registeredEmail;
-            
-            // Redirect to verification page
+            setVerificationSuccess('Registration successful! Please verify your email.');
             header('Location: verify-email.php');
             exit();
         } else {
@@ -57,58 +58,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         }
     }
 }
+
+// ============================================
+// 3. VIEW RENDER
+// ============================================
+
+$pageTitle = 'Foodie - Register';
+$customCss = 'css/register.css';
+
+include __DIR__ . '/includes/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Foodie - Register</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
-        }
-        .alert-error {
-            background-color: #FEE2E2;
-            border: 1px solid #FCA5A5;
-            color: #991B1B;
-        }
-    </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">
 
-    <div class="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50 w-full max-w-5xl overflow-hidden flex flex-col md:flex-row min-h-[580px] transition-all duration-300">
-        
-        <!-- LEFT COLUMN -->
-        <div class="w-full md:w-1/2 bg-slate-50/50 p-8 sm:p-12 flex flex-col items-center justify-center border-r border-slate-100/80 relative overflow-hidden">
-            <div class="flex flex-col items-center justify-center mb-2">
-                <div class="relative flex items-center justify-center text-slate-900 mb-2">
-                    <span class="fa-stack fa-2xl">
-                        <svg viewBox="0 0 100 100" class="w-16 h-16 fill-current text-slate-950">
-                            <path d="M42,28 C26,28 22,35 22,41 C22,43 23,45 25,45 L59,45 C61,45 62,43 62,41 C62,35 58,28 42,28 Z M22,49 C21,49 20,50 20,51 C20,53 23,55 25,55 L59,55 C61,55 64,53 64,51 C64,50 63,49 62,49 L22,49 Z M25,59 C21,59 21,63 21,65 C21,72 29,76 42,76 C55,76 63,72 63,65 C63,63 63,59 59,59 L25,59 Z" />
-                            <path d="M68,20 L80,20 C81,20 82,21 82,22 L76,72 C76,73 75,74 74,74 L64,74 C63,74 62,73 62,72 L65,48 L68,20 Z" />
-                            <line x1="74" y1="20" x2="63" y2="8" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
-                        </svg>
-                    </span>
-                </div>
-                <span class="text-3xl font-extrabold tracking-wider text-slate-950">FOODIE</span>
-                <p class="text-base sm:text-lg font-bold text-slate-900 mt-2 text-center">Create Your Account</p>
-            </div>
-        </div>
+<div class="register-card">
+    
+    <!-- Left Column: Brand Panel -->
+    <?php 
+    $brandTitle = 'FOODIE';
+    $brandSubtitle = 'Create Your Account';
+    include __DIR__ . '/includes/brand-panel.php'; 
+    ?>
 
-        <!-- RIGHT COLUMN -->
-        <div class="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center">
-            
+    <!-- Right Column: Form -->
+    <div class="form-panel">
+        <div>
             <?php if ($error): ?>
-                <div class="alert-error px-4 py-3 rounded-xl mb-4 text-sm font-medium flex items-center space-x-2">
+                <div class="alert-error">
                     <i class="fa-solid fa-circle-exclamation"></i>
                     <span><?php echo htmlspecialchars($error); ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($success): ?>
+                <div class="alert-success">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span><?php echo htmlspecialchars($success); ?></span>
                 </div>
             <?php endif; ?>
 
@@ -118,40 +101,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
             </div>
 
             <form method="POST" action="" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-slate-800 mb-1.5">Email Address</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                            <i class="fa-regular fa-envelope"></i>
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon">
+                            <i class="fa-regular fa-user"></i>
                         </span>
-                        <input name="email" type="email" placeholder="Enter email address" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                        <input name="name" type="text" placeholder="Enter full name" class="form-input" required>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-slate-800 mb-1.5">Password</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon">
+                            <i class="fa-regular fa-envelope"></i>
+                        </span>
+                        <input name="email" type="email" placeholder="Enter email address" class="form-input" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon">
                             <i class="fa-solid fa-lock"></i>
                         </span>
-                        <input name="password" type="password" placeholder="Enter password" required class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                        <input name="password" type="password" placeholder="Enter password" class="form-input" required>
                     </div>
                     <p class="text-xs text-slate-400 mt-1">Must be at least 8 characters with uppercase, lowercase, and a number</p>
                 </div>
 
-                <button type="submit" name="register" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 text-sm tracking-wide">
-                    Create Account
-                </button>
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <div class="form-input-wrapper">
+                        <span class="form-input-icon">
+                            <i class="fa-solid fa-phone"></i>
+                        </span>
+                        <input name="phone" type="tel" placeholder="Enter phone number" class="form-input">
+                    </div>
+                </div>
+
+                <button type="submit" name="register" class="btn-submit">Create Account</button>
             </form>
 
-            <div class="mt-6 text-center">
-                <p class="text-xs text-slate-500 font-medium">
-                    Already have an account? 
-                    <a href="login.php" class="text-slate-800 hover:text-emerald-600 font-bold underline transition-colors decoration-1 underline-offset-2">Login</a>
-                </p>
+            <div class="bottom-hint">
+                Already have an account? 
+                <a href="login.php">Login</a>
             </div>
         </div>
     </div>
+</div>
 
-</body>
-</html>
+<?php include __DIR__ . '/includes/footer.php'; ?>

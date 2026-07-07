@@ -1,0 +1,241 @@
+/* ============================================
+   VERIFY EMAIL PAGE STYLES
+   ============================================ */
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.verify-card {
+    background: white;
+    border-radius: 24px;
+    border: 1px solid #F1F5F9;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06);
+    width: 100%;
+    max-width: 448px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* ===== HEADER ===== */
+.verify-header {
+    background: linear-gradient(135deg, #ECFDF5, #FFFFFF);
+    padding: 1.5rem;
+    border-bottom: 1px solid #F1F5F9;
+    text-align: center;
+}
+
+.verify-header .logo {
+    width: 48px;
+    height: 48px;
+    fill: currentColor;
+    color: #0F172A;
+}
+
+.verify-header h1 {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #0F172A;
+    margin-top: 0.5rem;
+}
+
+.verify-header p {
+    font-size: 0.875rem;
+    color: #64748B;
+    margin-top: 0.25rem;
+}
+
+/* ===== BODY ===== */
+.verify-body {
+    padding: 1.5rem;
+}
+
+/* ===== ALERT MESSAGES ===== */
+.alert-error {
+    background-color: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.alert-success {
+    background-color: #D1FAE5;
+    border: 1px solid #6EE7B7;
+    color: #065F46;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ===== EMAIL DISPLAY ===== */
+.email-display {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.email-display p {
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.email-display strong {
+    color: #0F172A;
+}
+
+.email-display .hint {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    margin-top: 0.5rem;
+}
+
+/* ===== FORM ===== */
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1E293B;
+    margin-bottom: 6px;
+}
+
+/* ===== VERIFICATION CODE INPUT ===== */
+.code-input {
+    letter-spacing: 12px;
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    width: 100%;
+    padding: 1rem 0.5rem;
+    background: white;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.code-input:focus {
+    outline: none;
+    border-color: #10B981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.code-hint {
+    color: #94A3B8;
+    font-size: 0.8125rem;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+/* ===== BUTTONS ===== */
+.btn-verify {
+    width: 100%;
+    padding: 14px 0;
+    background: #10B981;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.15);
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.btn-verify:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.25);
+}
+
+.resend-btn {
+    background: none;
+    border: none;
+    color: #10B981;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.resend-btn:hover {
+    color: #059669;
+}
+
+.resend-text {
+    font-size: 0.875rem;
+    color: #64748B;
+    text-align: center;
+}
+
+/* ===== DEBUG BOX (for testing) ===== */
+.debug-box {
+    background: #1E293B;
+    color: #A5B4FC;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    margin-top: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* ===== FOOTER ===== */
+.verify-footer {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.verify-footer a {
+    font-size: 0.75rem;
+    color: #64748B;
+    transition: color 0.2s ease;
+    text-decoration: none;
+}
+
+.verify-footer a:hover {
+    color: #10B981;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+    .verify-card {
+        border-radius: 16px;
+    }
+    
+    .code-input {
+        font-size: 24px;
+        letter-spacing: 8px;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .verify-header {
+        padding: 1rem;
+    }
+    
+    .verify-body {
+        padding: 1rem;
+    }
+    
+    .verify-footer {
+        padding: 1rem;
+    }
+}

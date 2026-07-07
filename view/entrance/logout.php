@@ -1,9 +1,35 @@
 <?php
+declare(strict_types=1);
+
 session_start();
 
-require_once __DIR__ . '/../../vendor/autoload.php';
+// ============================================
+// 1. BUSINESS LOGIC - LOGOUT
+// ============================================
 
-use App\User\Presentation\Http\Controllers\UserController;
+// Clear all session variables
+$_SESSION = [];
 
-$controller = new UserController();
-$controller->logout();
+// Destroy the session
+session_destroy();
+
+// Clear session cookie
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+    setcookie(
+        session_name(),
+        '',
+        time() - 42000,
+        $params["path"],
+        $params["domain"],
+        $params["secure"],
+        $params["httponly"]
+    );
+}
+
+// ============================================
+// 2. REDIRECT TO LOGIN
+// ============================================
+
+header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+exit();
