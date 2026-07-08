@@ -66,7 +66,6 @@ class OrderController
         string $accountNumber, 
         string $transactionImage
     ): array {
-        // ✅ Pass all 3 dependencies: OrderRepository, CartRepository, FoodRepository
         $useCase = new CreateOrderUseCase(
             $this->orderRepository,
             $this->cartRepository,
@@ -116,6 +115,14 @@ class OrderController
     }
 
     /**
+     * Get order items by order ID
+     */
+    public function getOrderItems(int $orderId): array
+    {
+        return $this->orderRepository->getOrderItems($orderId);
+    }
+
+    /**
      * Get total orders count (admin dashboard)
      */
     public function getTotalOrders(): int
@@ -129,5 +136,13 @@ class OrderController
     public function getPendingOrders(): int
     {
         return $this->orderRepository->getPendingOrders();
+    }
+
+    /**
+     * Get order by ID
+     */
+    public function getOrder(int $orderId)
+    {
+        return $this->orderRepository->findById($orderId);
     }
 }

@@ -1,0 +1,20 @@
+   
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #FCFDFE;
+        }
+        .interactive-transition {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .fade-out-item {
+            animation: fadeOut 0.3s ease forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(12px); height: 0; padding: 0; margin: 0; overflow: hidden; }
+        }
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }

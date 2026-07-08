@@ -15,30 +15,38 @@ use App\User\Domain\ValueObjects\UserId;
 // 1. AUTHENTICATION & AUTHORIZATION
 // ============================================
 
-// Allow verification flow even if the user is not fully logged in yet
-if (!isset($_SESSION['user_id'])) {
-    $userId = 0;
-    $userEmail = $_SESSION['user_email'] ?? '';
-} else {
-    $userId = (int) $_SESSION['user_id'];
-    $userEmail = $_SESSION['user_email'] ?? '';
+// Do NOT auto-login the user. Only store email for verification purposes.
+// If user is already logged in, redirect to dashboard (they don't need verification)
+if (isset($_SESSION['user_id']) && isset($_SESSION['user_email'])) {
+    // Check if already verified
+    $userRepo = new UserRepository();
+    $user = $userRepo->findById(new UserId((int) $_SESSION['user_id']));
+    if ($user && $user->isVerified()) {
+        // Already verified, redirect to dashboard
+        $role = $_SESSION['user_role'] ?? 'user';
+        $redirectMap = [
+            'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
+            'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
+            'user' => '/Campus-Food-Ordering-System/view/customer/dashboard.php',
+        ];
+        header('Location: ' . ($redirectMap[$role] ?? $redirectMap['user']));
+        exit();
+    }
 }
 
-// Resolve the current user from the session or the stored email
-if (empty($userEmail) || $userId === 0) {
-    $userRepo = new UserRepository();
-    if ($userId > 0) {
-        $user = $userRepo->findById(new UserId($userId));
-    } else {
-        $user = !empty($userEmail) ? $userRepo->findByEmail(new Email($userEmail)) : null;
-    }
+// Get email from session or POST
+$userEmail = $_SESSION['user_email'] ?? '';
 
-    if ($user) {
-        $userId = $user->getId()->getValue();
-        $userEmail = $user->getEmail()->getValue();
-        $_SESSION['user_id'] = $userId;
-        $_SESSION['user_email'] = $userEmail;
-    }
+// If no email in session, try to get from POST
+if (empty($userEmail) && isset($_POST['email'])) {
+    $userEmail = trim($_POST['email']);
+}
+
+// If still no email, redirect to login
+if (empty($userEmail)) {
+    $_SESSION['error'] = 'Please register first or login to verify your email.';
+    header('Location: login.php');
+    exit();
 }
 
 // ============================================
@@ -53,36 +61,35 @@ $isVerified = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle Resend Code
     if (isset($_POST['resend_code'])) {
-        $email = trim($_POST['email'] ?? '');
+        $email = trim($_POST['email'] ?? $userEmail);
         if (empty($email)) {
             $error = 'Email address is required.';
         } else {
             $verificationRepo = new EmailVerificationRepository();
             $userRepo = new UserRepository();
-            if ($userId === 0) {
-                $user = $userRepo->findByEmail(new Email($email));
-                if ($user) {
-                    $userId = $user->getId()->getValue();
-                }
-            }
-            $sendVerification = new \App\User\Application\Usecases\SendVerificationUseCase($userRepo, $verificationRepo);
-            $result = $sendVerification->execute($userId);
+            $user = $userRepo->findByEmail(new Email($email));
             
-            if ($result['success']) {
-                $success = 'New verification code sent to your email!';
-                $_SESSION['test_code'] = $result['code'];
+            if (!$user) {
+                $error = 'User not found with this email.';
             } else {
-                $error = $result['message'];
+                $userId = $user->getId()->getValue();
+                $sendVerification = new \App\User\Application\Usecases\SendVerificationUseCase($userRepo, $verificationRepo);
+                $result = $sendVerification->execute($userId);
+                
+                if ($result['success']) {
+                    $success = 'New verification code sent to your email!';
+                    $_SESSION['test_code'] = $result['code'];
+                    $_SESSION['user_email'] = $email;
+                } else {
+                    $error = $result['message'];
+                }
             }
         }
     }
     
     // Handle Verify Code
     if (!isset($_POST['resend_code']) && (!empty($_POST['verification_code']) || isset($_POST['verify_email']))) {
-        $email = trim($_POST['email'] ?? '');
-        if (empty($email)) {
-            $email = $userEmail;
-        }
+        $email = trim($_POST['email'] ?? $userEmail);
         $code = trim($_POST['verification_code'] ?? '');
         
         if (empty($email) || empty($code)) {
@@ -96,6 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $success = 'Email verified successfully! You can now login.';
                 $isVerified = true;
+                
+                // Clear any session data from registration
+                unset($_SESSION['user_id']);
+                unset($_SESSION['user_email']);
+                unset($_SESSION['test_code']);
             } else {
                 $error = $result['message'];
             }
@@ -110,8 +122,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'Foodie - Verify Email';
 $customCss = 'css/verify-email.css';
 $simpleHeader = true;
-
 include __DIR__ . '/includes/header.php';
+
+
 ?>
 
 <div class="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8">
@@ -144,9 +157,9 @@ include __DIR__ . '/includes/header.php';
                     <span><?php echo htmlspecialchars($success); ?></span>
                 </div>
                 <div class="text-center mt-4">
-                    <p class="text-sm text-slate-500 mb-4">Redirecting to login page...</p>
+                    <p class="text-sm text-slate-500 mb-4">You can now login to your account.</p>
                     <a href="login.php" class="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20">
-                        <span>Login Now</span>
+                        <span>Go to Login</span>
                         <i class="fa-solid fa-arrow-right"></i>
                     </a>
                 </div>

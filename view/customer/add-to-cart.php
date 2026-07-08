@@ -1,13 +1,18 @@
 <?php
+declare(strict_types=1);
+
 session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/auth_helper.php';
 
-use App\User\Presentation\Http\Controllers\UserController;
-use App\Cart\Presentation\Http\Controllers\CartController;
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
 
 header('Content-Type: application/json');
+
+// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Please login first.']);
     exit();
@@ -18,12 +23,13 @@ if (!userHasPermission('add_to_cart')) {
     echo json_encode(['success' => false, 'message' => 'You do not have permission to add items to cart.']);
     exit();
 }
-// Check if user is logged in
-$userController = new UserController();
-if (!$userController->isLoggedIn()) {
-    echo json_encode(['success' => false, 'message' => 'Please login first.']);
-    exit();
-}
+
+// ============================================
+// 2. BUSINESS LOGIC
+// ============================================
+
+use App\User\Presentation\Http\Controllers\UserController;
+use App\Cart\Presentation\Http\Controllers\CartController;
 
 // Get POST data
 $foodId = (int) ($_POST['food_id'] ?? 0);
@@ -35,6 +41,7 @@ if ($foodId <= 0) {
 }
 
 // Get user ID
+$userController = new UserController();
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 
@@ -43,8 +50,11 @@ if ($userId <= 0) {
     exit();
 }
 
+// ============================================
+// 3. RESPONSE
+// ============================================
+
 try {
-    // Add to cart
     $cartController = new CartController();
     $result = $cartController->add($userId, $foodId, $quantity);
     

@@ -314,4 +314,6 @@ class OrderRepository implements OrderRepositoryInterface
         
         return $emojiMap[$categoryId] ?? '🍽️';
     }
+
+    
 }

@@ -503,34 +503,6 @@ $activeTab = $_GET['tab'] ?? 'general';
             </div>
         </div>
 
-        <!-- All Permissions Section -->
-        <!-- <div class="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-slate-100">
-                <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
-                    <i class="fa-solid fa-list text-indigo-500"></i>
-                    <span>All Permissions by Module</span>
-                </h2>
-                <p class="text-sm text-slate-500">Available permissions grouped by module</p>
-            </div>
-            <div class="p-6">
-                <?php foreach ($groupedPermissions as $module => $perms): ?>
-                    <div class="mb-4 last:mb-0">
-                        <h3 class="text-sm font-semibold text-slate-700 mb-2 flex items-center">
-                            <i class="fa-solid fa-folder text-indigo-400 mr-2"></i>
-                            <?php echo htmlspecialchars(ucfirst($module)); ?>
-                        </h3>
-                        <div class="permission-grid">
-                            <?php foreach ($perms as $perm): ?>
-                                <div class="permission-item">
-                                    <span class="text-sm text-slate-700"><?php echo htmlspecialchars($perm['display_name']); ?></span>
-                                    <span class="text-xs text-slate-400 ml-auto"><?php echo htmlspecialchars($perm['name']); ?></span>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div> -->
     </div>
 </div>
 
