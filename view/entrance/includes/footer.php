@@ -1,126 +1,56 @@
 <?php
 /**
- * Entrance Page Footer - Toast notification and closing tags
+ * Entrance Page Footer - Reusable footer for login/register pages
  */
 ?>
-    <div id="toast-notification" class="toast-notification">
-        <div id="toast-icon" class="toast-icon-success">
+    <!-- TOAST POPUP -->
+    <div id="add-toast" class="fixed bottom-6 right-6 bg-slate-950 text-white px-5 py-4 rounded-2xl shadow-2xl flex items-center space-x-3.5 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50 border border-slate-800 max-w-sm">
+        <div class="text-emerald-400 bg-emerald-500/10 p-2 rounded-xl">
             <i class="fa-solid fa-circle-check text-lg"></i>
         </div>
         <div>
-            <p id="toast-message" class="text-sm font-semibold"></p>
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Success</h4>
+            <p id="toast-message" class="text-sm font-semibold text-slate-100"></p>
         </div>
     </div>
 
-    <script>
-        // Initialize state
-        let currentMode = 'login';
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-100 mt-20 py-8">
+        <div class="max-w-6xl mx-auto px-4 text-center text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            &copy; <?php echo date('Y'); ?> FOODIE INC. All rights reserved. Delicious Food, Delivered Fast.
+        </div>
+    </footer>
 
-        function showNotification(message, isSuccess = true) {
-            const toast = document.getElementById('toast-notification');
+    <script>
+        // ============================================
+        // TOAST NOTIFICATION
+        // ============================================
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('add-toast');
             const messageEl = document.getElementById('toast-message');
-            const iconEl = document.getElementById('toast-icon');
+            const iconEl = toast.querySelector('.text-emerald-400');
 
             messageEl.innerText = message;
-            iconEl.className = isSuccess ? 'toast-icon-success' : 'toast-icon-error';
-            iconEl.innerHTML = isSuccess 
-                ? '<i class="fa-solid fa-circle-check text-lg"></i>'
-                : '<i class="fa-solid fa-circle-xmark text-lg"></i>';
+            
+            if (isSuccess) {
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-check text-lg"></i>';
+                iconEl.className = 'text-emerald-400 bg-emerald-500/10 p-2 rounded-xl';
+            } else {
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-exclamation text-lg"></i>';
+                iconEl.className = 'text-red-400 bg-red-500/10 p-2 rounded-xl';
+            }
 
-            toast.classList.add('show');
+            toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
 
             setTimeout(() => {
-                toast.classList.remove('show');
-            }, 4000);
+                toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
         }
 
-        function handleSocialAuth(provider) {
-            showNotification(`Sign-in procedure initialized via ${provider}.`);
-        }
-
-        function togglePasswordVisibility() {
-            const passwordInput = document.getElementById('password-input');
-            const toggleIcon = document.getElementById('password-toggle-icon');
-
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.className = 'fa-regular fa-eye';
-            } else {
-                passwordInput.type = 'password';
-                toggleIcon.className = 'fa-regular fa-eye-slash';
-            }
-        }
-
-        function triggerForgotPassword(event) {
-            event.preventDefault();
-            const identity = document.getElementById('identity-input')?.value;
-            if (!identity) {
-                showNotification("Please enter your email or username above.", false);
-            } else {
-                showNotification(`Password reset link sent to: ${identity}`);
-            }
-        }
-
-        function switchTab(mode) {
-            if (currentMode === mode) return;
-            currentMode = mode;
-
-            const tabLogin = document.getElementById('tab-login');
-            const tabRegister = document.getElementById('tab-register');
-            const submitBtn = document.getElementById('submit-btn');
-            const registerFields = document.getElementById('register-fields');
-            const registerPhone = document.getElementById('register-phone');
-            const identityLabel = document.getElementById('identity-label');
-            const identityInput = document.getElementById('identity-input');
-            const bottomHint = document.getElementById('bottom-hint');
-            const forgotPassword = document.getElementById('forgot-password');
-
-            if (mode === 'login') {
-                tabLogin.className = "auth-tab active";
-                tabRegister.className = "auth-tab";
-                submitBtn.innerText = "Login";
-                submitBtn.name = "login";
-                submitBtn.value = "1";
-                identityLabel.innerText = "Email / Username";
-                identityInput.placeholder = "Enter email or username";
-                forgotPassword.style.display = "block";
-
-                // Remove visible class first to allow CSS opacity transition to trigger
-                registerFields.classList.remove('visible');
-                registerPhone.classList.remove('visible');
-                
-                // Wait for transition to complete before applying display none
-                setTimeout(() => {
-                    if (currentMode === 'login') {
-                        registerFields.style.display = 'none';
-                        registerPhone.style.display = 'none';
-                    }
-                }, 300);
-
-                bottomHint.innerHTML = 'Don\'t have an account? <a href="#" onclick="switchTab(\'register\'); event.preventDefault();" class="text-slate-800 hover:text-emerald-600 font-bold underline transition-colors decoration-1 underline-offset-2">Register</a>';
-            } else {
-                tabRegister.className = "auth-tab active";
-                tabLogin.className = "auth-tab";
-                submitBtn.innerText = "Register";
-                submitBtn.name = "register";
-                submitBtn.value = "1";
-                identityLabel.innerText = "Email Address";
-                identityInput.placeholder = "Enter email address";
-                forgotPassword.style.display = "none";
-
-                // Make elements layout-accessible immediately
-                registerFields.style.display = 'block';
-                registerPhone.style.display = 'block';
-                
-                // Force a browser reflow so transition plays nicely with input positions
-                registerFields.offsetHeight; 
-                
-                // Add class to scale layout gracefully
-                registerFields.classList.add('visible');
-                registerPhone.classList.add('visible');
-
-                bottomHint.innerHTML = 'Already have an account? <a href="#" onclick="switchTab(\'login\'); event.preventDefault();" class="text-slate-800 hover:text-emerald-600 font-bold underline transition-colors decoration-1 underline-offset-2">Login</a>';
-            }
+        function showNotification(message, isSuccess = true) {
+            showToast(message, isSuccess);
         }
     </script>
 </body>
