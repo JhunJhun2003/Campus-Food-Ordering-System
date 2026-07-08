@@ -442,49 +442,69 @@ $activeTab = $_GET['tab'] ?? 'general';
             <div class="p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <?php foreach ($roles as $role): ?>
-                        <div class="role-card" data-role-id="<?php echo $role['id']; ?>">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <span class="font-semibold text-slate-900"><?php echo htmlspecialchars(ucfirst($role['name'])); ?></span>
-                                    <span class="role-badge ml-2"><?php echo count($role['permissions']); ?> permissions</span>
-                                </div>
-                                <div class="role-actions flex space-x-1">
-                                    <button onclick="editRole(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-edit" title="Edit Role">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <?php if (!in_array($role['id'], [1, 2, 3])): ?>
-                                        <button onclick="deleteRole(<?php echo $role['id']; ?>, '<?php echo htmlspecialchars($role['name']); ?>')" class="btn-icon btn-icon-delete" title="Delete Role">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                    <button onclick="managePermissions(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-permissions" title="Manage Permissions">
-                                        <i class="fa-solid fa-key"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-1">
-                                <?php 
-                                $displayPermissions = array_slice($role['permissions'], 0, 5);
-                                foreach ($displayPermissions as $perm): 
-                                ?>
-                                    <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
-                                        <?php echo htmlspecialchars($perm['display_name']); ?>
-                                    </span>
-                                <?php endforeach; ?>
-                                <?php if (count($role['permissions']) > 5): ?>
-                                    <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-xs">
-                                        +<?php echo count($role['permissions']) - 5; ?> more
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
+                      <div class="role-card" data-role-id="<?php echo $role['id']; ?>">
+    <div class="flex items-center justify-between mb-3">
+        <div>
+            <span class="font-semibold text-slate-900"><?php echo htmlspecialchars(ucfirst($role['name'])); ?></span>
+            <?php if ($role['id'] === 1): ?>
+                <span class="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold ml-2">
+                    <i class="fa-solid fa-crown mr-1"></i> Full Access
+                </span>
+            <?php else: ?>
+                <span class="role-badge ml-2"><?php echo count($role['permissions']); ?> permissions</span>
+            <?php endif; ?>
+        </div>
+        <div class="role-actions flex space-x-1">
+            <?php if ($role['id'] !== 1): ?>
+                <button onclick="editRole(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-edit" title="Edit Role">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+            <?php endif; ?>
+            <?php if (!in_array($role['id'], [1, 2, 3])): ?>
+                <button onclick="deleteRole(<?php echo $role['id']; ?>, '<?php echo htmlspecialchars($role['name']); ?>')" class="btn-icon btn-icon-delete" title="Delete Role">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            <?php endif; ?>
+            <?php if ($role['id'] !== 1): ?>
+                <button onclick="managePermissions(<?php echo $role['id']; ?>)" class="btn-icon btn-icon-permissions" title="Manage Permissions">
+                    <i class="fa-solid fa-key"></i>
+                </button>
+            <?php else: ?>
+                <span class="text-xs text-slate-400 flex items-center px-2">
+                    <i class="fa-solid fa-lock mr-1"></i> Built-in
+                </span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="flex flex-wrap gap-1">
+        <?php if ($role['id'] === 1): ?>
+            <span class="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs">
+                <i class="fa-solid fa-check-circle mr-1"></i> All permissions granted
+            </span>
+        <?php else: ?>
+            <?php 
+            $displayPermissions = array_slice($role['permissions'], 0, 5);
+            foreach ($displayPermissions as $perm): 
+            ?>
+                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
+                    <?php echo htmlspecialchars($perm['display_name']); ?>
+                </span>
+            <?php endforeach; ?>
+            <?php if (count($role['permissions']) > 5): ?>
+                <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-xs">
+                    +<?php echo count($role['permissions']) - 5; ?> more
+                </span>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</div>
                     <?php endforeach; ?>
                 </div>
             </div>
         </div>
 
         <!-- All Permissions Section -->
-        <div class="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+        <!-- <div class="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
             <div class="p-6 border-b border-slate-100">
                 <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
                     <i class="fa-solid fa-list text-indigo-500"></i>
@@ -510,7 +530,7 @@ $activeTab = $_GET['tab'] ?? 'general';
                     </div>
                 <?php endforeach; ?>
             </div>
-        </div>
+        </div> -->
     </div>
 </div>
 
@@ -824,6 +844,12 @@ function deleteRole(roleId, roleName) {
 }
 
 function managePermissions(roleId) {
+    // Check if this is the admin role (role_id = 1)
+    if (roleId === 1) {
+        showToast('Admin role has all permissions by default and cannot be modified.', 'info');
+        return;
+    }
+    
     document.getElementById('perm_role_id').value = roleId;
     const container = document.getElementById('permissionsContainer');
     container.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading permissions...</div>';
@@ -831,7 +857,6 @@ function managePermissions(roleId) {
     
     // Define supported permissions for each system role to match UI/UX design capabilities
     const allowedPermissionsByRole = {
-        1: ['view_dashboard', 'manage_users', 'manage_menu', 'manage_orders', 'view_reports', 'view_orders', 'update_order_status', 'view_menu', 'add_to_cart', 'place_orders', 'update_profile'], // Admin
         2: ['view_dashboard', 'manage_menu', 'manage_orders', 'view_orders', 'update_order_status', 'view_menu', 'update_profile'], // Staff
         3: ['view_menu', 'add_to_cart', 'place_orders', 'view_orders', 'update_profile'] // Customer / User
     };
@@ -878,6 +903,10 @@ function managePermissions(roleId) {
                     html += `</div></div>`;
                 }
                 
+                if (html === '') {
+                    html = '<div class="text-center text-slate-500 py-4">No permissions available for this role.</div>';
+                }
+                
                 container.innerHTML = html;
             } else {
                 container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions: ${data.error}</div>`;
@@ -887,17 +916,18 @@ function managePermissions(roleId) {
             container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions</div>`;
             console.error(error);
         });
+}    
+
+// ============================================
+// TOAST
+// ============================================
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast ' + type;
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => toast.classList.remove('show'), 3000);
 }
-        // ============================================
-        // TOAST
-        // ============================================
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast ' + type;
-            setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
 
         <?php if ($success): ?>
             showToast('<?php echo htmlspecialchars($success); ?>', 'success');

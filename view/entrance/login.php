@@ -113,9 +113,13 @@ include __DIR__ . '/includes/header.php';
                 <?php endif; ?>
 
                 <!-- Top Tabs -->
-                <div class="auth-tabs">
+                <!-- <div class="auth-tabs">
                     <button id="tab-login" onclick="switchTab('login')" class="auth-tab active">Login</button>
                     <button id="tab-register" onclick="switchTab('register')" class="auth-tab">Register</button>
+                </div> -->
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900">Login</h2>
+                    <p class="text-sm text-slate-500">Login your account to start ordering</p>
                 </div>
 
                 <!-- FORM -->
@@ -196,10 +200,10 @@ include __DIR__ . '/includes/header.php';
                         <span>Continue with Google</span>
                     </button>
 
-                    <button onclick="handleSocialAuth('Apple')" class="social-btn social-btn-apple">
+                    <!-- <button onclick="handleSocialAuth('Apple')" class="social-btn social-btn-apple">
                         <i class="fa-brands fa-apple text-base"></i>
                         <span>Continue with Apple</span>
-                    </button>
+                    </button> -->
                 </div>
             </div>
 
