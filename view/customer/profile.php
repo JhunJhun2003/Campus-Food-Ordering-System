@@ -11,6 +11,7 @@ require_once __DIR__ . '/includes/permissions.php';
 // ============================================
 
 requireLogin();
+requireEmailVerification();
 requirePermission('update_profile');
 
 use App\User\Presentation\Http\Controllers\UserController;

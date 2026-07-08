@@ -18,6 +18,12 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Check if email is verified
+if (!isset($_SESSION['user_verified']) || !$_SESSION['user_verified']) {
+    echo json_encode(['success' => false, 'message' => 'Please verify your email first. Check your inbox for the verification code.']);
+    exit();
+}
+
 // Check if user has permission to add to cart
 if (!userHasPermission('add_to_cart')) {
     echo json_encode(['success' => false, 'message' => 'You do not have permission to add items to cart.']);

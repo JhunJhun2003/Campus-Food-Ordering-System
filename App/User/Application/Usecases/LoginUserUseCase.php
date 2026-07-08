@@ -30,10 +30,6 @@ class LoginUserUseCase
             return new LoginUserResponse(false, 'Invalid credentials', null);
         }
 
-        // Check if user is verified
-        if (!$user->isVerified()) {
-            return new LoginUserResponse(false, 'Please verify your email first. Check your inbox for the verification code.', null);
-        }
 
         // Verify password
         if (!$user->getPassword()->verify($request->password)) {

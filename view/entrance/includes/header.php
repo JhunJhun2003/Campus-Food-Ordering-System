@@ -10,6 +10,7 @@
 
 $pageTitle = $pageTitle ?? 'Foodie - Login & Register';
 $customCss = $customCss ?? 'css/login.css';
+$simpleHeader = $simpleHeader ?? false;
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -72,6 +73,7 @@ if ($isLoggedIn) {
                 <span class="text-2xl font-black tracking-wider text-slate-950">FOODIE</span>
             </a>
 
+            <?php if (!$simpleHeader): ?>
             <!-- Navigation Links -->
             <nav class="hidden md:flex items-center space-x-10">
                 <?php if ($isLoggedIn): ?>
@@ -122,6 +124,7 @@ if ($isLoggedIn) {
                     </div>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
         </div>
     </header>
 

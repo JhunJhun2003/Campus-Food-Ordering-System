@@ -13,7 +13,7 @@ if (session_status() === PHP_SESSION_NONE) {
  */
 function userHasPermission(string $permissionName): bool
 {
-    if (!isset($_SESSION['user_id'])) {
+    if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
         return false;
     }
     
@@ -80,6 +80,18 @@ function requireLogin(string $redirectUrl = '/Campus-Food-Ordering-System/view/e
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['error'] = 'Please login to access this page.';
         header('Location: ' . $redirectUrl);
+        exit;
+    }
+}
+
+/**
+ * Require user to be verified or redirect to verify email page
+ */
+function requireEmailVerification(): void
+{
+    if (isset($_SESSION['user_id']) && (!isset($_SESSION['user_verified']) || !$_SESSION['user_verified'])) {
+        $_SESSION['error'] = 'Please verify your email first to access this feature.';
+        header('Location: /Campus-Food-Ordering-System/view/entrance/verify-email.php');
         exit;
     }
 }

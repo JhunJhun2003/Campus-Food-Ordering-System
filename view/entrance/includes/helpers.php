@@ -6,7 +6,7 @@
 
 function redirectIfLoggedIn(): void
 {
-    if (isset($_SESSION['user_id'])) {
+    if (isset($_SESSION['user_id']) && isset($_SESSION['user_role'])) {
         $role = $_SESSION['user_role'] ?? 'user';
         $redirectMap = [
             'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',

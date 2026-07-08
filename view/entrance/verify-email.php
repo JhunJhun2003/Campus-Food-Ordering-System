@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/helpers.php';
@@ -100,12 +102,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $verifyEmail->execute($email, $code);
 
             if ($result['success']) {
-                $success = 'Email verified successfully! You can now login.';
+                $success = 'Email verified successfully!';
                 $isVerified = true;
 
-                // Clear any session data from registration
-                unset($_SESSION['user_id']);
-                unset($_SESSION['user_email']);
+                if (isset($_SESSION['user_role'])) {
+                    $_SESSION['user_verified'] = true;
+                } else {
+                    // Clear session data from registration if not logged in
+                    unset($_SESSION['user_id']);
+                    unset($_SESSION['user_email']);
+                }
                 unset($_SESSION['test_code']);
             } else {
                 $error = $result['message'];
@@ -152,10 +158,17 @@ include __DIR__ . '/includes/header.php';
                             <i class="fa-solid fa-check text-2xl text-emerald-500"></i>
                         </div>
                         <p class="text-sm text-slate-600 mb-4">Your email has been verified successfully!</p>
+                        <?php if (isset($_SESSION['user_role'])): ?>
+                        <a href="/Campus-Food-Ordering-System/view/customer/dashboard.php" class="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20">
+                            <span>Go to Dashboard</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                        <?php else: ?>
                         <a href="login.php" class="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20">
                             <span>Go to Login</span>
                             <i class="fa-solid fa-arrow-right"></i>
                         </a>
+                        <?php endif; ?>
                     </div>
                 <?php else: ?>
                     <div class="mb-8 text-center">

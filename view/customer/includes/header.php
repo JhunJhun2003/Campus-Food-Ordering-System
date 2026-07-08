@@ -39,7 +39,7 @@ if ($isLoggedIn) {
     }
 }
 
-$canViewMenu = userHasPermission('view_menu');
+$canViewMenu = !$isLoggedIn || userHasPermission('view_menu');
 $canAddToCart = userHasPermission('add_to_cart');
 $canViewOrders = userHasPermission('view_orders');
 $canUpdateProfile = userHasPermission('update_profile');
@@ -122,7 +122,10 @@ $canUpdateProfile = userHasPermission('update_profile');
                     </div>
                 </div>
                 <?php else: ?>
-                <a href="/Campus-Food-Ordering-System/view/entrance/login.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 px-4 py-2 rounded-xl hover:bg-slate-50 interactive-transition">Log In</a>
+                <div class="flex items-center space-x-3">
+                    <a href="/Campus-Food-Ordering-System/view/entrance/login.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 px-4 py-2 rounded-xl hover:bg-slate-50 interactive-transition">Log In</a>
+                    <a href="/Campus-Food-Ordering-System/view/entrance/register.php" class="text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl shadow-md shadow-emerald-500/10 interactive-transition hover:scale-105">Register</a>
+                </div>
                 <?php endif; ?>
             </div>
         </div>

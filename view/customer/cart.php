@@ -11,6 +11,7 @@ require_once __DIR__ . '/includes/permissions.php';
 // ============================================
 
 requireLogin();
+requireEmailVerification();
 requirePermission('add_to_cart');
 
 use App\User\Presentation\Http\Controllers\UserController;

@@ -1,16 +1,14 @@
 <?php
 declare(strict_types=1);
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
 
-// ============================================
-// 1. AUTHENTICATION & AUTHORIZATION
-// ============================================
-
-requireCustomerAuth();
+// Guest access is allowed on the dashboard. No requireCustomerAuth() check is needed here.
 
 // ============================================
 // 2. BUSINESS LOGIC
@@ -202,7 +200,7 @@ function handleSearch() {
 }
 
 function addToCart(dishName, foodId, availableStock) {
-    const isLoggedIn = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
+    const isLoggedIn = <?php echo (isset($_SESSION['user_id']) && isset($_SESSION['user_role'])) ? 'true' : 'false'; ?>;
     if (!isLoggedIn) {
         window.location.href = '/Campus-Food-Ordering-System/view/entrance/login.php';
         return;
