@@ -48,6 +48,7 @@ if (empty($items)) {
 // ✅ Get payment methods
 $paymentMethods = $paymentController->getActiveMethods();
 
+
 // Handle order submission
 $error = '';
 $success = '';
@@ -67,17 +68,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $deliveryAddress = trim($_POST['delivery_address'] ?? '');
     $transactionImage = '';
     
-    // Get selected payment method
-    $selectedMethod = null;
-    foreach ($paymentMethods as $pm) {
-        if ($pm['id'] == $paymentMethodId) {
-            $selectedMethod = $pm;
-            break;
-        }
+// Get selected payment method
+$selectedMethod = null;
+foreach ($paymentMethods as $pm) {
+    if ($pm->getId() == $paymentMethodId) {
+        $selectedMethod = $pm;
+        break;
     }
-    
-    $paymentMethodName = $selectedMethod['method_name'] ?? 'Cash on Delivery';
-    $isDigital = $paymentMethodName !== 'Cash on Delivery';
+}
+
+$paymentMethodName = $selectedMethod ? $selectedMethod->getName() : 'Cash on Delivery';
+$isDigital = $paymentMethodName !== 'Cash on Delivery';
     
     // Validation
     if (empty($fullName)) {
@@ -115,17 +116,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         
         if (empty($error)) {
             $result = $orderController->createOrder(
-                $userId, 
-                $items, 
-                $total, 
-                $deliveryAddress, 
-                $paymentMethodName, 
-                $fullName, 
-                $phone, 
-                $accountName, 
-                $selectedMethod['account_number'] ?? '', 
-                $transactionImage
-            );
+    $userId, 
+    $items, 
+    $total, 
+    $deliveryAddress, 
+    $paymentMethodName, 
+    $fullName, 
+    $phone, 
+    $accountName, 
+    $selectedMethod ? $selectedMethod->getAccountNumber() : '',  // <-- Use getter
+    $transactionImage
+);
             
             if ($result['success']) {
                 $orderId = $result['order_id'];
@@ -224,58 +225,64 @@ include __DIR__ . '/includes/header.php';
         <div class="lg:col-span-7 space-y-4">
             <h2 class="text-lg font-bold text-slate-950 tracking-wide mb-2">Select Payment Method</h2>
             
-            <div class="space-y-3" id="payment-methods-list">
-                <?php if (empty($paymentMethods)): ?>
-                    <p class="text-sm text-slate-500">No payment methods available. Please contact admin.</p>
-                <?php else: ?>
-                    <?php $first = true; ?>
-                    <?php foreach ($paymentMethods as $pm): ?>
-                        <?php
-                            $isSelected = $selectedPaymentMethodId > 0
-                                ? ((int) $pm['id'] === $selectedPaymentMethodId)
-                                : $first;
-                        ?>
-                        <label class="block relative cursor-pointer group">
-                            <input type="radio" 
-                                   name="payment_method_id" 
-                                   id="payment_method_<?php echo $pm['id']; ?>" 
-                                   value="<?php echo $pm['id']; ?>" 
-                                   form="checkout-form"
-                                   class="sr-only peer payment-radio"
-                                   onchange="selectPaymentMethod(<?php echo $pm['id']; ?>)"
-                                   <?php echo $isSelected ? 'checked' : ''; ?>>
-                            <div class="payment-option flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 shadow-sm <?php echo $isSelected ? 'selected' : ''; ?>">
-                                <div class="w-6 h-6 rounded-md flex items-center justify-center border-2 border-slate-300 bg-white flex-shrink-0 transition-all duration-200">
-                                    <i class="fa-solid fa-check text-xs text-white opacity-0"></i>
-                                </div>
-                                <span class="font-bold text-slate-800 text-sm sm:text-base">
-                                    <?php echo htmlspecialchars($pm['method_name']); ?>
-                                </span>
-                            </div>
-                        </label>
-                        
-                        <?php if (!empty($pm['account_name']) || !empty($pm['account_number'])): ?>
-                            <div id="payment-details-<?php echo $pm['id']; ?>" class="payment-method-details <?php echo $isSelected ? 'active' : ''; ?>">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <?php if (!empty($pm['account_name'])): ?>
-                                        <div>
-                                            <div class="detail-label">Account Name</div>
-                                            <div class="detail-value"><?php echo htmlspecialchars($pm['account_name']); ?></div>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($pm['account_number'])): ?>
-                                        <div>
-                                            <div class="detail-label">Account Number</div>
-                                            <div class="detail-value"><?php echo htmlspecialchars($pm['account_number']); ?></div>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
+ <div class="space-y-3" id="payment-methods-list">
+    <?php if (empty($paymentMethods)): ?>
+        <p class="text-sm text-slate-500">No payment methods available. Please contact admin.</p>
+    <?php else: ?>
+        <?php $first = true; ?>
+        <?php foreach ($paymentMethods as $pm): ?>
+            <?php
+                // Use getter methods
+                $pmId = $pm->getId();
+                $pmName = $pm->getName();
+                $pmAccountName = $pm->getAccountName();
+                $pmAccountNumber = $pm->getAccountNumber();
+                
+                $isSelected = $selectedPaymentMethodId > 0
+                    ? ((int) $pmId === $selectedPaymentMethodId)
+                    : $first;
+            ?>
+            <label class="block relative cursor-pointer group">
+                <input type="radio" 
+                       name="payment_method_id" 
+                       id="payment_method_<?php echo $pmId; ?>" 
+                       value="<?php echo $pmId; ?>" 
+                       form="checkout-form"
+                       class="sr-only peer payment-radio"
+                       onchange="selectPaymentMethod(<?php echo $pmId; ?>)"
+                       <?php echo $isSelected ? 'checked' : ''; ?>>
+                <div class="payment-option flex items-center space-x-4 p-4 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 shadow-sm <?php echo $isSelected ? 'selected' : ''; ?>">
+                    <div class="w-6 h-6 rounded-md flex items-center justify-center border-2 border-slate-300 bg-white flex-shrink-0 transition-all duration-200">
+                        <i class="fa-solid fa-check text-xs text-white opacity-0"></i>
+                    </div>
+                    <span class="font-bold text-slate-800 text-sm sm:text-base">
+                        <?php echo htmlspecialchars($pmName); ?>
+                    </span>
+                </div>
+            </label>
+            
+            <?php if (!empty($pmAccountName) || !empty($pmAccountNumber)): ?>
+                <div id="payment-details-<?php echo $pmId; ?>" class="payment-method-details <?php echo $isSelected ? 'active' : ''; ?>">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <?php if (!empty($pmAccountName)): ?>
+                            <div>
+                                <div class="detail-label">Account Name</div>
+                                <div class="detail-value"><?php echo htmlspecialchars($pmAccountName); ?></div>
                             </div>
                         <?php endif; ?>
-                        <?php $first = false; ?>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+                        <?php if (!empty($pmAccountNumber)): ?>
+                            <div>
+                                <div class="detail-label">Account Number</div>
+                                <div class="detail-value"><?php echo htmlspecialchars($pmAccountNumber); ?></div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            <?php $first = false; ?>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
         </div>
 
         <!-- Right Column: Account Details -->

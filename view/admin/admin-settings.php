@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_payment_method
 if (isset($_GET['edit_payment'])) {
     $editId = (int) $_GET['edit_payment'];
     foreach ($paymentMethods as $pm) {
-        if ($pm['id'] == $editId) {
+        if ($pm->id    == $editId) {
             $editPayment = $pm;
             break;
         }
