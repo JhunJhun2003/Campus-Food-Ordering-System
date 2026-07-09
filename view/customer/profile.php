@@ -5,7 +5,7 @@ session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
-
+require_once __DIR__ . '/../../inc/user_helpers.php';
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
 // ============================================
@@ -16,7 +16,7 @@ requirePermission('update_profile');
 
 use App\User\Presentation\Http\Controllers\UserController;
 
-$userController = new UserController();
+$userController = getUserController();
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 

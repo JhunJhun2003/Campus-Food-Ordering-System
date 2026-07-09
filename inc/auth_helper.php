@@ -18,7 +18,7 @@ function userHasPermission(string $permissionName): bool
     }
     
     // Admin has all permissions
-    if (isset($_SESSION['role_id']) && $_SESSION['role_id'] === 1) {
+    if ((isset($_SESSION['role_id']) && $_SESSION['role_id'] === 1) || (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin')) {
         return true;
     }
     

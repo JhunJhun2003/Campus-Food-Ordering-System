@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/helpers.php';
+require_once __DIR__ . '/../../inc/user_helpers.php';  // ✅ Add this
 
 use App\User\Presentation\Http\Controllers\UserController;
 
@@ -21,7 +22,8 @@ redirectIfLoggedIn();
 // 2. BUSINESS LOGIC - HANDLE REQUESTS
 // ============================================
 
-$controller = new UserController();
+// ✅ Use helper - NO 'new' keyword!
+$controller = getUserController();
 $error = getErrorMessage();
 $success = getVerificationSuccess();
 

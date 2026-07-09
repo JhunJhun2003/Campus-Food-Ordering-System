@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
+require_once __DIR__ . '/../../inc/user_helpers.php';  // ✅ ADD THIS - CRITICAL!
 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
@@ -19,7 +20,7 @@ requirePermission('place_orders');
 
 use App\User\Presentation\Http\Controllers\UserController;
 
-$userController = getUserController();
+$userController = getUserController();  // ✅ Now works
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 
@@ -27,10 +28,10 @@ $userId = $currentUser['id'] ?? 0;
 // 2. BUSINESS LOGIC
 // ============================================
 
-// ✅ Get controllers using helpers - NO 'new' keyword!
+// ✅ Get controllers using helpers
 $cartController = getCartController();
 $orderController = getOrderController();
-$paymentController = getPaymentController();  // ✅ Added
+$paymentController = getPaymentController();
 
 // Get cart data
 $cart = $cartController->index($userId);
@@ -44,7 +45,7 @@ if (empty($items)) {
     exit();
 }
 
-// ✅ Get payment methods using helper - NO 'new' keyword!
+// ✅ Get payment methods
 $paymentMethods = $paymentController->getActiveMethods();
 
 // Handle order submission
@@ -113,7 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         }
         
         if (empty($error)) {
-            // ✅ Use order controller from helper
             $result = $orderController->createOrder(
                 $userId, 
                 $items, 
@@ -161,6 +161,7 @@ $customCss = 'css/checkout.css';
 include __DIR__ . '/includes/header.php';
 ?>
 
+<!-- REST OF YOUR HTML CONTENT -->
 <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
     <div class="mb-10 text-center sm:text-left">

@@ -373,6 +373,13 @@ class AccessControlRepository implements AccessControlRepositoryInterface
     
     public function hasPermission(int $userId, string $permissionName): bool
     {
+        $roleStmt = $this->db->prepare("SELECT role_id FROM users WHERE id = :user_id");
+        $roleStmt->execute([':user_id' => $userId]);
+        $roleId = $roleStmt->fetchColumn();
+        if ($roleId == 1) {
+            return true;
+        }
+
         $stmt = $this->db->prepare("
             SELECT COUNT(*) as count
             FROM users u

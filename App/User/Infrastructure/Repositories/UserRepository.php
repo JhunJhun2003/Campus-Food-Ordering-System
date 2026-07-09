@@ -424,12 +424,38 @@ public function createUser(string $name, string $email, string $password, string
 
     public function updateSetting(string $key, string $value): bool
     {
-        $sql = "UPDATE settings SET setting_value = :value WHERE setting_key = :key";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
-            ':key' => $key,
-            ':value' => $value
-        ]);
+        $sqlCheck = "SELECT COUNT(*) FROM settings WHERE setting_key = :key";
+        $stmtCheck = $this->db->prepare($sqlCheck);
+        $stmtCheck->execute([':key' => $key]);
+        $exists = $stmtCheck->fetchColumn() > 0;
+
+        if ($exists) {
+            $sql = "UPDATE settings SET setting_value = :value WHERE setting_key = :key";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':key' => $key,
+                ':value' => $value
+            ]);
+        } else {
+            $group = 'general';
+            if (in_array($key, ['preparation_time', 'cancellation_time', 'max_orders_per_day'])) {
+                $group = 'order';
+            } elseif (in_array($key, ['cash_on_delivery', 'qr_payment'])) {
+                $group = 'payment';
+            } elseif (in_array($key, ['maintenance_mode', 'currency'])) {
+                $group = 'system';
+            } elseif (in_array($key, ['notification_email'])) {
+                $group = 'notification';
+            }
+
+            $sql = "INSERT INTO settings (setting_key, setting_value, setting_group) VALUES (:key, :value, :group)";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':key' => $key,
+                ':value' => $value,
+                ':group' => $group
+            ]);
+        }
     }
 
     public function updateSettings(array $settings): array

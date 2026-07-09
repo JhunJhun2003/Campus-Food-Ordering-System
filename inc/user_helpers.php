@@ -14,14 +14,5 @@ function getUserController(): \App\User\Presentation\Http\Controllers\UserContro
     return $instance;
 }
 
-function getAdminController(): \App\User\Presentation\Http\Controllers\AdminController
-{
-    static $instance = null;
-    
-    if ($instance === null) {
-        $instance = AdminControllerFactory::getInstance();
-    }
-    
-    return $instance;
-}
+
 

@@ -74,6 +74,7 @@ class UserController
             $_SESSION['user_name'] = $response->user->getName();
             $_SESSION['user_email'] = $response->user->getEmail()->getValue();
             $_SESSION['user_role'] = $response->user->getRoleName();
+            $_SESSION['role_id'] = $response->user->getRoleId();
             $_SESSION['user_verified'] = $response->user->isVerified();
             
             if ($request->remember) {

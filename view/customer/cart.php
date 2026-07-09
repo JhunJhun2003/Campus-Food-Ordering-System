@@ -8,10 +8,17 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
+require_once __DIR__ . '/../../inc/user_helpers.php';
 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
 // ============================================
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+    exit();
+}
 
 requireLogin();
 requireEmailVerification();
@@ -39,10 +46,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $response = ['success' => false, 'message' => 'Invalid action'];
     switch ($action) {
-        case 'add': $response = $cartController->add($userId, $foodId, $quantity); break;
-        case 'update': $response = $cartController->update($userId, $foodId, $quantity); break;
-        case 'remove': $response = $cartController->remove($userId, $foodId); break;
-        case 'clear': $response = $cartController->clear($userId); break;
+        case 'add': 
+            $response = $cartController->add($userId, $foodId, $quantity); 
+            break;
+        case 'update': 
+            $response = $cartController->update($userId, $foodId, $quantity); 
+            break;
+        case 'remove': 
+            $response = $cartController->remove($userId, $foodId); 
+            break;
+        case 'clear': 
+            $response = $cartController->clear($userId); 
+            break;
     }
     echo json_encode($response);
     exit();

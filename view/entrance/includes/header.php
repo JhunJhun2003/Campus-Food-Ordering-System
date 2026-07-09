@@ -19,10 +19,13 @@ if (session_status() === PHP_SESSION_NONE) {
 // Get user data for the header - FIXED PATHS
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../inc/auth_helper.php';
+require_once __DIR__ . '/../../../inc/user_helpers.php';  // ✅ Add this
+require_once __DIR__ . '/../../../inc/order_helpers.php'; // ✅ Add this
 
 use App\User\Presentation\Http\Controllers\UserController;
 
-$userController = new UserController();
+// ✅ Use helper - NO 'new' keyword!
+$userController = getUserController();
 $isLoggedIn = $userController->isLoggedIn();
 $currentUser = null;
 $itemCount = 0;
@@ -34,7 +37,8 @@ if ($isLoggedIn) {
     $userId = $currentUser['id'] ?? null;
     if ($userId) {
         try {
-            $cartController = new \App\Cart\Presentation\Http\Controllers\CartController();
+            // ✅ Use helper - NO 'new' keyword!
+            $cartController = getCartController();
             $itemCount = $cartController->getItemCount($userId);
         } catch (\Exception $e) {
             $itemCount = 0;
@@ -134,12 +138,15 @@ if ($isLoggedIn) {
         // ============================================
         function toggleDropdown() {
             const menu = document.getElementById('dropdownMenu');
-            menu.classList.toggle('hidden');
+            if (menu) {
+                menu.classList.toggle('hidden');
+            }
         }
 
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.user-dropdown')) {
-                document.getElementById('dropdownMenu').classList.add('hidden');
+            const menu = document.getElementById('dropdownMenu');
+            if (menu && !e.target.closest('.user-dropdown')) {
+                menu.classList.add('hidden');
             }
         });
     </script>

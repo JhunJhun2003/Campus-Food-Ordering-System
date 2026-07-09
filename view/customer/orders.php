@@ -8,7 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
-
+require_once __DIR__ . '/../../inc/user_helpers.php'; 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
 // ============================================

@@ -10,6 +10,8 @@ use App\Order\Infrastructure\Repositories\OrderRepository;
 use App\Cart\Infrastructure\Repositories\CartRepository;
 use App\Food\Infrastructure\Repositories\FoodRepository;
 use App\Cart\Presentation\Http\Controllers\CartControllerFactory;
+use App\Food\Presentation\Http\Controllers\FoodControllerFactory;
+use App\Payment\Presentation\Http\Controllers\PaymentControllerFactory;
 
 /**
  * Get Order Controller with all dependencies injected
@@ -61,7 +63,7 @@ function getCartController(): \App\Cart\Presentation\Http\Controllers\CartContro
     static $instance = null;
     
     if ($instance === null) {
-        $instance = \App\Cart\Presentation\Http\Controllers\CartControllerFactory::getInstance();
+        $instance = CartControllerFactory::getInstance();
     }
     
     return $instance;
@@ -75,30 +77,22 @@ function getFoodController(): \App\Food\Presentation\Http\Controllers\FoodContro
     static $instance = null;
     
     if ($instance === null) {
-        $instance = \App\Food\Presentation\Http\Controllers\FoodControllerFactory::getInstance();
+        $instance = FoodControllerFactory::getInstance();
     }
     
     return $instance;
 }
 
-// Example for UserController
-function getUserController(): \App\User\Presentation\Http\Controllers\UserController
-{
-    static $instance = null;
-    
-    if ($instance === null) {
-        $instance = \App\User\Presentation\Http\Controllers\UserControllerFactory::getInstance();
-    }
-    
-    return $instance;
-}
 
+/**
+ * Get Payment Controller with all dependencies injected
+ */
 function getPaymentController(): \App\Payment\Presentation\Http\Controllers\PaymentController
 {
     static $instance = null;
     
     if ($instance === null) {
-        $instance = \App\Payment\Presentation\Http\Controllers\PaymentControllerFactory::getInstance();
+        $instance = PaymentControllerFactory::getInstance();
     }
     
     return $instance;

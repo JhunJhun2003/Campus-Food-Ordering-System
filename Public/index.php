@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * Front Controller - Entry point for all requests
  * Handles routing and request dispatching
@@ -19,8 +21,14 @@ define('BASE_PATH', dirname(__DIR__));
 // Load Composer autoloader
 require_once BASE_PATH . '/vendor/autoload.php';
 
-// Load route definitions
-$routes = require BASE_PATH . '/routes/web.php';
+// Load helpers
+require_once BASE_PATH . '/inc/order_helpers.php';
+require_once BASE_PATH . '/inc/admin_helpers.php';
+require_once BASE_PATH . '/inc/user_helpers.php';
+require_once BASE_PATH . '/inc/access_control_helper.php';
+
+// Load routes
+$router = require BASE_PATH . '/routes/web.php';
 
 // ============================================
 // REQUEST PROCESSING
@@ -40,7 +48,7 @@ if (strpos($requestUri, $basePath) === 0) {
 
 // Remove /Public/ if present
 if (strpos($requestUri, '/Public/') === 0) {
-    $requestUri = substr($requestUri, 7); // Remove '/Public/'
+    $requestUri = substr($requestUri, 7);
 }
 
 // If empty, set to '/'
@@ -50,59 +58,54 @@ if ($requestUri === '' || $requestUri === '/') {
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// Debug logging (remove in production)
-error_log('=== Request ===');
-error_log('URI: ' . $requestUri);
-error_log('Method: ' . $method);
-
 // ============================================
-// ROUTE MATCHING
+// PREPARE REQUEST DATA FOR MIDDLEWARE
 // ============================================
 
-$found = false;
-foreach ($routes as $route) {
-    // Check if method matches
-    if (($route['method'] ?? 'GET') !== $method) {
-        continue;
-    }
+$request = [
+    'session' => $_SESSION,
+    'get' => $_GET,
+    'post' => $_POST,
+    'files' => $_FILES,
+    'server' => $_SERVER,
+    'method' => $method,
+    'uri' => $requestUri,
+];
 
-    // Check if pattern matches
-    if (preg_match($route['pattern'], $requestUri, $matches)) {
-        $found = true;
-        // Remove the full match from the beginning
-        array_shift($matches);
-        // Execute the callback with matched parameters
-        call_user_func_array($route['callback'], $matches);
-        exit();
-    }
+// ============================================
+// DISPATCH ROUTE
+// ============================================
+
+$response = $router->dispatch($method, $requestUri, $request);
+
+// If response is an array with error, handle it
+if (is_array($response) && isset($response['error'])) {
+    http_response_code($response['status'] ?? 404);
+    echo $response['error'];
+    exit();
 }
 
-// ============================================
-// NO ROUTE FOUND - HANDLE DEFAULT
-// ============================================
+// If response is a string (HTML content), echo it
+if (is_string($response)) {
+    echo $response;
+    exit();
+}
 
-if (!$found) {
-    error_log('No route found for: ' . $requestUri);
-    
+// If response is null or empty, check for redirects
+if ($response === null) {
     // Check if user is logged in
     if (isset($_SESSION['user_id'])) {
-        // Redirect to appropriate dashboard based on role
         $role = $_SESSION['user_role'] ?? 'user';
-        switch ($role) {
-            case 'admin':
-                header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-                break;
-            case 'staff':
-                header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
-                break;
-            default:
-                header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
-                break;
-        }
+        $redirectMap = [
+            'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
+            'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
+            'user' => '/Campus-Food-Ordering-System/view/customer/dashboard.php',
+        ];
+        header('Location: ' . ($redirectMap[$role] ?? $redirectMap['user']));
         exit();
     } else {
-        // Show landing page (customer dashboard) for non-logged-in users
-        header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
+        // Show landing page
+        require_once __DIR__ . '/../view/public/landing.php';
         exit();
     }
 }

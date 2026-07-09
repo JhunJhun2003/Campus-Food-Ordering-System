@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/helpers.php';
+require_once __DIR__ . '/../../inc/user_helpers.php'; // ✅ Added
 
 use App\User\Infrastructure\Repositories\EmailVerificationRepository;
 use App\User\Infrastructure\Repositories\UserRepository;
@@ -17,23 +18,19 @@ use App\User\Domain\ValueObjects\UserId;
 // 1. AUTHENTICATION & AUTHORIZATION
 // ============================================
 
-// Do NOT auto-login the user. Only store email for verification purposes.
-// If user is already logged in, redirect to dashboard (they don't need verification)
-if (isset($_SESSION['user_id']) && isset($_SESSION['user_email'])) {
-    // Check if already verified
-    $userRepo = new UserRepository();
-    $user = $userRepo->findById(new UserId((int) $_SESSION['user_id']));
-    if ($user && $user->isVerified()) {
-        // Already verified, redirect to dashboard
-        $role = $_SESSION['user_role'] ?? 'user';
-        $redirectMap = [
-            'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
-            'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
-            'user' => '/Campus-Food-Ordering-System/view/customer/dashboard.php',
-        ];
-        header('Location: ' . ($redirectMap[$role] ?? $redirectMap['user']));
-        exit();
-    }
+// ✅ Use helper - NO 'new' keyword!
+$userController = getUserController();
+
+// If user is already logged in (verified), redirect to dashboard
+if ($userController->isLoggedIn() && $userController->isVerified()) {
+    $role = $_SESSION['user_role'] ?? 'user';
+    $redirectMap = [
+        'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
+        'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
+        'user' => '/Campus-Food-Ordering-System/view/customer/dashboard.php',
+    ];
+    header('Location: ' . ($redirectMap[$role] ?? $redirectMap['user']));
+    exit();
 }
 
 // Get email from session or POST
@@ -228,7 +225,86 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<style>
+.code-input {
+    letter-spacing: 12px;
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    width: 100%;
+    padding: 16px 8px;
+    background: white;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
 
+.code-input:focus {
+    outline: none;
+    border-color: #10B981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08);
+}
+
+.code-input::placeholder {
+    color: #94A3B8;
+    letter-spacing: 4px;
+    font-weight: 300;
+}
+
+@media (max-width: 640px) {
+    .code-input {
+        font-size: 24px;
+        letter-spacing: 8px;
+        padding: 12px 4px;
+    }
+}
+
+.email-display strong {
+    word-break: break-all;
+}
+
+.resend-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: #10B981;
+    transition: color 0.2s ease;
+}
+
+.resend-btn:hover {
+    color: #059669;
+}
+
+.alert-success {
+    background-color: #D1FAE5;
+    border: 1px solid #6EE7B7;
+    color: #065F46;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.alert-error {
+    background-color: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+</style>
 
 <script>
     const codeInput = document.querySelector('input[name="verification_code"]');
@@ -245,7 +321,6 @@ include __DIR__ . '/includes/header.php';
             }
         });
     }
-
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

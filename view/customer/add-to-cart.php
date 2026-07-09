@@ -5,6 +5,8 @@ session_start();
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/auth_helper.php';
+require_once __DIR__ . '/../../inc/user_helpers.php';   // ✅ Add this
+require_once __DIR__ . '/../../inc/order_helpers.php';  // ✅ Add this
 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
@@ -34,8 +36,8 @@ if (!userHasPermission('add_to_cart')) {
 // 2. BUSINESS LOGIC
 // ============================================
 
-use App\User\Presentation\Http\Controllers\UserController;
-use App\Cart\Presentation\Http\Controllers\CartController;
+// ✅ Use helper - NO 'new' keyword!
+$userController = getUserController();
 
 // Get POST data
 $foodId = (int) ($_POST['food_id'] ?? 0);
@@ -47,7 +49,6 @@ if ($foodId <= 0) {
 }
 
 // Get user ID
-$userController = new UserController();
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 
@@ -61,7 +62,8 @@ if ($userId <= 0) {
 // ============================================
 
 try {
-    $cartController = new CartController();
+    // ✅ Use helper for cart controller
+    $cartController = getCartController();
     $result = $cartController->add($userId, $foodId, $quantity);
     
     if ($result['success']) {

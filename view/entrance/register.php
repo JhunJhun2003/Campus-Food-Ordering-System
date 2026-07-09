@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/helpers.php';
+require_once __DIR__ . '/../../inc/user_helpers.php';  // ✅ Add this
 
 use App\User\Presentation\Http\Controllers\UserController;
 use App\User\Application\Usecases\SendVerificationUseCase;
@@ -24,7 +25,8 @@ redirectIfLoggedIn();
 // 2. BUSINESS LOGIC - HANDLE REQUESTS
 // ============================================
 
-$controller = new UserController();
+// ✅ Use helper - NO 'new' keyword!
+$controller = getUserController();
 $error = getErrorMessage();
 $success = getSuccessMessage();
 
@@ -44,8 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $verifyResult = $sendVerification->execute($registeredUserId);
         
         if ($verifyResult['success']) {
-            $_SESSION['user_id'] = $registeredUserId;
+            // ✅ Store only email, NOT user_id (prevents auto-login)
             $_SESSION['user_email'] = $registeredEmail;
+            $_SESSION['test_code'] = $verifyResult['code']; // For development auto-fill
             setVerificationSuccess('Registration successful! Please verify your email.');
             header('Location: verify-email.php');
             exit();
