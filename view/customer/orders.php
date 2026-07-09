@@ -19,7 +19,7 @@ requirePermission('view_orders');
 
 use App\User\Presentation\Http\Controllers\UserController;
 
-$userController = new UserController();
+$userController = getUserController();
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 

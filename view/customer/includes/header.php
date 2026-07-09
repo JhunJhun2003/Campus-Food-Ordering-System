@@ -25,7 +25,7 @@ require_once __DIR__ . '/../../../inc/order_helpers.php';  // ✅ Add this
 
 use App\User\Presentation\Http\Controllers\UserController;
 
-$userController = new UserController();
+$userController = getUserController();
 $isLoggedIn = $userController->isLoggedIn();
 $currentUser = null;
 $itemCount = 0;

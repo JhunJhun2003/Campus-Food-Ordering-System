@@ -305,4 +305,60 @@ class FoodRepository implements FoodRepositoryInterface
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int) ($result['stock'] ?? 0);
     }
+
+    // ============================================
+    // STATISTICS METHODS - ADD THESE
+    // ============================================
+
+    /**
+     * Get total number of food items
+     */
+    public function count(): int
+    {
+        $stmt = $this->db->query("SELECT COUNT(*) as count FROM foods");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    /**
+     * Get count by category
+     */
+    public function countByCategory(int $categoryId): int
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM foods WHERE category_id = :category_id");
+        $stmt->execute([':category_id' => $categoryId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    /**
+     * Get active food count (status_id = 1 and stock > 0)
+     */
+    public function countActive(): int
+    {
+        $stmt = $this->db->query("SELECT COUNT(*) as count FROM foods WHERE status_id = 1 AND stock > 0");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    /**
+     * Get count by status
+     */
+    public function countByStatus(int $statusId): int
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM foods WHERE status_id = :status_id");
+        $stmt->execute([':status_id' => $statusId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    /**
+     * Get count of out of stock items
+     */
+    public function countOutOfStock(): int
+    {
+        $stmt = $this->db->query("SELECT COUNT(*) as count FROM foods WHERE stock <= 0 OR status_id = 3");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
 }

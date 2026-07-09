@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Order\Domain\Repositories;
 
 use App\Order\Domain\Entities\Order;
@@ -68,6 +70,11 @@ interface OrderRepositoryInterface
      */
     public function addItem(int $orderId, int $foodId, int $quantity, float $unitPrice): void;
 
+    /**
+     * Save multiple order items
+     */
+    public function saveItems(int $orderId, array $items): void;
+
     // ============================================
     // STATUS METHODS
     // ============================================
@@ -83,7 +90,7 @@ interface OrderRepositoryInterface
     public function getOrderStatusById(int $statusId): ?array;
 
     // ============================================
-    // STATS METHODS
+    // STATS METHODS (For Admin Dashboard)
     // ============================================
 
     /**
@@ -97,12 +104,42 @@ interface OrderRepositoryInterface
     public function getPendingOrders(): int;
 
     /**
+     * Get number of completed orders
+     */
+    public function getCompletedOrders(): int;
+
+    /**
      * Count orders by status name
      */
     public function countByStatusName(string $statusName): int;
 
     /**
-     * Get order statistics
+     * Get total revenue from completed orders
+     */
+    public function getTotalRevenue(): float;
+
+    /**
+     * Get monthly revenue for chart (last N months)
+     */
+    public function getMonthlyRevenue(int $months = 6): array;
+
+    /**
+     * Get order statistics grouped by status
+     */
+    public function getOrderStats(): array;
+
+    /**
+     * Get order statistics summary
      */
     public function getOrderStatistics(): array;
+
+    /**
+     * Count orders placed today
+     */
+    public function countToday(): int;
+
+    /**
+     * Count orders placed this month
+     */
+    public function countMonthly(): int;
 }

@@ -18,7 +18,7 @@ require_once __DIR__ . '/../../inc/order_helpers.php';
 use App\User\Presentation\Http\Controllers\UserController;
 use App\Food\Presentation\Http\Controllers\FoodControllerFactory;
 
-$userController = new UserController();
+$userController = getUserController();
 $currentUser = $userController->getCurrentUser();
 $permissions = getCustomerPermissions();
 

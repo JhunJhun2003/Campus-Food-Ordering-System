@@ -20,7 +20,7 @@ requirePermission('place_orders');
 use App\User\Presentation\Http\Controllers\UserController;
 use App\Payment\Presentation\Http\Controllers\PaymentController;
 
-$userController = new UserController();
+$userController = getUserController();
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 

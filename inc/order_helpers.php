@@ -80,3 +80,15 @@ function getFoodController(): \App\Food\Presentation\Http\Controllers\FoodContro
     
     return $instance;
 }
+
+// Example for UserController
+function getUserController(): \App\User\Presentation\Http\Controllers\UserController
+{
+    static $instance = null;
+    
+    if ($instance === null) {
+        $instance = \App\User\Presentation\Http\Controllers\UserControllerFactory::getInstance();
+    }
+    
+    return $instance;
+}

@@ -1,21 +1,40 @@
 <?php
+declare(strict_types=1);
+
 namespace App\User\Presentation\Http\Controllers;
 
 use App\User\Application\DTOs\RegisterUserRequest;
 use App\User\Application\Usecases\RegisterUserUseCase;
 use App\User\Application\DTOs\LoginUserRequest;
 use App\User\Application\Usecases\LoginUserUseCase;
-use App\User\Infrastructure\Repositories\UserRepository;
+use App\User\Application\Usecases\GetProfileUseCase;
+use App\User\Application\Usecases\UpdateProfileUseCase;
+use App\User\Domain\Repositories\UserRepositoryInterface;
+use App\User\Domain\ValueObjects\UserId;
+use App\User\Domain\ValueObjects\Password;
 
+/**
+ * User Controller
+ * Follows SOLID principles with Dependency Injection
+ * No 'new' keyword - all dependencies are injected
+ */
 class UserController
 {
-    private UserRepository $userRepository;
+    private UserRepositoryInterface $userRepository;
 
-    public function __construct()
-    {
-        $this->userRepository = new UserRepository();
+    /**
+     * Constructor with Dependency Injection
+     * All dependencies are injected, not created inside
+     */
+    public function __construct(
+        UserRepositoryInterface $userRepository
+    ) {
+        $this->userRepository = $userRepository;
     }
 
+    /**
+     * Register a new user
+     */
     public function register(): array
     {
         $request = new RegisterUserRequest(
@@ -36,6 +55,9 @@ class UserController
         ];
     }
 
+    /**
+     * Login user
+     */
     public function login(): array
     {
         $request = new LoginUserRequest(
@@ -67,6 +89,9 @@ class UserController
         ];
     }
 
+    /**
+     * Get redirect URL based on user role
+     */
     private function getRedirectUrl(string $role): string
     {
         $role = strtolower($role);
@@ -77,20 +102,22 @@ class UserController
         };
     }
 
+    /**
+     * Logout user
+     */
     public function logout(): void
     {
-        // Clear session
         $_SESSION = [];
         session_destroy();
-        
-        // Clear remember me cookie
         setcookie('user_email', '', time() - 3600, '/');
         
-        // Redirect to login page with full path
         header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
         exit();
     }
 
+    /**
+     * Check if user is logged in
+     */
     public function isLoggedIn(): bool
     {
         return !empty($_SESSION['user_id'])
@@ -98,6 +125,17 @@ class UserController
             && !empty($_SESSION['user_role']);
     }
 
+    /**
+     * Check if user is verified
+     */
+    public function isVerified(): bool
+    {
+        return !empty($_SESSION['user_verified']) && $_SESSION['user_verified'] === true;
+    }
+
+    /**
+     * Get current user data
+     */
     public function getCurrentUser(): ?array
     {
         if (!$this->isLoggedIn()) {
@@ -108,10 +146,14 @@ class UserController
             'id' => $_SESSION['user_id'] ?? null,
             'name' => $_SESSION['user_name'] ?? '',
             'email' => $_SESSION['user_email'] ?? '',
-            'role' => $_SESSION['user_role'] ?? 'user'
+            'role' => $_SESSION['user_role'] ?? 'user',
+            'is_verified' => $_SESSION['user_verified'] ?? false
         ];
     }
 
+    /**
+     * Require authentication
+     */
     public function requireAuth(): void
     {
         if (!$this->isLoggedIn()) {
@@ -120,6 +162,21 @@ class UserController
         }
     }
 
+    /**
+     * Require verified user
+     */
+    public function requireVerified(): void
+    {
+        $this->requireAuth();
+        if (!$this->isVerified()) {
+            header('Location: /Campus-Food-Ordering-System/view/entrance/verify-email.php');
+            exit();
+        }
+    }
+
+    /**
+     * Require admin role
+     */
     public function requireAdmin(): void
     {
         $this->requireAuth();
@@ -129,6 +186,9 @@ class UserController
         }
     }
 
+    /**
+     * Require staff role
+     */
     public function requireStaff(): void
     {
         $this->requireAuth();
@@ -138,6 +198,9 @@ class UserController
         }
     }
 
+    /**
+     * Require guest (not logged in)
+     */
     public function requireGuest(): void
     {
         if ($this->isLoggedIn()) {
@@ -152,14 +215,16 @@ class UserController
         }
     }
 
+    // ============================================
+    // PROFILE METHODS
+    // ============================================
+
     /**
      * Get user profile
      */
     public function getProfile(int $userId): ?array
     {
-        $useCase = new \App\User\Application\Usecases\GetProfileUseCase(
-            new \App\User\Infrastructure\Repositories\UserRepository()
-        );
+        $useCase = new GetProfileUseCase($this->userRepository);
         return $useCase->execute($userId);
     }
 
@@ -168,9 +233,7 @@ class UserController
      */
     public function updateProfile(int $userId, array $data): array
     {
-        $useCase = new \App\User\Application\Usecases\UpdateProfileUseCase(
-            new \App\User\Infrastructure\Repositories\UserRepository()
-        );
+        $useCase = new UpdateProfileUseCase($this->userRepository);
         return $useCase->execute($userId, $data);
     }
 
@@ -180,7 +243,7 @@ class UserController
     public function changePassword(int $userId, string $currentPassword, string $newPassword): array
     {
         try {
-            $user = $this->userRepository->findById(new \App\User\Domain\ValueObjects\UserId($userId));
+            $user = $this->userRepository->findById(new UserId($userId));
             if (!$user) {
                 return ['success' => false, 'message' => 'User not found.'];
             }
@@ -191,7 +254,7 @@ class UserController
             }
 
             // Change password
-            $user->changePassword(new \App\User\Domain\ValueObjects\Password($newPassword));
+            $user->changePassword(new Password($newPassword));
             $this->userRepository->save($user);
 
             return ['success' => true, 'message' => 'Password changed successfully!'];

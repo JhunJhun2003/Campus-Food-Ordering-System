@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\User\Presentation\Http\Controllers\AdminController;
 
-$adminController = new AdminController();
+$adminController = getAdminController();
 $stats = $adminController->dashboard();
 $currentUser = $adminController->getCurrentUser();
 ?>
