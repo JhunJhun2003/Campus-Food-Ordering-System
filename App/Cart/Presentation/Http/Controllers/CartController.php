@@ -1,24 +1,40 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Cart\Presentation\Http\Controllers;
 
 use App\Cart\Application\Usecases\GetCartUseCase;
 use App\Cart\Application\Usecases\AddToCartUseCase;
 use App\Cart\Application\Usecases\UpdateCartItemUseCase;
 use App\Cart\Application\Usecases\RemoveFromCartUseCase;
-use App\Cart\Infrastructure\Repositories\CartRepository;
-use App\Food\Infrastructure\Repositories\FoodRepository;
+use App\Cart\Domain\Repositories\CartRepositoryInterface;
+use App\Food\Domain\Repositories\FoodRepositoryInterface;
 
+/**
+ * Cart Controller
+ * Follows SOLID principles with Dependency Injection
+ * No 'new' keyword - all dependencies are injected
+ */
 class CartController
 {
-    private CartRepository $cartRepository;
-    private FoodRepository $foodRepository;
+    private CartRepositoryInterface $cartRepository;
+    private FoodRepositoryInterface $foodRepository;
 
-    public function __construct()
-    {
-        $this->cartRepository = new CartRepository();
-        $this->foodRepository = new FoodRepository();
+    /**
+     * Constructor with Dependency Injection
+     * All dependencies are injected, not created inside
+     */
+    public function __construct(
+        CartRepositoryInterface $cartRepository,
+        FoodRepositoryInterface $foodRepository
+    ) {
+        $this->cartRepository = $cartRepository;
+        $this->foodRepository = $foodRepository;
     }
 
+    /**
+     * Get cart contents
+     */
     public function index(int $userId): array
     {
         $useCase = new GetCartUseCase($this->cartRepository);
@@ -41,6 +57,9 @@ class CartController
         return $result;
     }
 
+    /**
+     * Update cart item quantity
+     */
     public function update(int $userId, int $foodId, int $quantity): array
     {
         $useCase = new UpdateCartItemUseCase($this->cartRepository);
@@ -54,6 +73,9 @@ class CartController
         return $result;
     }
 
+    /**
+     * Remove item from cart
+     */
     public function remove(int $userId, int $foodId): array
     {
         $useCase = new RemoveFromCartUseCase($this->cartRepository);
@@ -67,6 +89,9 @@ class CartController
         return $result;
     }
 
+    /**
+     * Clear all items from cart
+     */
     public function clear(int $userId): array
     {
         $this->cartRepository->clear($userId);
@@ -77,6 +102,9 @@ class CartController
         ];
     }
 
+    /**
+     * Get total item count in cart
+     */
     public function getItemCount(int $userId): int
     {
         return $this->cartRepository->getItemCount($userId);

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Food\Presentation\Http\Controllers;
 
 use App\Food\Application\Usecases\GetAllFoodsUseCase;
@@ -6,56 +8,91 @@ use App\Food\Application\Usecases\CreateFoodUseCase;
 use App\Food\Application\Usecases\UpdateFoodUseCase;
 use App\Food\Application\Usecases\DeleteFoodUseCase;
 use App\Food\Application\Usecases\GetFoodForEditUseCase;
-use App\Food\Infrastructure\Repositories\FoodRepository;
-use Inc\Database;
+use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use App\Food\Domain\Repositories\CategoryRepositoryInterface;
+use App\Food\Application\DTOs\CreateFoodRequest;
+use App\Food\Application\DTOs\UpdateFoodRequest;
 
+/**
+ * Food Controller
+ * Follows SOLID principles with Dependency Injection
+ * No 'new' keyword - all dependencies are injected
+ */
 class FoodController
 {
-    private FoodRepository $foodRepository;
+    private FoodRepositoryInterface $foodRepository;
+    private CategoryRepositoryInterface $categoryRepository;
 
-    public function __construct()
-    {
-        $this->foodRepository = new FoodRepository();
+    /**
+     * Constructor with Dependency Injection
+     * All dependencies are injected, not created inside
+     */
+    public function __construct(
+        FoodRepositoryInterface $foodRepository,
+        CategoryRepositoryInterface $categoryRepository
+    ) {
+        $this->foodRepository = $foodRepository;
+        $this->categoryRepository = $categoryRepository;
     }
 
+    /**
+     * Get all foods
+     */
     public function index(): array
     {
         $useCase = new GetAllFoodsUseCase($this->foodRepository);
         return $useCase->execute();
     }
 
+    /**
+     * Get all categories
+     * SQL moved to repository
+     */
     public function getCategories(): array
     {
-        $db = Database::getConnection();
-        $stmt = $db->query("SELECT * FROM categories ORDER BY name");
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->categoryRepository->findAll();
     }
 
+    /**
+     * Get food for editing
+     */
     public function getForEdit(int $id): ?array
     {
         $useCase = new GetFoodForEditUseCase($this->foodRepository);
         return $useCase->execute($id);
     }
 
-    public function create(array $data): array
+    /**
+     * Create a new food item
+     */
+    public function create(CreateFoodRequest $request): array
     {
         $useCase = new CreateFoodUseCase($this->foodRepository);
-        return $useCase->execute($data);
+        return $useCase->execute($request);
     }
 
-    public function update(int $id, array $data): array
+    /**
+     * Update a food item
+     */
+    public function update(UpdateFoodRequest $request): array
     {
         $useCase = new UpdateFoodUseCase($this->foodRepository);
-        return $useCase->execute($id, $data);
+        return $useCase->execute($request);
     }
 
+    /**
+     * Delete a food item
+     */
     public function delete(int $id): array
     {
         $useCase = new DeleteFoodUseCase($this->foodRepository);
         return $useCase->execute($id);
     }
 
-    // New helper method to handle form submissions
+    /**
+     * Handle form submission
+     * This is a helper method for the view layer
+     */
     public function handleRequest(): array
     {
         $message = null;
@@ -69,33 +106,34 @@ class FoodController
 
         // POST: Add
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
-            $data = [
-                'category_id' => (int) ($_POST['category_id'] ?? 0),
-                'name' => trim($_POST['name'] ?? ''),
-                'description' => trim($_POST['description'] ?? ''),
-                'price' => (float) ($_POST['price'] ?? 0),
-                'stock' => (int) ($_POST['stock'] ?? 0),
-                'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
-                'image' => trim($_POST['image'] ?? '')
-            ];
+            $request = new CreateFoodRequest(
+                (int) ($_POST['category_id'] ?? 0),
+                trim($_POST['name'] ?? ''),
+                trim($_POST['description'] ?? ''),
+                (float) ($_POST['price'] ?? 0),
+                (int) ($_POST['stock'] ?? 0),
+                (int) ($_POST['preparation_time'] ?? 15),
+                trim($_POST['image'] ?? '')
+            );
             
-            $message = $this->create($data);
+            $message = $this->create($request);
         }
 
         // POST: Edit
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
             $foodId = (int) ($_POST['food_id'] ?? 0);
-            $data = [
-                'category_id' => (int) ($_POST['category_id'] ?? 0),
-                'name' => trim($_POST['name'] ?? ''),
-                'description' => trim($_POST['description'] ?? ''),
-                'price' => (float) ($_POST['price'] ?? 0),
-                'stock' => (int) ($_POST['stock'] ?? 0),
-                'preparation_time' => (int) ($_POST['preparation_time'] ?? 15),
-                'image' => trim($_POST['image'] ?? '')
-            ];
+            $request = new UpdateFoodRequest(
+                $foodId,
+                (int) ($_POST['category_id'] ?? 0),
+                trim($_POST['name'] ?? ''),
+                trim($_POST['description'] ?? ''),
+                (float) ($_POST['price'] ?? 0),
+                (int) ($_POST['stock'] ?? 0),
+                (int) ($_POST['preparation_time'] ?? 15),
+                trim($_POST['image'] ?? '')
+            );
             
-            $message = $this->update($foodId, $data);
+            $message = $this->update($request);
             if ($message['success']) {
                 $editFood = null;
             }

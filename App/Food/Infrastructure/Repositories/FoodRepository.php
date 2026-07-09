@@ -15,15 +15,16 @@ class FoodRepository implements FoodRepositoryInterface
         $this->db = Database::getConnection();
     }
 
-    public function save(Food $food): void
+    public function save(Food $food): int
     {
         if ($food->getId() === null) {
-            $sql = "INSERT INTO foods (category_id, name, description, price, stock, image, preparation_time) 
-                    VALUES (:category_id, :name, :description, :price, :stock, :image, :preparation_time)";
+            $sql = "INSERT INTO foods (category_id, status_id, name, description, price, stock, image, preparation_time) 
+                    VALUES (:category_id, :status_id, :name, :description, :price, :stock, :image, :preparation_time)";
             
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 ':category_id' => $food->getCategoryId(),
+                ':status_id' => $food->getStatusId(),
                 ':name' => $food->getName(),
                 ':description' => $food->getDescription(),
                 ':price' => $food->getPrice(),
@@ -31,9 +32,12 @@ class FoodRepository implements FoodRepositoryInterface
                 ':image' => $food->getImage(),
                 ':preparation_time' => $food->getPreparationTime()
             ]);
+            
+            return (int) $this->db->lastInsertId();
         } else {
             $sql = "UPDATE foods SET 
                     category_id = :category_id,
+                    status_id = :status_id,
                     name = :name, 
                     description = :description, 
                     price = :price, 
@@ -45,6 +49,7 @@ class FoodRepository implements FoodRepositoryInterface
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 ':category_id' => $food->getCategoryId(),
+                ':status_id' => $food->getStatusId(),
                 ':name' => $food->getName(),
                 ':description' => $food->getDescription(),
                 ':price' => $food->getPrice(),
@@ -53,12 +58,17 @@ class FoodRepository implements FoodRepositoryInterface
                 ':preparation_time' => $food->getPreparationTime(),
                 ':id' => $food->getId()
             ]);
+            
+            return $food->getId();
         }
     }
 
     public function findById(int $id): ?Food
     {
-        $sql = "SELECT * FROM foods WHERE id = :id";
+        $sql = "SELECT f.*, fs.status_name 
+                FROM foods f
+                LEFT JOIN food_statuses fs ON f.status_id = fs.id
+                WHERE f.id = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id' => $id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -68,7 +78,11 @@ class FoodRepository implements FoodRepositoryInterface
 
     public function findAll(): array
     {
-        $sql = "SELECT * FROM foods ORDER BY created_at DESC";
+        $sql = "SELECT f.*, fs.status_name, c.name as category_name
+                FROM foods f
+                LEFT JOIN food_statuses fs ON f.status_id = fs.id
+                LEFT JOIN categories c ON f.category_id = c.id
+                ORDER BY f.created_at DESC";
         $stmt = $this->db->query($sql);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
@@ -77,7 +91,11 @@ class FoodRepository implements FoodRepositoryInterface
 
     public function findByCategory(int $categoryId): array
     {
-        $sql = "SELECT * FROM foods WHERE category_id = :category_id ORDER BY name";
+        $sql = "SELECT f.*, fs.status_name
+                FROM foods f
+                LEFT JOIN food_statuses fs ON f.status_id = fs.id
+                WHERE f.category_id = :category_id 
+                ORDER BY f.name";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':category_id' => $categoryId]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -87,15 +105,16 @@ class FoodRepository implements FoodRepositoryInterface
 
     public function findActive(): array
     {
-        $sql = "SELECT f.*, c.name as category_name 
+        $sql = "SELECT f.*, fs.status_name, c.name as category_name 
                 FROM foods f 
+                LEFT JOIN food_statuses fs ON f.status_id = fs.id
                 LEFT JOIN categories c ON f.category_id = c.id 
-                WHERE f.stock > 0 
+                WHERE f.status_id = 1 AND f.stock > 0 
                 ORDER BY f.created_at DESC";
         $stmt = $this->db->query($sql);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        return array_map([$this, 'hydrateWithCategory'], $data);
+        return array_map([$this, 'hydrate'], $data);
     }
 
     public function delete(int $id): void
@@ -112,38 +131,37 @@ class FoodRepository implements FoodRepositoryInterface
         $stmt->execute([':quantity' => $quantity, ':id' => $id]);
     }
 
+    // ============================================
+    // HYDRATE METHODS - FIXED
+    // ============================================
+
     private function hydrate(array $data): Food
     {
-        return new Food(
+        $food = new Food(
             (int) $data['id'],
             $data['category_id'] ? (int) $data['category_id'] : null,
             $data['name'],
-            $data['description'],
+            $data['description'] ?? '',
             (float) $data['price'],
             (int) $data['stock'],
             $data['image'] ?? null,
-            (int) $data['preparation_time']
+            (int) ($data['preparation_time'] ?? 15),
+            (int) ($data['status_id'] ?? 1)  // ✅ Include status_id
         );
-    }
 
-    private function hydrateWithCategory(array $data): array
-    {
-        return [
-            'id' => (int) $data['id'],
-            'category_id' => $data['category_id'] ? (int) $data['category_id'] : null,
-            'category_name' => $data['category_name'] ?? 'Uncategorized',
-            'name' => $data['name'],
-            'description' => $data['description'],
-            'price' => (float) $data['price'],
-            'stock' => (int) $data['stock'],
-            'image' => $data['image'] ?? null,
-            'preparation_time' => (int) $data['preparation_time'],
-            'created_at' => $data['created_at']
-        ];
+        if (isset($data['created_at'])) {
+            $food->setCreatedAt(new \DateTime($data['created_at']));
+        }
+
+        if (isset($data['updated_at'])) {
+            $food->setUpdatedAt(new \DateTime($data['updated_at']));
+        }
+
+        return $food;
     }
 
     // ============================================
-    // ADMIN METHODS
+    // ADMIN METHODS - FIXED
     // ============================================
 
     public function getFoodForEdit(int $id): ?array
@@ -157,12 +175,13 @@ class FoodRepository implements FoodRepositoryInterface
 
     public function createFood(array $data): int
     {
-        $sql = "INSERT INTO foods (category_id, name, description, price, stock, image, preparation_time) 
-                VALUES (:category_id, :name, :description, :price, :stock, :image, :preparation_time)";
+        $sql = "INSERT INTO foods (category_id, status_id, name, description, price, stock, image, preparation_time) 
+                VALUES (:category_id, :status_id, :name, :description, :price, :stock, :image, :preparation_time)";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':category_id' => $data['category_id'],
+            ':status_id' => $data['status_id'] ?? 1,  // ✅ Add status_id
             ':name' => $data['name'],
             ':description' => $data['description'],
             ':price' => $data['price'],
@@ -182,6 +201,10 @@ class FoodRepository implements FoodRepositoryInterface
         if (isset($data['category_id'])) {
             $fields[] = "category_id = :category_id";
             $params[':category_id'] = $data['category_id'];
+        }
+        if (isset($data['status_id'])) {  // ✅ Add status_id
+            $fields[] = "status_id = :status_id";
+            $params[':status_id'] = $data['status_id'];
         }
         if (isset($data['name'])) {
             $fields[] = "name = :name";
@@ -217,9 +240,6 @@ class FoodRepository implements FoodRepositoryInterface
         return $stmt->execute($params);
     }
 
-    /**
-     * Delete a food item (hard delete - permanently removes from database)
-     */
     public function deleteFood(int $id): bool
     {
         try {
@@ -230,9 +250,11 @@ class FoodRepository implements FoodRepositoryInterface
             return false;
         }
     }
-    /**
-     * Reduce stock for multiple food items
-     */
+
+    // ============================================
+    // STOCK MANAGEMENT
+    // ============================================
+
     public function reduceStockForItems(array $items): bool
     {
         try {
@@ -263,9 +285,6 @@ class FoodRepository implements FoodRepositoryInterface
         }
     }
 
-    /**
-     * Reduce stock for a single food item
-     */
     public function reduceStock(int $foodId, int $quantity): bool
     {
         $sql = "UPDATE foods SET stock = stock - :quantity WHERE id = :id AND stock >= :quantity";
@@ -278,9 +297,6 @@ class FoodRepository implements FoodRepositoryInterface
         return $result && $stmt->rowCount() > 0;
     }
 
-    /**
-     * Get current stock for a food item
-     */
     public function getStock(int $foodId): int
     {
         $sql = "SELECT stock FROM foods WHERE id = :id";

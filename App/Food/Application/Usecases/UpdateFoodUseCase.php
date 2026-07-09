@@ -2,6 +2,7 @@
 namespace App\Food\Application\Usecases;
 
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use App\Food\Application\DTOs\UpdateFoodRequest;
 
 class UpdateFoodUseCase
 {
@@ -12,13 +13,17 @@ class UpdateFoodUseCase
         $this->foodRepository = $foodRepository;
     }
 
-    public function execute(int $id, array $data): array
+    public function execute(UpdateFoodRequest $request): array  // ✅ Use DTO
     {
-        if (empty($data['name']) || empty($data['category_id']) || empty($data['price'])) {
-            return ['success' => false, 'message' => 'Name, Category, and Price are required.'];
+        // Validate
+        $errors = $request->validate();
+        if (!empty($errors)) {
+            return ['success' => false, 'message' => implode('<br>', $errors)];
         }
 
         try {
+            $data = $request->toArray();
+            $id = $request->getId();
             $updated = $this->foodRepository->updateFood($id, $data);
             return [
                 'success' => $updated,

@@ -7,30 +7,33 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
 // Guest access is allowed on the dashboard. No requireCustomerAuth() check is needed here.
 
 // ============================================
-// 2. BUSINESS LOGIC
+// 1. BUSINESS LOGIC
 // ============================================
 
-use App\Food\Presentation\Http\Controllers\FoodController;
 use App\User\Presentation\Http\Controllers\UserController;
+use App\Food\Presentation\Http\Controllers\FoodControllerFactory;
 
 $userController = new UserController();
 $currentUser = $userController->getCurrentUser();
 $permissions = getCustomerPermissions();
 
-// Get foods
-$foodController = new FoodController();
+// ✅ Get food controller from factory - NO 'new' keyword!
+$foodController = FoodControllerFactory::getInstance();
 $foods = $foodController->index();
 $categories = $foodController->getCategories();
+
+// ✅ Get cart controller using helper
+$cartController = getCartController();
 
 // Get cart count
 $itemCount = 0;
 if ($currentUser && isset($currentUser['id'])) {
     try {
-        $cartController = new \App\Cart\Presentation\Http\Controllers\CartController();
         $itemCount = $cartController->getItemCount($currentUser['id']);
     } catch (\Exception $e) {
         $itemCount = 0;
@@ -61,7 +64,7 @@ foreach ($foods as $food) {
 }
 
 // ============================================
-// 3. VIEW RENDER
+// 2. VIEW RENDER
 // ============================================
 
 $pageTitle = 'Foodie - Explore Our Menu';
@@ -266,6 +269,23 @@ function updateCartBadge() {
             badge.classList.add('hidden');
         }
     }
+}
+
+function showToast(message, isSuccess = true) {
+    let toast = document.getElementById('toast-notification');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = 'fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg transform translate-y-24 opacity-0 transition-all duration-300 z-50';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.remove('translate-y-24', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+    }, 3000);
 }
 
 window.onload = function() {

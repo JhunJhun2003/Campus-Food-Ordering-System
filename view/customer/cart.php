@@ -1,10 +1,13 @@
 <?php
 declare(strict_types=1);
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
@@ -15,7 +18,6 @@ requireEmailVerification();
 requirePermission('add_to_cart');
 
 use App\User\Presentation\Http\Controllers\UserController;
-use App\Cart\Presentation\Http\Controllers\CartController;
 
 $userController = new UserController();
 $currentUser = $userController->getCurrentUser();
@@ -25,7 +27,8 @@ $userId = $currentUser['id'] ?? 0;
 // 2. BUSINESS LOGIC
 // ============================================
 
-$cartController = new CartController();
+// ✅ Get cart controller using helper - NO 'new' keyword!
+$cartController = getCartController();
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -175,8 +178,10 @@ function renderCartUI() {
         `;
         totalHeader.innerText = "0 items";
         subtotalLabel.innerText = "$ 0";
-        badgeCount.innerText = "0";
-        badgeCount.classList.add('hidden');
+        if (badgeCount) {
+            badgeCount.innerText = "0";
+            badgeCount.classList.add('hidden');
+        }
         const checkoutBtn = document.querySelector('a[href="checkout.php"]');
         if (checkoutBtn) {
             checkoutBtn.removeAttribute('href');
@@ -186,7 +191,9 @@ function renderCartUI() {
         return;
     }
 
-    badgeCount.classList.remove('hidden');
+    if (badgeCount) {
+        badgeCount.classList.remove('hidden');
+    }
     let rowsHtml = '';
     let currentSubtotal = 0;
 
@@ -232,7 +239,9 @@ function renderCartUI() {
 
     wrapper.innerHTML = rowsHtml;
     totalHeader.innerText = `${cartItems.length} items`;
-    badgeCount.innerText = cartItems.length;
+    if (badgeCount) {
+        badgeCount.innerText = cartItems.length;
+    }
     subtotalLabel.innerText = `$ ${currentSubtotal}`;
     cartTotal = currentSubtotal;
 
@@ -286,6 +295,23 @@ function removeCartItem(foodId) {
             });
         }, 300);
     }
+}
+
+function showToast(message) {
+    let toast = document.getElementById('toast-notification');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = 'fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg transform translate-y-24 opacity-0 transition-all duration-300 z-50';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.remove('translate-y-24', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+    }, 3000);
 }
 </script>
 

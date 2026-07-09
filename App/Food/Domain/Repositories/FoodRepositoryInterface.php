@@ -6,7 +6,7 @@ use App\Food\Domain\Entities\Food;
 interface FoodRepositoryInterface
 {
     // Basic CRUD
-    public function save(Food $food): void;
+    public function save(Food $food): int;
     public function findById(int $id): ?Food;
     public function findAll(): array;
     public function findByCategory(int $categoryId): array;
