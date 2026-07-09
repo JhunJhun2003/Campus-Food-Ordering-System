@@ -1,54 +1,84 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Payment\Presentation\Http\Controllers;
 
-use App\Payment\Infrastructure\Repositories\PaymentRepository;
+use App\Payment\Application\DTOs\CreatePaymentMethodRequest;
+use App\Payment\Application\DTOs\UpdatePaymentMethodRequest;
+use App\Payment\Application\Usecases\CreatePaymentMethodUseCase;
+use App\Payment\Application\Usecases\UpdatePaymentMethodUseCase;
+use App\Payment\Application\Usecases\DeletePaymentMethodUseCase;
+use App\Payment\Domain\Repositories\PaymentRepositoryInterface;
 
+/**
+ * Payment Controller
+ * Follows SOLID principles with Dependency Injection
+ * No 'new' keyword - all dependencies are injected
+ */
 class PaymentController
 {
-    private PaymentRepository $paymentRepository;
+    private PaymentRepositoryInterface $paymentRepository;
+    private CreatePaymentMethodUseCase $createPaymentMethodUseCase;
+    private UpdatePaymentMethodUseCase $updatePaymentMethodUseCase;
+    private DeletePaymentMethodUseCase $deletePaymentMethodUseCase;
 
-    public function __construct()
-    {
-        $this->paymentRepository = new PaymentRepository();
+    public function __construct(
+        PaymentRepositoryInterface $paymentRepository,
+        CreatePaymentMethodUseCase $createPaymentMethodUseCase,
+        UpdatePaymentMethodUseCase $updatePaymentMethodUseCase,
+        DeletePaymentMethodUseCase $deletePaymentMethodUseCase
+    ) {
+        $this->paymentRepository = $paymentRepository;
+        $this->createPaymentMethodUseCase = $createPaymentMethodUseCase;
+        $this->updatePaymentMethodUseCase = $updatePaymentMethodUseCase;
+        $this->deletePaymentMethodUseCase = $deletePaymentMethodUseCase;
     }
 
+    /**
+     * Get active payment methods
+     */
     public function getActiveMethods(): array
     {
         return $this->paymentRepository->getActivePaymentMethods();
     }
 
+    /**
+     * Get all payment methods
+     */
     public function getAllMethods(): array
     {
         return $this->paymentRepository->getAllPaymentMethods();
     }
 
+    /**
+     * Add a new payment method
+     */
     public function addMethod(string $name, string $accountName, string $accountNumber): array
     {
-        try {
-            $id = $this->paymentRepository->addPaymentMethod($name, $accountName, $accountNumber);
-            return ['success' => true, 'id' => $id, 'message' => 'Payment method added successfully'];
-        } catch (\Exception $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        $request = new CreatePaymentMethodRequest($name, $accountName, $accountNumber);
+        return $this->createPaymentMethodUseCase->execute($request);
     }
 
+    /**
+     * Update a payment method
+     */
     public function updateMethod(int $id, array $data): array
     {
-        try {
-            $updated = $this->paymentRepository->updatePaymentMethod($id, $data);
-            return ['success' => $updated, 'message' => $updated ? 'Payment method updated successfully' : 'Failed to update'];
-        } catch (\Exception $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        $request = new UpdatePaymentMethodRequest(
+            $id,
+            $data['name'] ?? null,
+            $data['account_name'] ?? null,
+            $data['account_number'] ?? null,
+            $data['is_active'] ?? null
+        );
+        return $this->updatePaymentMethodUseCase->execute($request);
     }
 
+    /**
+     * Delete a payment method
+     */
     public function deleteMethod(int $id): array
     {
-        try {
-            $deleted = $this->paymentRepository->deletePaymentMethod($id);
-            return ['success' => $deleted, 'message' => $deleted ? 'Payment method deleted successfully' : 'Failed to delete'];
-        } catch (\Exception $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        return $this->deletePaymentMethodUseCase->execute($id);
     }
 }

@@ -18,7 +18,6 @@ requireEmailVerification();
 requirePermission('place_orders');
 
 use App\User\Presentation\Http\Controllers\UserController;
-use App\Payment\Presentation\Http\Controllers\PaymentController;
 
 $userController = getUserController();
 $currentUser = $userController->getCurrentUser();
@@ -31,6 +30,7 @@ $userId = $currentUser['id'] ?? 0;
 // ✅ Get controllers using helpers - NO 'new' keyword!
 $cartController = getCartController();
 $orderController = getOrderController();
+$paymentController = getPaymentController();  // ✅ Added
 
 // Get cart data
 $cart = $cartController->index($userId);
@@ -44,8 +44,7 @@ if (empty($items)) {
     exit();
 }
 
-// Get payment methods
-$paymentController = new PaymentController();
+// ✅ Get payment methods using helper - NO 'new' keyword!
 $paymentMethods = $paymentController->getActiveMethods();
 
 // Handle order submission

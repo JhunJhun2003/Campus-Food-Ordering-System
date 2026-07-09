@@ -1,11 +1,52 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Payment\Domain\Repositories;
+
+use App\Payment\Domain\Entities\PaymentMethod;
 
 interface PaymentRepositoryInterface
 {
+    // ============================================
+    // READ OPERATIONS
+    // ============================================
+
+    /**
+     * Get active payment methods
+     */
     public function getActivePaymentMethods(): array;
+
+    /**
+     * Get all payment methods
+     */
     public function getAllPaymentMethods(): array;
-    public function addPaymentMethod(string $name, string $accountName, string $accountNumber): int;
-    public function updatePaymentMethod(int $id, array $data): bool;
-    public function deletePaymentMethod(int $id): bool;
+
+    /**
+     * Find payment method by ID
+     */
+    public function findById(int $id): ?PaymentMethod;
+
+    /**
+     * Find payment method by name
+     */
+    public function findByName(string $name): ?PaymentMethod;
+
+    // ============================================
+    // WRITE OPERATIONS
+    // ============================================
+
+    /**
+     * Save a new payment method
+     */
+    public function save(PaymentMethod $paymentMethod): int;
+
+    /**
+     * Update an existing payment method
+     */
+    public function update(PaymentMethod $paymentMethod): bool;
+
+    /**
+     * Delete a payment method
+     */
+    public function delete(int $id): bool;
 }

@@ -98,7 +98,7 @@ function getPaymentController(): \App\Payment\Presentation\Http\Controllers\Paym
     static $instance = null;
     
     if ($instance === null) {
-        $instance = new \App\Payment\Presentation\Http\Controllers\PaymentController();
+        $instance = \App\Payment\Presentation\Http\Controllers\PaymentControllerFactory::getInstance();
     }
     
     return $instance;
