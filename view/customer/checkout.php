@@ -1,10 +1,13 @@
 <?php
 declare(strict_types=1);
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
@@ -15,8 +18,6 @@ requireEmailVerification();
 requirePermission('place_orders');
 
 use App\User\Presentation\Http\Controllers\UserController;
-use App\Cart\Presentation\Http\Controllers\CartController;
-use App\Order\Presentation\Http\Controllers\OrderController;
 use App\Payment\Presentation\Http\Controllers\PaymentController;
 
 $userController = new UserController();
@@ -27,8 +28,11 @@ $userId = $currentUser['id'] ?? 0;
 // 2. BUSINESS LOGIC
 // ============================================
 
+// ✅ Get controllers using helpers - NO 'new' keyword!
+$cartController = getCartController();
+$orderController = getOrderController();
+
 // Get cart data
-$cartController = new CartController();
 $cart = $cartController->index($userId);
 $items = $cart['items'] ?? [];
 $total = $cart['total'] ?? 0;
@@ -110,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         }
         
         if (empty($error)) {
-            $orderController = new OrderController();
+            // ✅ Use order controller from helper
             $result = $orderController->createOrder(
                 $userId, 
                 $items, 
@@ -178,40 +182,39 @@ include __DIR__ . '/includes/header.php';
         <?php endif; ?>
 
         <!-- Step Progress -->
-<!-- Step Progress - Polished Design -->
-<div class="max-w-2xl mx-auto sm:mx-0 mb-10">
-    <div class="relative flex items-center justify-between px-4">
-        <!-- Background Line -->
-        <div class="absolute left-8 right-8 top-1/2 h-0.5 bg-slate-200 -translate-y-1/2"></div>
-        
-        <!-- Progress Line -->
-        <div id="step-progress-line" class="absolute left-8 top-1/2 h-0.5 bg-emerald-500 -translate-y-1/2 transition-all duration-700 ease-in-out <?php echo $orderPlaced ? 'w-[calc(100%-64px)]' : 'w-0'; ?>"></div>
-        
-        <!-- Step 1 -->
-        <div class="flex flex-col items-center z-10">
-            <div id="circle-step-1" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100' : 'bg-emerald-500 text-white ring-4 ring-emerald-100'; ?> transition-all duration-300 shadow-sm">
-                1
+        <div class="max-w-2xl mx-auto sm:mx-0 mb-10">
+            <div class="relative flex items-center justify-between px-4">
+                <!-- Background Line -->
+                <div class="absolute left-8 right-8 top-1/2 h-0.5 bg-slate-200 -translate-y-1/2"></div>
+                
+                <!-- Progress Line -->
+                <div id="step-progress-line" class="absolute left-8 top-1/2 h-0.5 bg-emerald-500 -translate-y-1/2 transition-all duration-700 ease-in-out <?php echo $orderPlaced ? 'w-[calc(100%-64px)]' : 'w-0'; ?>"></div>
+                
+                <!-- Step 1 -->
+                <div class="flex flex-col items-center z-10">
+                    <div id="circle-step-1" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100' : 'bg-emerald-500 text-white ring-4 ring-emerald-100'; ?> transition-all duration-300 shadow-sm">
+                        1
+                    </div>
+                    <span id="label-step-1" class="text-xs font-semibold text-slate-700 mt-2.5">Payment</span>
+                </div>
+                
+                <!-- Step 2 -->
+                <div class="flex flex-col items-center z-10">
+                    <div id="circle-step-2" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 shadow-sm' : 'bg-white text-slate-400 ring-4 ring-slate-100 border-2 border-slate-300'; ?> transition-all duration-300">
+                        2
+                    </div>
+                    <span id="label-step-2" class="text-xs font-semibold <?php echo $orderPlaced ? 'text-slate-700' : 'text-slate-400'; ?> mt-2.5 transition-all duration-300">Review</span>
+                </div>
+                
+                <!-- Step 3 -->
+                <div class="flex flex-col items-center z-10">
+                    <div id="circle-step-3" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 shadow-sm' : 'bg-white text-slate-400 ring-4 ring-slate-100 border-2 border-slate-300'; ?> transition-all duration-300">
+                        3
+                    </div>
+                    <span id="label-step-3" class="text-xs font-semibold <?php echo $orderPlaced ? 'text-slate-700' : 'text-slate-400'; ?> mt-2.5 transition-all duration-300">Confirm</span>
+                </div>
             </div>
-            <span id="label-step-1" class="text-xs font-semibold text-slate-700 mt-2.5">Payment</span>
         </div>
-        
-        <!-- Step 2 -->
-        <div class="flex flex-col items-center z-10">
-            <div id="circle-step-2" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 shadow-sm' : 'bg-white text-slate-400 ring-4 ring-slate-100 border-2 border-slate-300'; ?> transition-all duration-300">
-                2
-            </div>
-            <span id="label-step-2" class="text-xs font-semibold <?php echo $orderPlaced ? 'text-slate-700' : 'text-slate-400'; ?> mt-2.5 transition-all duration-300">Review</span>
-        </div>
-        
-        <!-- Step 3 -->
-        <div class="flex flex-col items-center z-10">
-            <div id="circle-step-3" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold <?php echo $orderPlaced ? 'bg-emerald-500 text-white ring-4 ring-emerald-100 shadow-sm' : 'bg-white text-slate-400 ring-4 ring-slate-100 border-2 border-slate-300'; ?> transition-all duration-300">
-                3
-            </div>
-            <span id="label-step-3" class="text-xs font-semibold <?php echo $orderPlaced ? 'text-slate-700' : 'text-slate-400'; ?> mt-2.5 transition-all duration-300">Confirm</span>
-        </div>
-    </div>
-</div>
     </div>
 
     <!-- STEP 1: Payment -->

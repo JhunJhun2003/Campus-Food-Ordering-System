@@ -1,10 +1,13 @@
 <?php
 declare(strict_types=1);
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
@@ -15,8 +18,6 @@ requireEmailVerification();
 requirePermission('view_orders');
 
 use App\User\Presentation\Http\Controllers\UserController;
-use App\Order\Presentation\Http\Controllers\OrderController;
-use App\Cart\Presentation\Http\Controllers\CartController;
 
 $userController = new UserController();
 $currentUser = $userController->getCurrentUser();
@@ -26,17 +27,20 @@ $userId = $currentUser['id'] ?? 0;
 // 2. BUSINESS LOGIC
 // ============================================
 
+// ✅ Get controllers using helpers - NO 'new' keyword!
+$orderController = getOrderController();
+$cartController = getCartController();
+
+
 // Get cart item count
 $itemCount = 0;
 try {
-    $cartController = new CartController();
     $itemCount = $cartController->getItemCount($userId);
 } catch (\Exception $e) {
     $itemCount = 0;
 }
 
 // Get orders
-$orderController = new OrderController();
 $orders = $orderController->getUserOrders($userId);
 $statuses = $orderController->getStatuses();
 

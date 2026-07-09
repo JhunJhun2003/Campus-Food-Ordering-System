@@ -69,6 +69,20 @@ interface OrderRepositoryInterface
     public function addItem(int $orderId, int $foodId, int $quantity, float $unitPrice): void;
 
     // ============================================
+    // STATUS METHODS
+    // ============================================
+
+    /**
+     * Get all order statuses
+     */
+    public function getOrderStatuses(): array;
+
+    /**
+     * Get order status by ID
+     */
+    public function getOrderStatusById(int $statusId): ?array;
+
+    // ============================================
     // STATS METHODS
     // ============================================
 
@@ -81,4 +95,14 @@ interface OrderRepositoryInterface
      * Get number of pending orders
      */
     public function getPendingOrders(): int;
+
+    /**
+     * Count orders by status name
+     */
+    public function countByStatusName(string $statusName): int;
+
+    /**
+     * Get order statistics
+     */
+    public function getOrderStatistics(): array;
 }

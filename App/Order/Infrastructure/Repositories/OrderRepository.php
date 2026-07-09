@@ -228,6 +228,38 @@ class OrderRepository implements OrderRepositoryInterface
     }
 
     // ============================================
+    // STATUS METHODS (MOVED FROM CONTROLLER)
+    // ============================================
+
+    /**
+     * Get all order statuses
+     */
+    public function getOrderStatuses(): array
+    {
+        $stmt = $this->db->query("
+            SELECT *
+            FROM order_statuses
+            ORDER BY id
+        ");
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get order status by ID
+     */
+    public function getOrderStatusById(int $statusId): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT *
+            FROM order_statuses
+            WHERE id = :id
+        ");
+        $stmt->execute([':id' => $statusId]);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
+    // ============================================
     // STATS METHODS
     // ============================================
 
@@ -245,6 +277,40 @@ class OrderRepository implements OrderRepositoryInterface
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int) ($result['count'] ?? 0);
+    }
+
+    /**
+     * Count orders by status name
+     */
+    public function countByStatusName(string $statusName): int
+    {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as count
+            FROM orders o
+            JOIN order_statuses os ON o.status_id = os.id
+            WHERE LOWER(os.status_name) = LOWER(:status_name)
+        ");
+        $stmt->execute([':status_name' => $statusName]);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    /**
+     * Get order statistics
+     */
+    public function getOrderStatistics(): array
+    {
+        return [
+            'total' => $this->getTotalOrders(),
+            'pending' => $this->getPendingOrders(),
+            'preparing' => $this->countByStatusName('preparing'),
+            'ready' => $this->countByStatusName('ready'),
+            'completed' => $this->countByStatusName('completed'),
+            'cancelled' => $this->countByStatusName('cancelled'),
+            'today' => $this->countToday(),
+            'monthly' => $this->countMonthly(),
+            'revenue' => $this->getTotalRevenue()
+        ];
     }
 
     // ============================================
@@ -315,5 +381,40 @@ class OrderRepository implements OrderRepositoryInterface
         return $emojiMap[$categoryId] ?? '🍽️';
     }
 
-    
+    private function countToday(): int
+    {
+        $stmt = $this->db->query("
+            SELECT COUNT(*) as count
+            FROM orders
+            WHERE DATE(order_date) = CURDATE()
+        ");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    private function countMonthly(): int
+    {
+        $stmt = $this->db->query("
+            SELECT COUNT(*) as count
+            FROM orders
+            WHERE MONTH(order_date) = MONTH(CURDATE())
+            AND YEAR(order_date) = YEAR(CURDATE())
+        ");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($result['count'] ?? 0);
+    }
+
+    private function getTotalRevenue(): float
+    {
+        $stmt = $this->db->query("
+            SELECT SUM(total_amount) as total
+            FROM orders
+            WHERE status_id IN (
+                SELECT id FROM order_statuses
+                WHERE status_name IN ('completed', 'ready')
+            )
+        ");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (float) ($result['total'] ?? 0);
+    }
 }

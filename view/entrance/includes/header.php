@@ -73,7 +73,7 @@ if ($isLoggedIn) {
                 <span class="text-2xl font-black tracking-wider text-slate-950">FOODIE</span>
             </a>
 
-            <?php if (!$simpleHeader): ?>
+            <?php if ($simpleHeader): ?>
             <!-- Navigation Links -->
             <nav class="hidden md:flex items-center space-x-10">
                 <?php if ($isLoggedIn): ?>

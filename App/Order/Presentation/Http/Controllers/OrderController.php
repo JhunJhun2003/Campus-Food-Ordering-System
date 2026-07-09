@@ -1,146 +1,118 @@
 <?php
+
 namespace App\Order\Presentation\Http\Controllers;
 
+use App\Order\Application\Usecases\CreateOrderUseCase;
 use App\Order\Application\Usecases\GetAllOrdersUseCase;
 use App\Order\Application\Usecases\GetUserOrdersUseCase;
-use App\Order\Application\Usecases\CreateOrderUseCase;
-use App\Order\Application\Usecases\UpdateOrderStatusUseCase;
 use App\Order\Application\Usecases\ReorderItemsUseCase;
-use App\Order\Infrastructure\Repositories\OrderRepository;
-use App\Cart\Infrastructure\Repositories\CartRepository;
-use App\Food\Infrastructure\Repositories\FoodRepository;
-use Inc\Database;
+use App\Order\Application\Usecases\UpdateOrderStatusUseCase;
+use App\Order\Domain\Repositories\OrderRepositoryInterface;
+use App\Cart\Domain\Repositories\CartRepositoryInterface;
+use App\Food\Domain\Repositories\FoodRepositoryInterface;
 
 class OrderController
 {
-    private OrderRepository $orderRepository;
-    private CartRepository $cartRepository;
-    private FoodRepository $foodRepository;
-
-    public function __construct()
-    {
-        $this->orderRepository = new OrderRepository();
-        $this->cartRepository = new CartRepository();
-        $this->foodRepository = new FoodRepository();
-    }
+    private OrderRepositoryInterface $orderRepository;
+    private GetAllOrdersUseCase $getAllOrdersUseCase;
+    private GetUserOrdersUseCase $getUserOrdersUseCase;
+    private CreateOrderUseCase $createOrderUseCase;
+    private UpdateOrderStatusUseCase $updateOrderStatusUseCase;
+    private ReorderItemsUseCase $reorderItemsUseCase;
 
     /**
-     * Get all orders (admin)
+     * ✅ Constructor Injection - All dependencies are injected
+     * No 'new' keyword here!
      */
+    public function __construct(
+        OrderRepositoryInterface $orderRepository,
+        CartRepositoryInterface $cartRepository,
+        FoodRepositoryInterface $foodRepository,
+        GetAllOrdersUseCase $getAllOrdersUseCase,
+        GetUserOrdersUseCase $getUserOrdersUseCase,
+        CreateOrderUseCase $createOrderUseCase,
+        UpdateOrderStatusUseCase $updateOrderStatusUseCase,
+        ReorderItemsUseCase $reorderItemsUseCase
+    ) {
+        $this->orderRepository = $orderRepository;
+        $this->getAllOrdersUseCase = $getAllOrdersUseCase;
+        $this->getUserOrdersUseCase = $getUserOrdersUseCase;
+        $this->createOrderUseCase = $createOrderUseCase;
+        $this->updateOrderStatusUseCase = $updateOrderStatusUseCase;
+        $this->reorderItemsUseCase = $reorderItemsUseCase;
+    }
+
     public function index(): array
     {
-        $useCase = new GetAllOrdersUseCase($this->orderRepository);
-        return $useCase->execute();
+        return $this->getAllOrdersUseCase->execute();
     }
 
-    /**
-     * Get recent orders (admin dashboard)
-     */
     public function getRecentOrders(int $limit = 10): array
     {
-        $useCase = new GetAllOrdersUseCase($this->orderRepository);
-        return $useCase->getRecentOrders($limit);
+        return $this->getAllOrdersUseCase->getRecentOrders($limit);
     }
 
-    /**
-     * Get orders for a specific user (customer orders page)
-     */
     public function getUserOrders(int $userId): array
     {
-        $useCase = new GetUserOrdersUseCase($this->orderRepository);
-        return $useCase->execute($userId);
+        return $this->getUserOrdersUseCase->execute($userId);
     }
 
-    /**
-     * Create a new order (checkout)
-     */
     public function createOrder(
-        int $userId, 
-        array $items, 
-        float $total, 
-        string $address, 
-        string $paymentMethod, 
-        string $fullName, 
-        string $phone, 
-        string $accountName, 
-        string $accountNumber, 
+        int $userId,
+        array $items,
+        float $total,
+        string $address,
+        string $paymentMethod,
+        string $fullName,
+        string $phone,
+        string $accountName,
+        string $accountNumber,
         string $transactionImage
     ): array {
-        $useCase = new CreateOrderUseCase(
-            $this->orderRepository,
-            $this->cartRepository,
-            $this->foodRepository
-        );
-        
-        return $useCase->execute(
-            $userId, 
-            $items, 
-            $total, 
-            $address, 
-            $paymentMethod, 
-            $fullName, 
-            $phone, 
-            $accountName, 
-            $accountNumber, 
+        return $this->createOrderUseCase->execute(
+            $userId,
+            $items,
+            $total,
+            $address,
+            $paymentMethod,
+            $fullName,
+            $phone,
+            $accountName,
+            $accountNumber,
             $transactionImage
         );
     }
 
-    /**
-     * Update order status (admin/staff)
-     */
     public function updateStatus(int $orderId, int $statusId): array
     {
-        $useCase = new UpdateOrderStatusUseCase($this->orderRepository);
-        return $useCase->execute($orderId, $statusId);
+        return $this->updateOrderStatusUseCase->execute($orderId, $statusId);
     }
 
-    /**
-     * Reorder items from a previous order (customer)
-     */
     public function reorder(int $userId, int $orderId): array
     {
-        $useCase = new ReorderItemsUseCase($this->orderRepository, $this->cartRepository);
-        return $useCase->execute($userId, $orderId);
+        return $this->reorderItemsUseCase->execute($userId, $orderId);
     }
 
-    /**
-     * Get all order statuses
-     */
     public function getStatuses(): array
     {
-        $db = Database::getConnection();
-        $stmt = $db->query("SELECT * FROM order_statuses ORDER BY id");
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->orderRepository->getOrderStatuses();
     }
 
-    /**
-     * Get order items by order ID
-     */
     public function getOrderItems(int $orderId): array
     {
         return $this->orderRepository->getOrderItems($orderId);
     }
 
-    /**
-     * Get total orders count (admin dashboard)
-     */
     public function getTotalOrders(): int
     {
         return $this->orderRepository->getTotalOrders();
     }
 
-    /**
-     * Get pending orders count (admin dashboard)
-     */
     public function getPendingOrders(): int
     {
         return $this->orderRepository->getPendingOrders();
     }
 
-    /**
-     * Get order by ID
-     */
     public function getOrder(int $orderId)
     {
         return $this->orderRepository->findById($orderId);
