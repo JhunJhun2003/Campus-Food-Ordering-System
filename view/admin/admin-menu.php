@@ -1,15 +1,31 @@
 <?php
-session_start();
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../entrance/includes/permissions.php';
+require_once __DIR__ . '/../../inc/admin_helpers.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
-use App\User\Presentation\Http\Controllers\AdminController;
-use App\Food\Presentation\Http\Controllers\FoodController;
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
 
-$adminController = new AdminController();
+requireLogin();
+requirePermission('manage_menu');
+
+// ============================================
+// 2. BUSINESS LOGIC
+// ============================================
+
+// ✅ Use helpers - NO 'new' keyword!
+$adminController = getAdminController();
 $currentUser = $adminController->getCurrentUser();
 
-$foodController = new FoodController();
+$foodController = getFoodController();
 
 // Handle all requests through controller
 $result = $foodController->handleRequest();

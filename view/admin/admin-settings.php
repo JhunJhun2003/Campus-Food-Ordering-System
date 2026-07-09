@@ -1,28 +1,45 @@
 <?php
-session_start();
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../entrance/includes/permissions.php';
+require_once __DIR__ . '/../../inc/admin_helpers.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
-use App\User\Presentation\Http\Controllers\AdminController;
-use App\Payment\Presentation\Http\Controllers\PaymentController;
-use App\AccessControl\Presentation\Http\Controllers\AccessControlController;
-use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
-use Inc\Database; // Add this line
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
 
-$adminController = new AdminController();
+requireLogin();
+requirePermission('manage_settings');
+
+// ============================================
+// 2. BUSINESS LOGIC
+// ============================================
+
+// ✅ Use helpers - NO 'new' keyword!
+$adminController = getAdminController();
 $currentUser = $adminController->getCurrentUser();
 
 // Get settings
 $settings = $adminController->getSettings();
 
 // Get payment methods from Payment module
-$paymentController = new PaymentController();
+$paymentController = getPaymentController();
 $paymentMethods = $paymentController->getAllMethods();
 
 // ============================================
-// ACCESS CONTROL INITIALIZATION - FIXED
+// ACCESS CONTROL INITIALIZATION
 // ============================================
-// Get database connection using the Database class
+
+use App\AccessControl\Presentation\Http\Controllers\AccessControlController;
+use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
+use Inc\Database;
+
 $db = Database::getConnection();
 $accessControlRepo = new AccessControlRepository($db);
 
@@ -137,6 +154,8 @@ if (isset($_GET['edit_payment'])) {
 
 // Get active tab from URL
 $activeTab = $_GET['tab'] ?? 'general';
+
+// ... rest of the HTML remains the same ...
 ?>
 <!-- Rest of your HTML remains the same -->
 <!DOCTYPE html>

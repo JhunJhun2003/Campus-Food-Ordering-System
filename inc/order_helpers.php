@@ -92,3 +92,14 @@ function getUserController(): \App\User\Presentation\Http\Controllers\UserContro
     
     return $instance;
 }
+
+function getPaymentController(): \App\Payment\Presentation\Http\Controllers\PaymentController
+{
+    static $instance = null;
+    
+    if ($instance === null) {
+        $instance = new \App\Payment\Presentation\Http\Controllers\PaymentController();
+    }
+    
+    return $instance;
+}

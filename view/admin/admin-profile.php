@@ -1,25 +1,31 @@
 <?php
-session_start();
+declare(strict_types=1);
 
-// Check if user is logged in
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
     exit();
 }
 
-// Check if user has admin role
 if ($_SESSION['user_role'] !== 'admin') {
     header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
     exit();
 }
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/admin_helpers.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
-use App\User\Presentation\Http\Controllers\AdminController;
 
-$userController = new UserController();
-$adminController = new AdminController();
+// ✅ Use helper - NO 'new' keyword!
+$userController = getUserController();
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 
@@ -75,6 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         }
     }
 }
+
+// ... rest of the HTML remains the same ...
 ?>
 <!DOCTYPE html>
 <html lang="en">

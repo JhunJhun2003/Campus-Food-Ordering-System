@@ -1,15 +1,31 @@
 <?php
-session_start();
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../entrance/includes/permissions.php';
+require_once __DIR__ . '/../../inc/admin_helpers.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
-use App\User\Presentation\Http\Controllers\AdminController;
-use App\Order\Presentation\Http\Controllers\OrderController;
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
 
-$adminController = new AdminController();
+requireLogin();
+requirePermission('manage_orders');
+
+// ============================================
+// 2. BUSINESS LOGIC
+// ============================================
+
+// ✅ Use helpers - NO 'new' keyword!
+$adminController = getAdminController();
 $currentUser = $adminController->getCurrentUser();
 
-$orderController = new OrderController();
+$orderController = getOrderController();
 
 // Handle AJAX request for order details
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -45,8 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         try {
             // Get order from repository
-            $orderRepository = new \App\Order\Infrastructure\Repositories\OrderRepository();
-            $order = $orderRepository->findById($orderId);
+            $order = $orderController->getOrder($orderId);
             
             if (!$order) {
                 echo json_encode(['success' => false, 'message' => 'Order not found.']);
@@ -54,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
             
             // Get order items
-            $items = $orderRepository->getOrderItems($orderId);
+            $items = $orderController->getOrderItems($orderId);
             
             $orderData = [
                 'id' => $order->getId(),
@@ -91,6 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 $orders = $orderController->index();
 $statuses = $orderController->getStatuses();
+
+// ... rest of the HTML remains the same ...
 ?>
 <!DOCTYPE html>
 <html lang="en">

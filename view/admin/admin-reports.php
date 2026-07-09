@@ -1,23 +1,41 @@
 <?php
-session_start();
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../entrance/includes/permissions.php';
+require_once __DIR__ . '/../../inc/admin_helpers.php';
 
-use App\User\Presentation\Http\Controllers\AdminController;
+// ============================================
+// 1. AUTHENTICATION & AUTHORIZATION
+// ============================================
 
-$adminController = new AdminController();
+requireLogin();
+requirePermission('view_reports');
+
+// ============================================
+// 2. BUSINESS LOGIC
+// ============================================
+
+// ✅ Use helper - NO 'new' keyword!
+$adminController = getAdminController();
 $stats = $adminController->reports();
 $currentUser = $adminController->getCurrentUser();
 
 // Extract data
 $totalOrders = $stats['total_orders'] ?? 0;
 $totalRevenue = $stats['total_revenue'] ?? 0;
-$completedOrders = $stats['completed_orders'] ?? 0;  // ✅ NEW
+$completedOrders = $stats['completed_orders'] ?? 0;
 $pendingOrders = $stats['pending_orders'] ?? 0;
 $monthlyRevenue = $stats['monthly_revenue'] ?? [];
 
 // Calculate max revenue for chart scaling
 $maxRevenue = !empty($monthlyRevenue) ? max(array_column($monthlyRevenue, 'revenue')) : 1;
+
+// ... rest of the HTML remains the same ...
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -24,3 +24,4 @@ function getAdminController(): \App\User\Presentation\Http\Controllers\AdminCont
     
     return $instance;
 }
+
