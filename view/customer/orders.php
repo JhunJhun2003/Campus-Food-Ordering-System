@@ -9,6 +9,8 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/user_helpers.php'; 
+require_once __DIR__ . '/../../inc/access_control_helper.php';
+
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
 // ============================================
@@ -27,10 +29,8 @@ $userId = $currentUser['id'] ?? 0;
 // 2. BUSINESS LOGIC
 // ============================================
 
-// ✅ Get controllers using helpers - NO 'new' keyword!
 $orderController = getOrderController();
 $cartController = getCartController();
-
 
 // Get cart item count
 $itemCount = 0;
@@ -40,41 +40,61 @@ try {
     $itemCount = 0;
 }
 
-// Get orders
+// ✅ Get ALL orders for the user
 $orders = $orderController->getUserOrders($userId);
+
+// ✅ Get statuses from order_statuses table
 $statuses = $orderController->getStatuses();
 
-// Create status mapping for quick lookup
+// Create status mapping
 $statusMap = [];
+$statusColors = [];
+$statusIcons = [];
+
 foreach ($statuses as $status) {
-    $statusMap[$status['id']] = $status['status_name'];
-}
-
-// Group orders by status - using array data
-$groupedOrders = ['ongoing' => [], 'completed' => [], 'cancelled' => []];
-foreach ($orders as $order) {
-    // Access array values directly
-    $statusId = $order['status_id'] ?? 1;
-    $statusName = $statusMap[$statusId] ?? 'pending';
+    $id = $status['id'];
+    $name = strtolower($status['status_name']);
+    $statusMap[$id] = $name;
     
-    if (in_array($statusName, ['pending', 'accepted', 'preparing', 'ready'])) {
-        $groupedOrders['ongoing'][] = $order;
-    } elseif ($statusName === 'completed') {
-        $groupedOrders['completed'][] = $order;
-    } elseif ($statusName === 'cancelled') {
-        $groupedOrders['cancelled'][] = $order;
-    }
+    $statusColors[$name] = match($name) {
+        'pending' => 'bg-yellow-50 border-yellow-200 text-yellow-700',
+        'accepted' => 'bg-blue-50 border-blue-200 text-blue-700',
+        'preparing' => 'bg-purple-50 border-purple-200 text-purple-700',
+        'ready' => 'bg-cyan-50 border-cyan-200 text-cyan-700',
+        'completed' => 'bg-emerald-50 border-emerald-100 text-emerald-700',
+        'cancelled' => 'bg-rose-50 border-rose-100 text-rose-600',
+        default => 'bg-slate-50 border-slate-200 text-slate-700'
+    };
+    
+    $statusIcons[$name] = match($name) {
+        'pending' => 'fa-solid fa-clock',
+        'accepted' => 'fa-solid fa-check-circle',
+        'preparing' => 'fa-solid fa-utensils',
+        'ready' => 'fa-solid fa-box-open',
+        'completed' => 'fa-solid fa-circle-check',
+        'cancelled' => 'fa-solid fa-circle-xmark',
+        default => 'fa-solid fa-circle'
+    };
 }
 
-// Status colors for badges
-$statusColors = [
-    'pending' => 'bg-yellow-50 border-yellow-200 text-yellow-700',
-    'accepted' => 'bg-blue-50 border-blue-200 text-blue-700',
-    'preparing' => 'bg-purple-50 border-purple-200 text-purple-700',
-    'ready' => 'bg-cyan-50 border-cyan-200 text-cyan-700',
-    'completed' => 'bg-emerald-50 border-emerald-100 text-emerald-700',
-    'cancelled' => 'bg-rose-50 border-rose-100 text-rose-600'
+// ✅ Build filter tabs dynamically
+$filterTabs = [];
+$filterTabs[] = [
+    'key' => 'all',
+    'label' => 'All Orders',
+    'icon' => 'fa-solid fa-list',
+    'status_id' => null
 ];
+
+foreach ($statuses as $status) {
+    $name = strtolower($status['status_name']);
+    $filterTabs[] = [
+        'key' => $name,
+        'label' => ucfirst($status['status_name']),
+        'icon' => $statusIcons[$name] ?? 'fa-solid fa-circle',
+        'status_id' => $status['id']
+    ];
+}
 
 // ============================================
 // 3. VIEW RENDER
@@ -97,22 +117,37 @@ include __DIR__ . '/includes/header.php';
         
         <div class="flex items-center justify-center sm:justify-start gap-4 bg-slate-50 border border-slate-100 p-2 rounded-2xl">
             <div class="px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-100 text-center min-w-[90px]">
-                <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wide">Active</span>
-                <span class="text-lg font-extrabold text-emerald-600"><?php echo count($groupedOrders['ongoing']); ?> Orders</span>
-            </div>
-            <div class="px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-100 text-center min-w-[90px]">
-                <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wide">Delivered</span>
-                <span class="text-lg font-extrabold text-slate-800"><?php echo count($groupedOrders['completed']); ?> total</span>
+                <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wide">Total</span>
+                <span class="text-lg font-extrabold text-emerald-600"><?php echo count($orders); ?> Orders</span>
             </div>
         </div>
     </div>
 
     <!-- Filter Tabs -->
     <div class="flex items-center space-x-2 border-b border-slate-100 pb-px mb-8 overflow-x-auto whitespace-nowrap" id="filterTabs">
-        <button class="tab-btn px-5 py-3 border-b-2 border-emerald-500 font-bold text-sm text-emerald-600 hover:text-emerald-500 transition-colors" data-status="all">All Orders</button>
-        <button class="tab-btn px-5 py-3 border-b-2 border-transparent font-semibold text-sm text-slate-500 hover:text-emerald-500 transition-colors" data-status="ongoing">Ongoing</button>
-        <button class="tab-btn px-5 py-3 border-b-2 border-transparent font-semibold text-sm text-slate-500 hover:text-emerald-500 transition-colors" data-status="completed">Completed</button>
-        <button class="tab-btn px-5 py-3 border-b-2 border-transparent font-semibold text-sm text-slate-500 hover:text-emerald-500 transition-colors" data-status="cancelled">Cancelled</button>
+        <?php foreach ($filterTabs as $index => $tab): 
+            $isActive = $index === 0 ? 'border-emerald-500 font-bold text-emerald-600' : 'border-transparent font-semibold text-slate-500';
+        ?>
+            <button class="tab-btn px-5 py-3 border-b-2 <?php echo $isActive; ?> hover:text-emerald-500 transition-colors text-sm" 
+                    data-status="<?php echo $tab['key']; ?>"
+                    data-status-id="<?php echo $tab['status_id']; ?>">
+                <i class="<?php echo $tab['icon']; ?> mr-1.5"></i>
+                <?php echo $tab['label']; ?>
+                <?php if ($tab['key'] !== 'all'): ?>
+                    <span class="ml-1 text-xs opacity-60">
+                        (<?php 
+                            $count = 0;
+                            foreach ($orders as $order) {
+                                if (strtolower($order['status_name'] ?? '') === $tab['key']) {
+                                    $count++;
+                                }
+                            }
+                            echo $count;
+                        ?>)
+                    </span>
+                <?php endif; ?>
+            </button>
+        <?php endforeach; ?>
     </div>
 
     <!-- Orders List -->
@@ -130,25 +165,35 @@ include __DIR__ . '/includes/header.php';
             </div>
             
         <?php else: ?>
-            
-            <!-- Ongoing Orders -->
-            <?php foreach ($groupedOrders['ongoing'] as $order): ?>
+             <!-- ✅ DEBUG: Check how many orders are in the array -->
+    <?php 
+    echo '<!-- Total orders count: ' . count($orders) . ' -->';
+    echo '<!-- Order IDs: ';
+    foreach ($orders as $o) {
+        echo $o['id'] . ', ';
+    }
+    echo ' -->';
+    ?>
+            <?php foreach ($orders as $order): ?>
                 <?php 
                     $statusId = $order['status_id'] ?? 1;
                     $statusName = $statusMap[$statusId] ?? 'pending';
                     $statusColor = $statusColors[$statusName] ?? 'bg-slate-50 border-slate-200 text-slate-700';
+                    $statusIcon = $statusIcons[$statusName] ?? 'fa-solid fa-circle';
+                    $orderId = $order['id'] ?? 0;
                     $isPreparing = $statusName === 'preparing';
                     $isReady = $statusName === 'ready';
-                    $pulseColor = $isPreparing ? '#F59E0B' : ($isReady ? '#10B981' : '#3B82F6');
-                    $orderId = $order['id'] ?? 0;
+                    $isPending = $statusName === 'pending';
+                    $pulseColor = $isPreparing ? '#F59E0B' : ($isReady ? '#10B981' : ($isPending ? '#3B82F6' : '#64748B'));
                 ?>
-                <div class="order-card bg-white border border-slate-150 rounded-2xl shadow-sm shadow-slate-100/60 overflow-hidden" data-status="ongoing">
+                <div class="order-card bg-white border border-slate-150 rounded-2xl shadow-sm shadow-slate-100/60 overflow-hidden" data-status="<?php echo $statusName; ?>">
                     <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                             <span class="text-sm font-bold text-slate-900">Order ID: #<?php echo sprintf('%06d', (int) $orderId); ?></span>
                             <span class="text-xs text-slate-400 font-medium">Placed <?php echo date('M j, Y, h:i A', strtotime($order['order_date'] ?? 'now')); ?></span>
                         </div>
                         <div class="flex items-center space-x-2 <?php echo $statusColor; ?> px-3.5 py-1.5 rounded-full text-xs font-bold">
+                            <i class="<?php echo $statusIcon; ?> text-[10px]"></i>
                             <span class="w-2 h-2 rounded-full live-pulse" style="background-color: <?php echo $pulseColor; ?>"></span>
                             <span><?php echo ucfirst($statusName); ?></span>
                         </div>
@@ -156,10 +201,11 @@ include __DIR__ . '/includes/header.php';
 
                     <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-3xl">🍔</div>
+                            <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-3xl"><?php echo $order['item_emoji'] ?? '🍔'; ?></div>
                             <div>
                                 <h4 class="text-base font-extrabold text-slate-900">Order #<?php echo sprintf('%06d', (int) $orderId); ?></h4>
                                 <p class="text-xs text-slate-400 mt-0.5"><?php echo $order['total_items'] ?? 0; ?> items</p>
+                                <p class="text-xs text-slate-500 mt-0.5"><?php echo htmlspecialchars($order['item_names'] ?? ''); ?></p>
                                 <button onclick="toggleDetails('details-<?php echo $orderId; ?>')" class="text-xs font-bold text-emerald-500 hover:text-emerald-600 mt-2 flex items-center gap-1 focus:outline-none">
                                     <span>View details</span>
                                     <i class="fa-solid fa-chevron-down text-[10px]" id="icon-details-<?php echo $orderId; ?>"></i>
@@ -203,83 +249,13 @@ include __DIR__ . '/includes/header.php';
                 </div>
             <?php endforeach; ?>
 
-            <!-- Completed Orders -->
-            <?php foreach ($groupedOrders['completed'] as $order): ?>
-                <?php 
-                    $statusId = $order['status_id'] ?? 5;
-                    $statusName = $statusMap[$statusId] ?? 'completed';
-                    $orderId = $order['id'] ?? 0;
-                ?>
-                <div class="order-card bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden" data-status="completed">
-                    <div class="bg-slate-50/30 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span class="text-sm font-bold text-slate-800">Order ID: #<?php echo sprintf('%06d', (int) $orderId); ?></span>
-                            <span class="text-xs text-slate-400 font-medium">Delivered <?php echo date('M j, Y', strtotime($order['order_date'] ?? 'now')); ?></span>
-                        </div>
-                        <div class="flex items-center space-x-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">
-                            <i class="fa-solid fa-circle-check text-[10px]"></i><span>Completed</span>
-                        </div>
-                    </div>
-
-                    <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-3xl">🍽️</div>
-                            <div>
-                                <h4 class="text-base font-extrabold text-slate-900">Order #<?php echo sprintf('%06d', (int) $orderId); ?></h4>
-                                <p class="text-xs text-slate-400 mt-0.5"><?php echo $order['total_items'] ?? 0; ?> items • Delivered</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                            <div class="text-left md:text-right pr-4">
-                                <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Total</span>
-                                <span class="text-xl font-extrabold text-slate-900">$<?php echo number_format((float) ($order['total_amount'] ?? 0), 2); ?></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
-            <!-- Cancelled Orders -->
-            <?php foreach ($groupedOrders['cancelled'] as $order): ?>
-                <?php 
-                    $statusId = $order['status_id'] ?? 6;
-                    $statusName = $statusMap[$statusId] ?? 'cancelled';
-                    $orderId = $order['id'] ?? 0;
-                ?>
-                <div class="order-card bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden" data-status="cancelled">
-                    <div class="bg-slate-50/30 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span class="text-sm font-bold text-slate-800">Order ID: #<?php echo sprintf('%06d', (int) $orderId); ?></span>
-                            <span class="text-xs text-slate-400 font-medium">Cancelled <?php echo date('M j, Y', strtotime($order['order_date'] ?? 'now')); ?></span>
-                        </div>
-                        <div class="flex items-center space-x-1.5 bg-rose-50 border border-rose-100 text-rose-600 px-3 py-1 rounded-full text-xs font-bold">
-                            <i class="fa-solid fa-circle-xmark text-[10px]"></i><span>Cancelled</span>
-                        </div>
-                    </div>
-
-                    <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div class="flex items-center space-x-4 opacity-70">
-                            <div class="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 text-3xl">🌮</div>
-                            <div>
-                                <h4 class="text-base font-extrabold text-slate-900">Order #<?php echo sprintf('%06d', (int) $orderId); ?></h4>
-                                <p class="text-xs text-slate-400 mt-0.5">Cancelled</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                            <div class="text-left md:text-right pr-4 opacity-70">
-                                <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Total</span>
-                                <span class="text-xl font-extrabold text-slate-900">$<?php echo number_format((float) ($order['total_amount'] ?? 0), 2); ?></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
         <?php endif; ?>
     </div>
 </main>
 
+<!-- ============================================ -->
 <!-- LIVE TRACKING MODAL -->
+<!-- ============================================ -->
 <div id="live-tracker-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
     <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300 overflow-hidden" id="tracker-modal-card">
         <div class="bg-slate-900 text-white p-6 flex items-center justify-between">
@@ -337,6 +313,14 @@ include __DIR__ . '/includes/header.php';
 .live-pulse { animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse-ring { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(1.15); } }
+
+/* ✅ Make sure order cards are visible */
+.order-card {
+    display: block !important;
+}
+.order-card.hidden {
+    display: none !important;
+}
 </style>
 
 <script>
@@ -345,7 +329,7 @@ include __DIR__ . '/includes/header.php';
 // ============================================
 function toggleDetails(elementId) {
     const drawer = document.getElementById(elementId);
-    const icon = document.getElementById(`icon-${elementId}`);
+    const icon = document.getElementById('icon-' + elementId);
     if (drawer) {
         if (drawer.classList.contains('hidden')) {
             drawer.classList.remove('hidden');
@@ -358,11 +342,10 @@ function toggleDetails(elementId) {
 }
 
 // ============================================
-// FILTER ORDERS
+// FILTER ORDERS - Fixed Version
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const filterTabs = document.getElementById('filterTabs');
-    const orderCards = document.querySelectorAll('.order-card');
     
     if (filterTabs) {
         filterTabs.addEventListener('click', function(e) {
@@ -378,23 +361,31 @@ document.addEventListener('DOMContentLoaded', function() {
             tab.className = 'tab-btn px-5 py-3 border-b-2 border-emerald-500 font-bold text-sm text-emerald-600 hover:text-emerald-500 transition-colors';
             
             // Filter orders
-            orderCards.forEach(card => {
+            document.querySelectorAll('.order-card').forEach(card => {
                 const cardStatus = card.dataset.status;
                 if (status === 'all' || cardStatus === status) {
+                    card.style.display = 'block';
                     card.classList.remove('hidden');
                 } else {
+                    card.style.display = 'none';
                     card.classList.add('hidden');
                 }
             });
         });
     }
+    
+    // ✅ Ensure all orders are visible on page load
+    document.querySelectorAll('.order-card').forEach(card => {
+        card.style.display = 'block';
+        card.classList.remove('hidden');
+    });
 });
 
 // ============================================
 // LIVE TRACKING
 // ============================================
 function openLiveTracking(orderId, statusCode) {
-    document.getElementById('live-order-id').innerText = `Tracking Order ${orderId}`;
+    document.getElementById('live-order-id').innerText = 'Tracking Order ' + orderId;
     const modal = document.getElementById('live-tracker-modal');
     const card = document.getElementById('tracker-modal-card');
     modal.classList.remove('opacity-0', 'pointer-events-none');
@@ -427,21 +418,27 @@ function closeLiveTracking() {
 }
 
 function setMilestoneCompleted(stepNum) {
-    const bullet = document.getElementById(`step-bullet-${stepNum}`);
-    bullet.className = "absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center border-2 border-emerald-500 bg-emerald-500 text-white z-10 text-[9px] font-extrabold";
-    bullet.innerHTML = "<i class='fa-solid fa-check'></i>";
+    const bullet = document.getElementById('step-bullet-' + stepNum);
+    if (bullet) {
+        bullet.className = "absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center border-2 border-emerald-500 bg-emerald-500 text-white z-10 text-[9px] font-extrabold";
+        bullet.innerHTML = "<i class='fa-solid fa-check'></i>";
+    }
 }
 
 function setMilestoneActive(stepNum) {
-    const bullet = document.getElementById(`step-bullet-${stepNum}`);
-    bullet.className = "absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center border-2 border-emerald-500 bg-white ring-4 ring-emerald-50 z-10";
-    bullet.innerHTML = "<div class='w-2.5 h-2.5 rounded-full bg-emerald-500 live-pulse'></div>";
+    const bullet = document.getElementById('step-bullet-' + stepNum);
+    if (bullet) {
+        bullet.className = "absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center border-2 border-emerald-500 bg-white ring-4 ring-emerald-50 z-10";
+        bullet.innerHTML = "<div class='w-2.5 h-2.5 rounded-full bg-emerald-500 live-pulse'></div>";
+    }
 }
 
 function setMilestonePending(stepNum) {
-    const bullet = document.getElementById(`step-bullet-${stepNum}`);
-    bullet.className = "absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center border-2 border-slate-200 bg-white z-10";
-    bullet.innerHTML = "<div class='w-2 h-2 rounded-full bg-slate-200'></div>";
+    const bullet = document.getElementById('step-bullet-' + stepNum);
+    if (bullet) {
+        bullet.className = "absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center border-2 border-slate-200 bg-white z-10";
+        bullet.innerHTML = "<div class='w-2 h-2 rounded-full bg-slate-200'></div>";
+    }
 }
 </script>
 

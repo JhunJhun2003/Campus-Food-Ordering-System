@@ -2,11 +2,17 @@
 /**
  * Authentication and Authorization Helper Functions
  * Include this file in pages that need permission checks
+ * 
+ * NOTE: For advanced permission checks, use inc/access_control_helper.php
  */
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// ============================================
+// PERMISSION CHECK FUNCTIONS
+// ============================================
 
 /**
  * Check if current user has a specific permission
@@ -18,7 +24,8 @@ function userHasPermission(string $permissionName): bool
     }
     
     // Admin has all permissions
-    if ((isset($_SESSION['role_id']) && $_SESSION['role_id'] === 1) || (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin')) {
+    if ((isset($_SESSION['role_id']) && $_SESSION['role_id'] === 1) || 
+        (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin')) {
         return true;
     }
     
@@ -63,14 +70,18 @@ function userHasAllPermissions(array $permissions): bool
 /**
  * Require a specific permission or redirect
  */
-function requirePermission(string $permissionName, string $redirectUrl = '/Campus-Food-Ordering-System/view/customer/dashboard.php'): void
-{
-    if (!userHasPermission($permissionName)) {
-        $_SESSION['error'] = 'You do not have permission to access this page.';
-        header('Location: ' . $redirectUrl);
-        exit;
-    }
-}
+// function requirePermission(string $permissionName, string $redirectUrl = '/Campus-Food-Ordering-System/view/customer/dashboard.php'): void
+// {
+//     if (!userHasPermission($permissionName)) {
+//         $_SESSION['error'] = 'You do not have permission to access this page.';
+//         header('Location: ' . $redirectUrl);
+//         exit;
+//     }
+// }
+
+// ============================================
+// AUTHENTICATION FUNCTIONS
+// ============================================
 
 /**
  * Require user to be logged in or redirect
@@ -99,54 +110,64 @@ function requireEmailVerification(): void
 /**
  * Get all permissions for current user
  */
-function getMyPermissions(): array
-{
-    if (!isset($_SESSION['user_id'])) {
-        return [];
-    }
+// function getMyPermissions(): array
+// {
+//     if (!isset($_SESSION['user_id'])) {
+//         return [];
+//     }
     
-    try {
-        require_once __DIR__ . '/../vendor/autoload.php';
-        $db = \Inc\Database::getConnection();
-        $repository = new \App\AccessControl\Infrastructure\Repositories\AccessControlRepository($db);
-        $permissions = $repository->getUserPermissions($_SESSION['user_id']);
-        return array_map(function($p) {
-            return $p->getName();
-        }, $permissions);
-    } catch (Exception $e) {
-        error_log("Error getting user permissions: " . $e->getMessage());
-        return [];
-    }
-}
+//     try {
+//         require_once __DIR__ . '/../vendor/autoload.php';
+//         $db = \Inc\Database::getConnection();
+//         $repository = new \App\AccessControl\Infrastructure\Repositories\AccessControlRepository($db);
+//         $permissions = $repository->getUserPermissions($_SESSION['user_id']);
+//         return array_map(function($p) {
+//             return $p->getName();
+//         }, $permissions);
+//     } catch (Exception $e) {
+//         error_log("Error getting user permissions: " . $e->getMessage());
+//         return [];
+//     }
+// }
 
 /**
  * Get current user's role
  */
-function getCurrentUserRole(): string
-{
-    return $_SESSION['user_role'] ?? 'user';
-}
+// function getCurrentUserRole(): string
+// {
+//     return $_SESSION['user_role'] ?? 'user';
+// }
 
 /**
- * Check if current user is admin
+ * Check if current user is logged in
  */
-function isAdmin(): bool
+function isLoggedIn(): bool
 {
-    return ($_SESSION['user_role'] ?? '') === 'admin';
+    return isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0;
 }
 
-/**
- * Check if current user is staff
- */
-function isStaff(): bool
-{
-    return ($_SESSION['user_role'] ?? '') === 'staff';
-}
-
-/**
- * Check if current user is customer
- */
-function isCustomer(): bool
-{
-    return ($_SESSION['user_role'] ?? '') === 'user';
-}
+// ============================================
+// ⚠️ FUNCTIONS REMOVED - Now in access_control_helper.php
+// ============================================
+// The following functions are now defined in inc/access_control_helper.php:
+//   - isAdmin()
+//   - isStaff()
+//   - isCustomer()
+//   - getCurrentUserId()
+//   - hasPermission()
+//   - hasAnyPermission()
+//   - hasAllPermissions()
+//   - requireAdmin()
+//   - requireStaff()
+//   - requireAuth()
+//   - getUserPermissions()
+//   - canAccessResource()
+//   - requireResourceAccess()
+//   - getAllRoles()
+//   - getPermissionsGroupedByModule()
+//
+// For simple session-based checks, use:
+//   getCurrentUserRole() === 'admin'
+//   getCurrentUserRole() === 'staff'
+//   getCurrentUserRole() === 'user'
+//   isLoggedIn()

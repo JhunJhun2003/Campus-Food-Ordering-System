@@ -9,13 +9,9 @@ use App\Payment\Application\Usecases\CreatePaymentMethodUseCase;
 use App\Payment\Application\Usecases\UpdatePaymentMethodUseCase;
 use App\Payment\Application\Usecases\DeletePaymentMethodUseCase;
 use App\Payment\Domain\Repositories\PaymentRepositoryInterface;
+use App\Shared\Presentation\Http\Controllers\BaseController;
 
-/**
- * Payment Controller
- * Follows SOLID principles with Dependency Injection
- * No 'new' keyword - all dependencies are injected
- */
-class PaymentController
+class PaymentController extends BaseController
 {
     private PaymentRepositoryInterface $paymentRepository;
     private CreatePaymentMethodUseCase $createPaymentMethodUseCase;
@@ -28,6 +24,7 @@ class PaymentController
         UpdatePaymentMethodUseCase $updatePaymentMethodUseCase,
         DeletePaymentMethodUseCase $deletePaymentMethodUseCase
     ) {
+        parent::__construct();
         $this->paymentRepository = $paymentRepository;
         $this->createPaymentMethodUseCase = $createPaymentMethodUseCase;
         $this->updatePaymentMethodUseCase = $updatePaymentMethodUseCase;
@@ -35,7 +32,7 @@ class PaymentController
     }
 
     /**
-     * Get active payment methods
+     * Get active payment methods - No permission needed (public)
      */
     public function getActiveMethods(): array
     {
@@ -43,27 +40,32 @@ class PaymentController
     }
 
     /**
-     * Get all payment methods
+     * Get all payment methods - Admin only
      */
     public function getAllMethods(): array
     {
+        $this->authorize('manage_payment_methods');
         return $this->paymentRepository->getAllPaymentMethods();
     }
 
     /**
-     * Add a new payment method
+     * Add a new payment method - Admin only
      */
     public function addMethod(string $name, string $accountName, string $accountNumber): array
     {
+        $this->authorize('manage_payment_methods');
+        
         $request = new CreatePaymentMethodRequest($name, $accountName, $accountNumber);
         return $this->createPaymentMethodUseCase->execute($request);
     }
 
     /**
-     * Update a payment method
+     * Update a payment method - Admin only
      */
     public function updateMethod(int $id, array $data): array
     {
+        $this->authorize('manage_payment_methods');
+        
         $request = new UpdatePaymentMethodRequest(
             $id,
             $data['name'] ?? null,
@@ -75,10 +77,11 @@ class PaymentController
     }
 
     /**
-     * Delete a payment method
+     * Delete a payment method - Admin only
      */
     public function deleteMethod(int $id): array
     {
+        $this->authorize('manage_payment_methods');
         return $this->deletePaymentMethodUseCase->execute($id);
     }
 }

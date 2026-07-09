@@ -30,9 +30,10 @@ class CreateOrderUseCase
         string $paymentMethod, 
         string $fullName, 
         string $phone, 
-        string $accountName, 
-        string $accountNumber, 
-        string $transactionImage
+        ?string $accountName = null,
+        ?string $accountNumber = null,
+        ?string $transactionImage = null
+
     ): array {
         try {
             // Validate

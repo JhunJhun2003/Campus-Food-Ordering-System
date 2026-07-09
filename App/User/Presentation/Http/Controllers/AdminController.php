@@ -8,20 +8,11 @@ use App\User\Application\Usecases\GetReportsUseCase;
 use App\User\Application\Usecases\GetSettingsUseCase;
 use App\User\Application\Usecases\UpdateSettingsUseCase;
 use App\User\Domain\Repositories\UserRepositoryInterface;
-
-// ✅ Import from correct namespace
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use App\Shared\Presentation\Http\Controllers\BaseController;
 
-use App\User\Infrastructure\Repositories\UserRepository;
-use App\Order\Infrastructure\Repositories\OrderRepository;
-use App\Food\Infrastructure\Repositories\FoodRepository;
-
-/**
- * Admin Controller
- * Follows SOLID principles with Dependency Injection
- */
-class AdminController
+class AdminController extends BaseController
 {
     private UserRepositoryInterface $userRepository;
     private OrderRepositoryInterface $orderRepository;
@@ -34,6 +25,7 @@ class AdminController
         FoodRepositoryInterface $foodRepository,
         UserController $userController
     ) {
+        parent::__construct();
         $this->userRepository = $userRepository;
         $this->orderRepository = $orderRepository;
         $this->foodRepository = $foodRepository;
@@ -41,11 +33,11 @@ class AdminController
     }
 
     /**
-     * Dashboard statistics
+     * Dashboard statistics - Admin only
      */
     public function dashboard(): array
     {
-        $this->userController->requireAdmin();
+        $this->requireAdmin();
         
         return [
             'total_users' => $this->userRepository->getTotalUsers(),
@@ -57,11 +49,11 @@ class AdminController
     }
 
     /**
-     * Reports
+     * Reports - Admin only
      */
     public function reports(): array
     {
-        $this->userController->requireAdmin();
+        $this->requireAdmin();
         
         return [
             'total_revenue' => $this->orderRepository->getTotalRevenue(),
@@ -72,18 +64,18 @@ class AdminController
     }
 
     // ============================================
-    // SETTINGS METHODS
+    // SETTINGS METHODS - Admin only
     // ============================================
 
     public function getSettings(): array
     {
-        $this->userController->requireAdmin();
+        $this->authorize('manage_settings');
         return $this->userRepository->getAllSettings();
     }
 
     public function updateSettingsFromRequest(): array
     {
-        $this->userController->requireAdmin();
+        $this->authorize('manage_settings');
         
         $postData = array_filter($_POST, function($key) {
             return strpos($key, 'setting_') === 0;
@@ -99,7 +91,7 @@ class AdminController
     }
 
     // ============================================
-    // USER MANAGEMENT
+    // USER MANAGEMENT - Admin only
     // ============================================
 
     public function getCurrentUser(): ?array
@@ -109,37 +101,27 @@ class AdminController
 
     public function requireStaffAccess(): void
     {
-        $this->userController->requireAuth();
-        if (!in_array($_SESSION['user_role'], ['admin', 'staff'])) {
-            header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
-            exit();
-        }
+        $this->requireStaff();
     }
 
     public function requireAdminAccess(): void
     {
-        $this->userController->requireAdmin();
+        $this->requireAdmin();
     }
 
     public function hasStaffAccess(): bool
     {
-        if (!$this->userController->isLoggedIn()) {
-            return false;
-        }
-        return in_array($_SESSION['user_role'], ['admin', 'staff']);
+        return $this->isStaff() || $this->isAdmin();
     }
 
     public function isAdmin(): bool
     {
-        if (!$this->userController->isLoggedIn()) {
-            return false;
-        }
-        return $_SESSION['user_role'] === 'admin';
+        return parent::isAdmin();
     }
 
     public function createUser(array $data): array
     {
-        $this->userController->requireAdmin();
+        $this->authorize('manage_users');
         
         try {
             if (empty($data['name']) || empty($data['email']) || empty($data['password'])) {
@@ -156,7 +138,7 @@ class AdminController
                 $data['password'],
                 $data['phone'] ?? '',
                 $data['role_id'] ?? 3,
-                true // Auto-verified by admin
+                true
             );
 
             return [
@@ -171,7 +153,7 @@ class AdminController
 
     public function updateUser(int $userId, array $data): array
     {
-        $this->userController->requireAdmin();
+        $this->authorize('manage_users');
         
         try {
             $result = $this->userRepository->updateUser($userId, $data);
@@ -186,7 +168,7 @@ class AdminController
 
     public function deleteUser(int $userId): array
     {
-        $this->userController->requireAdmin();
+        $this->authorize('manage_users');
         
         try {
             if ($userId === 1) {
@@ -205,7 +187,7 @@ class AdminController
 
     public function getAllUsersWithVerification(): array
     {
-        $this->userController->requireAdmin();
+        $this->authorize('manage_users');
         
         try {
             $users = $this->userRepository->findAll();

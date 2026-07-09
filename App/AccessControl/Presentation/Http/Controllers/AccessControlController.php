@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\AccessControl\Presentation\Http\Controllers;
 
@@ -10,8 +11,9 @@ use App\AccessControl\Application\Usecases\CreateRoleUseCase;
 use App\AccessControl\Application\Usecases\UpdateRoleUseCase;
 use App\AccessControl\Application\Usecases\DeleteRoleUseCase;
 use App\AccessControl\Application\Usecases\SyncRolePermissionsUseCase;
+use App\Shared\Presentation\Http\Controllers\BaseController;
 
-class AccessControlController
+class AccessControlController extends BaseController
 {
     private GetAllRolesUseCase $getAllRolesUseCase;
     private GetAllPermissionsUseCase $getAllPermissionsUseCase;
@@ -32,6 +34,7 @@ class AccessControlController
         DeleteRoleUseCase $deleteRoleUseCase,
         SyncRolePermissionsUseCase $syncRolePermissionsUseCase
     ) {
+        parent::__construct();
         $this->getAllRolesUseCase = $getAllRolesUseCase;
         $this->getAllPermissionsUseCase = $getAllPermissionsUseCase;
         $this->assignRoleToUserUseCase = $assignRoleToUserUseCase;
@@ -42,22 +45,16 @@ class AccessControlController
         $this->syncRolePermissionsUseCase = $syncRolePermissionsUseCase;
     }
 
+    /**
+     * Index - Admin only
+     */
     public function index()
     {
-        // Check if user has permission - DON'T start session here, it's already started
-        // session_start(); // REMOVE THIS LINE
+        // ✅ Check if user is authenticated
+        $this->requireAuthentication();
         
-        // Check if user is logged in
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit;
-        }
-        
-        // Check permission
-        if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-            exit;
-        }
+        // ✅ Check permission - Admin only
+        $this->authorize('manage_roles');
 
         try {
             $roles = $this->getAllRolesUseCase->execute();
@@ -73,7 +70,6 @@ class AccessControlController
                 $groupedPermissions[$module][] = $permission;
             }
 
-            // Return data instead of loading a view
             return [
                 'roles' => $roles,
                 'permissions' => $permissions,
@@ -86,18 +82,13 @@ class AccessControlController
         }
     }
 
+    /**
+     * Create Role - Admin only
+     */
     public function createRole()
     {
-        // Don't start session here
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit;
-        }
-        
-        if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-            exit;
-        }
+        $this->requireAuthentication();
+        $this->authorize('manage_roles');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim($_POST['name'] ?? '');
@@ -115,18 +106,13 @@ class AccessControlController
         }
     }
 
+    /**
+     * Update Role - Admin only
+     */
     public function updateRole()
     {
-        // Don't start session here
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit;
-        }
-        
-        if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-            exit;
-        }
+        $this->requireAuthentication();
+        $this->authorize('manage_roles');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $roleId = (int) ($_POST['role_id'] ?? 0);
@@ -145,18 +131,13 @@ class AccessControlController
         }
     }
 
+    /**
+     * Delete Role - Admin only
+     */
     public function deleteRole()
     {
-        // Don't start session here
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit;
-        }
-        
-        if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-            exit;
-        }
+        $this->requireAuthentication();
+        $this->authorize('manage_roles');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $roleId = (int) ($_POST['role_id'] ?? 0);
@@ -174,18 +155,13 @@ class AccessControlController
         }
     }
 
+    /**
+     * Assign Role to User - Admin only
+     */
     public function assignRole()
     {
-        // Don't start session here
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit;
-        }
-        
-        if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-            exit;
-        }
+        $this->requireAuthentication();
+        $this->authorize('manage_roles');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $userId = (int) ($_POST['user_id'] ?? 0);
@@ -204,18 +180,13 @@ class AccessControlController
         }
     }
 
+    /**
+     * Sync Permissions - Admin only
+     */
     public function syncPermissions()
     {
-        // Don't start session here
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-            exit;
-        }
-        
-        if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-            header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-            exit;
-        }
+        $this->requireAuthentication();
+        $this->authorize('manage_roles');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $roleId = (int) ($_POST['role_id'] ?? 0);
@@ -234,61 +205,50 @@ class AccessControlController
         }
     }
 
-    // API endpoint for getting role permissions (AJAX)
-public function getRolePermissions()
-{
-    // Set JSON header
-    header('Content-Type: application/json');
-    
-    // Check if user is logged in
-    if (!isset($_SESSION['user_id'])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized']);
-        exit;
-    }
-    
-    // Check permission
-    if (!$this->checkPermissionUseCase->execute($_SESSION['user_id'] ?? 0, 'manage_users')) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Forbidden']);
-        exit;
-    }
-
-    // Get role_id from GET parameters
-    $roleId = isset($_GET['role_id']) ? (int) $_GET['role_id'] : 0;
-    
-    if ($roleId <= 0) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid role ID']);
-        exit;
-    }
-
-    try {
-        $roles = $this->getAllRolesUseCase->execute();
-        $roleData = null;
+    /**
+     * Get Role Permissions (AJAX) - Admin only
+     */
+    public function getRolePermissions()
+    {
+        header('Content-Type: application/json');
         
-        foreach ($roles as $role) {
-            if ($role['id'] === $roleId) {
-                $roleData = $role;
-                break;
+        try {
+            $this->requireAuthentication();
+            $this->authorize('manage_roles');
+
+            $roleId = isset($_GET['role_id']) ? (int) $_GET['role_id'] : 0;
+            
+            if ($roleId <= 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid role ID']);
+                exit;
             }
-        }
-        
-        if (!$roleData) {
-            echo json_encode(['success' => false, 'error' => 'Role not found']);
+
+            $roles = $this->getAllRolesUseCase->execute();
+            $roleData = null;
+            
+            foreach ($roles as $role) {
+                if ($role['id'] === $roleId) {
+                    $roleData = $role;
+                    break;
+                }
+            }
+            
+            if (!$roleData) {
+                echo json_encode(['success' => false, 'error' => 'Role not found']);
+                exit;
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'permissions' => $roleData['permissions'] ?? []
+            ]);
+            exit;
+            
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
             exit;
         }
-        
-        echo json_encode([
-            'success' => true,
-            'permissions' => $roleData['permissions'] ?? []
-        ]);
-        exit;
-        
-    } catch (\Exception $e) {
-        http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
-        exit;
     }
-}
 }

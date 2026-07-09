@@ -12,31 +12,24 @@ use App\Food\Domain\Repositories\FoodRepositoryInterface;
 use App\Food\Domain\Repositories\CategoryRepositoryInterface;
 use App\Food\Application\DTOs\CreateFoodRequest;
 use App\Food\Application\DTOs\UpdateFoodRequest;
+use App\Shared\Presentation\Http\Controllers\BaseController;
 
-/**
- * Food Controller
- * Follows SOLID principles with Dependency Injection
- * No 'new' keyword - all dependencies are injected
- */
-class FoodController
+class FoodController extends BaseController
 {
     private FoodRepositoryInterface $foodRepository;
     private CategoryRepositoryInterface $categoryRepository;
 
-    /**
-     * Constructor with Dependency Injection
-     * All dependencies are injected, not created inside
-     */
     public function __construct(
         FoodRepositoryInterface $foodRepository,
         CategoryRepositoryInterface $categoryRepository
     ) {
+        parent::__construct();
         $this->foodRepository = $foodRepository;
         $this->categoryRepository = $categoryRepository;
     }
 
     /**
-     * Get all foods
+     * Get all foods - No permission needed (public)
      */
     public function index(): array
     {
@@ -45,8 +38,7 @@ class FoodController
     }
 
     /**
-     * Get all categories
-     * SQL moved to repository
+     * Get all categories - No permission needed (public)
      */
     public function getCategories(): array
     {
@@ -54,37 +46,45 @@ class FoodController
     }
 
     /**
-     * Get food for editing
+     * Get food for editing - Staff/Admin only
      */
     public function getForEdit(int $id): ?array
     {
+        $this->authorize('manage_menu');
+        
         $useCase = new GetFoodForEditUseCase($this->foodRepository);
         return $useCase->execute($id);
     }
 
     /**
-     * Create a new food item
+     * Create a new food item - Staff/Admin only
      */
     public function create(CreateFoodRequest $request): array
     {
+        $this->authorize('manage_menu');
+        
         $useCase = new CreateFoodUseCase($this->foodRepository);
         return $useCase->execute($request);
     }
 
     /**
-     * Update a food item
+     * Update a food item - Staff/Admin only
      */
     public function update(UpdateFoodRequest $request): array
     {
+        $this->authorize('manage_menu');
+        
         $useCase = new UpdateFoodUseCase($this->foodRepository);
         return $useCase->execute($request);
     }
 
     /**
-     * Delete a food item
+     * Delete a food item - Admin only
      */
     public function delete(int $id): array
     {
+        $this->authorize('delete_food');
+        
         $useCase = new DeleteFoodUseCase($this->foodRepository);
         return $useCase->execute($id);
     }
@@ -98,14 +98,17 @@ class FoodController
         $message = null;
         $editFood = null;
 
-        // GET: Edit
+        // GET: Edit - Staff/Admin only
         if (isset($_GET['edit'])) {
+            $this->authorize('manage_menu');
             $editId = (int) $_GET['edit'];
             $editFood = $this->getForEdit($editId);
         }
 
-        // POST: Add
+        // POST: Add - Staff/Admin only
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
+            $this->authorize('manage_menu');
+            
             $request = new CreateFoodRequest(
                 (int) ($_POST['category_id'] ?? 0),
                 trim($_POST['name'] ?? ''),
@@ -119,8 +122,10 @@ class FoodController
             $message = $this->create($request);
         }
 
-        // POST: Edit
+        // POST: Edit - Staff/Admin only
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
+            $this->authorize('manage_menu');
+            
             $foodId = (int) ($_POST['food_id'] ?? 0);
             $request = new UpdateFoodRequest(
                 $foodId,
@@ -139,8 +144,10 @@ class FoodController
             }
         }
 
-        // POST: Delete
+        // POST: Delete - Admin only
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
+            $this->authorize('delete_food');
+            
             $foodId = (int) ($_POST['food_id'] ?? 0);
             if ($foodId > 0) {
                 $message = $this->delete($foodId);

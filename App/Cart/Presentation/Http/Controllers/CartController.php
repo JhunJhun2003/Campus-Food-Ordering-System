@@ -9,47 +9,46 @@ use App\Cart\Application\Usecases\UpdateCartItemUseCase;
 use App\Cart\Application\Usecases\RemoveFromCartUseCase;
 use App\Cart\Domain\Repositories\CartRepositoryInterface;
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use App\Shared\Presentation\Http\Controllers\BaseController;
 
-/**
- * Cart Controller
- * Follows SOLID principles with Dependency Injection
- * No 'new' keyword - all dependencies are injected
- */
-class CartController
+class CartController extends BaseController
 {
     private CartRepositoryInterface $cartRepository;
     private FoodRepositoryInterface $foodRepository;
 
-    /**
-     * Constructor with Dependency Injection
-     * All dependencies are injected, not created inside
-     */
     public function __construct(
         CartRepositoryInterface $cartRepository,
         FoodRepositoryInterface $foodRepository
     ) {
+        parent::__construct();
         $this->cartRepository = $cartRepository;
         $this->foodRepository = $foodRepository;
     }
 
     /**
-     * Get cart contents
+     * Get cart contents - Users can only view their own cart
      */
     public function index(int $userId): array
     {
+        $this->requireAuthentication();
+        $this->authorizeResource($userId);
+        
         $useCase = new GetCartUseCase($this->cartRepository);
         return $useCase->execute($userId);
     }
 
     /**
-     * Add item to cart with item count in response
+     * Add item to cart - Users can only add to their own cart
      */
     public function add(int $userId, int $foodId, int $quantity = 1): array
     {
+        $this->requireAuthentication();
+        $this->authorizeResource($userId);
+        $this->authorize('add_to_cart');
+        
         $useCase = new AddToCartUseCase($this->cartRepository, $this->foodRepository);
         $result = $useCase->execute($userId, $foodId, $quantity);
         
-        // Add item count to response for frontend badge update
         if ($result['success']) {
             $result['item_count'] = $this->cartRepository->getItemCount($userId);
         }
@@ -58,14 +57,16 @@ class CartController
     }
 
     /**
-     * Update cart item quantity
+     * Update cart item quantity - Users can only update their own cart
      */
     public function update(int $userId, int $foodId, int $quantity): array
     {
+        $this->requireAuthentication();
+        $this->authorizeResource($userId);
+        
         $useCase = new UpdateCartItemUseCase($this->cartRepository);
         $result = $useCase->execute($userId, $foodId, $quantity);
         
-        // Add item count to response
         if ($result['success']) {
             $result['item_count'] = $this->cartRepository->getItemCount($userId);
         }
@@ -74,14 +75,16 @@ class CartController
     }
 
     /**
-     * Remove item from cart
+     * Remove item from cart - Users can only remove from their own cart
      */
     public function remove(int $userId, int $foodId): array
     {
+        $this->requireAuthentication();
+        $this->authorizeResource($userId);
+        
         $useCase = new RemoveFromCartUseCase($this->cartRepository);
         $result = $useCase->execute($userId, $foodId);
         
-        // Add item count to response
         if ($result['success']) {
             $result['item_count'] = $this->cartRepository->getItemCount($userId);
         }
@@ -90,10 +93,13 @@ class CartController
     }
 
     /**
-     * Clear all items from cart
+     * Clear all items from cart - Users can only clear their own cart
      */
     public function clear(int $userId): array
     {
+        $this->requireAuthentication();
+        $this->authorizeResource($userId);
+        
         $this->cartRepository->clear($userId);
         return [
             'success' => true,
@@ -103,10 +109,13 @@ class CartController
     }
 
     /**
-     * Get total item count in cart
+     * Get total item count in cart - Users can only view their own cart count
      */
     public function getItemCount(int $userId): int
     {
+        $this->requireAuthentication();
+        $this->authorizeResource($userId);
+        
         return $this->cartRepository->getItemCount($userId);
     }
 }
