@@ -16,6 +16,8 @@ require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
 requireEmailVerification();
+// ✅ Redirect admin/staff away from customer dashboard
+redirectAdminStaffFromCustomer();
 requirePermission('place_orders');
 
 use App\User\Presentation\Http\Controllers\UserController;

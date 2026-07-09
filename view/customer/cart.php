@@ -23,6 +23,8 @@ if (!isset($_SESSION['user_id'])) {
 
 requireLogin();
 requireEmailVerification();
+// ✅ Redirect admin/staff away from customer dashboard
+redirectAdminStaffFromCustomer();
 requirePermission('add_to_cart');
 
 use App\User\Presentation\Http\Controllers\UserController;

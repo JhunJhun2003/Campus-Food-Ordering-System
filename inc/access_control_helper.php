@@ -366,3 +366,31 @@ function getPermissionsGroupedByModule(): array
         return [];
     }
 }
+
+/**
+ * Check if user is customer only (not admin or staff)
+ */
+function isCustomerOnly(?int $userId = null): bool
+{
+    if ($userId === null) {
+        $userId = getCurrentUserId();
+    }
+
+    if ($userId === 0) {
+        return false;
+    }
+
+    return !isAdmin($userId) && !isStaff($userId);
+}
+
+/**
+ * Redirect admin/staff away from customer pages
+ */
+function redirectAdminStaffFromCustomer(string $redirectUrl = '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'): void
+{
+    if (isAdmin() || isStaff()) {
+        $_SESSION['error'] = 'Access denied. This page is for customers only.';
+        header('Location: ' . $redirectUrl);
+        exit();
+    }
+}

@@ -17,6 +17,8 @@ require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
 requireEmailVerification();
+// ✅ Redirect admin/staff away from customer dashboard
+redirectAdminStaffFromCustomer();
 requirePermission('view_orders');
 
 use App\User\Presentation\Http\Controllers\UserController;
@@ -123,31 +125,45 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <!-- Filter Tabs -->
-    <div class="flex items-center space-x-2 border-b border-slate-100 pb-px mb-8 overflow-x-auto whitespace-nowrap" id="filterTabs">
-        <?php foreach ($filterTabs as $index => $tab): 
-            $isActive = $index === 0 ? 'border-emerald-500 font-bold text-emerald-600' : 'border-transparent font-semibold text-slate-500';
-        ?>
-            <button class="tab-btn px-5 py-3 border-b-2 <?php echo $isActive; ?> hover:text-emerald-500 transition-colors text-sm" 
-                    data-status="<?php echo $tab['key']; ?>"
-                    data-status-id="<?php echo $tab['status_id']; ?>">
-                <i class="<?php echo $tab['icon']; ?> mr-1.5"></i>
-                <?php echo $tab['label']; ?>
-                <?php if ($tab['key'] !== 'all'): ?>
-                    <span class="ml-1 text-xs opacity-60">
-                        (<?php 
-                            $count = 0;
-                            foreach ($orders as $order) {
-                                if (strtolower($order['status_name'] ?? '') === $tab['key']) {
-                                    $count++;
+    <!-- Filter Tabs & Search Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div class="flex items-center space-x-2 border-b border-slate-100 pb-px overflow-x-auto whitespace-nowrap" id="filterTabs">
+            <?php foreach ($filterTabs as $index => $tab): 
+                $isActive = $index === 0 ? 'border-emerald-500 font-bold text-emerald-600' : 'border-transparent font-semibold text-slate-500';
+            ?>
+                <button class="tab-btn px-5 py-3 border-b-2 <?php echo $isActive; ?> hover:text-emerald-500 transition-colors text-sm" 
+                        data-status="<?php echo $tab['key']; ?>"
+                        data-status-id="<?php echo $tab['status_id']; ?>">
+                    <i class="<?php echo $tab['icon']; ?> mr-1.5"></i>
+                    <?php echo $tab['label']; ?>
+                    <?php if ($tab['key'] !== 'all'): ?>
+                        <span class="ml-1 text-xs opacity-60">
+                            (<?php 
+                                $count = 0;
+                                foreach ($orders as $order) {
+                                    if (strtolower($order['status_name'] ?? '') === $tab['key']) {
+                                        $count++;
+                                    }
                                 }
-                            }
-                            echo $count;
-                        ?>)
-                    </span>
-                <?php endif; ?>
+                                echo $count;
+                            ?>)
+                        </span>
+                    <?php endif; ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+        
+        <!-- ✅ SEARCH BAR -->
+        <div class="relative flex-shrink-0 w-full sm:w-64">
+            <input type="text" 
+                   id="searchOrders" 
+                   placeholder="Search by Order ID or Item..." 
+                   class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white/80">
+            <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <button id="clearSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden">
+                <i class="fa-solid fa-xmark text-sm"></i>
             </button>
-        <?php endforeach; ?>
+        </div>
     </div>
 
     <!-- Orders List -->
@@ -165,15 +181,7 @@ include __DIR__ . '/includes/header.php';
             </div>
             
         <?php else: ?>
-             <!-- ✅ DEBUG: Check how many orders are in the array -->
-    <?php 
-    echo '<!-- Total orders count: ' . count($orders) . ' -->';
-    echo '<!-- Order IDs: ';
-    foreach ($orders as $o) {
-        echo $o['id'] . ', ';
-    }
-    echo ' -->';
-    ?>
+            
             <?php foreach ($orders as $order): ?>
                 <?php 
                     $statusId = $order['status_id'] ?? 1;
@@ -189,7 +197,7 @@ include __DIR__ . '/includes/header.php';
                 <div class="order-card bg-white border border-slate-150 rounded-2xl shadow-sm shadow-slate-100/60 overflow-hidden" data-status="<?php echo $statusName; ?>">
                     <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span class="text-sm font-bold text-slate-900">Order ID: #<?php echo sprintf('%06d', (int) $orderId); ?></span>
+                            <span class="text-sm font-bold text-slate-900 order-id-text">Order ID: #<?php echo sprintf('%06d', (int) $orderId); ?></span>
                             <span class="text-xs text-slate-400 font-medium">Placed <?php echo date('M j, Y, h:i A', strtotime($order['order_date'] ?? 'now')); ?></span>
                         </div>
                         <div class="flex items-center space-x-2 <?php echo $statusColor; ?> px-3.5 py-1.5 rounded-full text-xs font-bold">
@@ -205,7 +213,7 @@ include __DIR__ . '/includes/header.php';
                             <div>
                                 <h4 class="text-base font-extrabold text-slate-900">Order #<?php echo sprintf('%06d', (int) $orderId); ?></h4>
                                 <p class="text-xs text-slate-400 mt-0.5"><?php echo $order['total_items'] ?? 0; ?> items</p>
-                                <p class="text-xs text-slate-500 mt-0.5"><?php echo htmlspecialchars($order['item_names'] ?? ''); ?></p>
+                                <p class="text-xs text-slate-500 mt-0.5 item-name-text"><?php echo htmlspecialchars($order['item_names'] ?? ''); ?></p>
                                 <button onclick="toggleDetails('details-<?php echo $orderId; ?>')" class="text-xs font-bold text-emerald-500 hover:text-emerald-600 mt-2 flex items-center gap-1 focus:outline-none">
                                     <span>View details</span>
                                     <i class="fa-solid fa-chevron-down text-[10px]" id="icon-details-<?php echo $orderId; ?>"></i>
@@ -314,7 +322,6 @@ include __DIR__ . '/includes/header.php';
 @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse-ring { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(1.15); } }
 
-/* ✅ Make sure order cards are visible */
 .order-card {
     display: block !important;
 }
@@ -342,17 +349,71 @@ function toggleDetails(elementId) {
 }
 
 // ============================================
-// FILTER ORDERS - Fixed Version
+// FILTER ORDERS WITH SEARCH
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
     const filterTabs = document.getElementById('filterTabs');
+    const searchInput = document.getElementById('searchOrders');
+    const clearBtn = document.getElementById('clearSearch');
     
+    // Function to apply both filter and search
+    function applyFilters(status, searchTerm) {
+        const search = (searchTerm || '').toLowerCase().trim();
+        let visibleCount = 0;
+        
+        document.querySelectorAll('.order-card').forEach(card => {
+            const cardStatus = card.dataset.status;
+            
+            // Get text content from the card
+            const orderIdElement = card.querySelector('.order-id-text');
+            const itemNameElement = card.querySelector('.item-name-text');
+            
+            const orderId = orderIdElement ? orderIdElement.textContent : '';
+            const itemName = itemNameElement ? itemNameElement.textContent : '';
+            const orderText = (orderId + ' ' + itemName).toLowerCase();
+            
+            const matchesFilter = status === 'all' || cardStatus === status;
+            const matchesSearch = search === '' || orderText.includes(search);
+            
+            if (matchesFilter && matchesSearch) {
+                card.style.display = 'block';
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+                card.classList.add('hidden');
+            }
+        });
+        
+        // Show/hide no results message
+        const container = document.getElementById('orders-list-container');
+        let noResults = document.getElementById('no-results-message');
+        
+        if (noResults) {
+            noResults.remove();
+        }
+        
+        if (visibleCount === 0 && document.querySelectorAll('.order-card').length > 0) {
+            noResults = document.createElement('div');
+            noResults.id = 'no-results-message';
+            noResults.className = 'col-span-full text-center py-16 bg-white rounded-2xl border border-slate-100 shadow-sm';
+            noResults.innerHTML = `
+                <div class="text-slate-300 text-5xl mb-4"><i class="fa-regular fa-search"></i></div>
+                <h3 class="text-lg font-bold text-slate-800">No matching orders</h3>
+                <p class="text-sm text-slate-500 mt-1">Try adjusting your search or filter criteria.</p>
+            `;
+            container.appendChild(noResults);
+        }
+    }
+    
+    // Filter tab click handler
     if (filterTabs) {
         filterTabs.addEventListener('click', function(e) {
             const tab = e.target.closest('.tab-btn');
             if (!tab) return;
             
             const status = tab.dataset.status;
+            const searchTerm = searchInput ? searchInput.value : '';
             
             // Update active tab styles
             document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -360,25 +421,44 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             tab.className = 'tab-btn px-5 py-3 border-b-2 border-emerald-500 font-bold text-sm text-emerald-600 hover:text-emerald-500 transition-colors';
             
-            // Filter orders
-            document.querySelectorAll('.order-card').forEach(card => {
-                const cardStatus = card.dataset.status;
-                if (status === 'all' || cardStatus === status) {
-                    card.style.display = 'block';
-                    card.classList.remove('hidden');
-                } else {
-                    card.style.display = 'none';
-                    card.classList.add('hidden');
-                }
-            });
+            applyFilters(status, searchTerm);
         });
     }
     
-    // ✅ Ensure all orders are visible on page load
-    document.querySelectorAll('.order-card').forEach(card => {
-        card.style.display = 'block';
-        card.classList.remove('hidden');
-    });
+    // Search input handler
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value;
+            const activeTab = document.querySelector('.tab-btn.border-emerald-500');
+            const status = activeTab ? activeTab.dataset.status : 'all';
+            
+            // Show/hide clear button
+            if (clearBtn) {
+                if (searchTerm.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            }
+            
+            applyFilters(status, searchTerm);
+        });
+    }
+    
+    // Clear search button
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            this.classList.add('hidden');
+            const activeTab = document.querySelector('.tab-btn.border-emerald-500');
+            const status = activeTab ? activeTab.dataset.status : 'all';
+            applyFilters(status, '');
+            searchInput.focus();
+        });
+    }
+    
+    // ✅ Initial load - show all orders
+    applyFilters('all', '');
 });
 
 // ============================================
