@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
 use App\AccessControl\Infrastructure\Services\AuthorizationService;
 use App\AccessControl\Application\Usecases\AuthorizeUseCase;
+use App\AccessControl\Presentation\Http\Controllers\AccessControlController;
 use Inc\Database;
 
 // ============================================
@@ -187,6 +188,34 @@ function isCustomer(?int $userId = null): bool
 }
 
 /**
+ * Check if user is customer only (not admin or staff)
+ */
+function isCustomerOnly(?int $userId = null): bool
+{
+    if ($userId === null) {
+        $userId = getCurrentUserId();
+    }
+
+    if ($userId === 0) {
+        return false;
+    }
+
+    return !isAdmin($userId) && !isStaff($userId);
+}
+
+/**
+ * Redirect admin/staff away from customer pages
+ */
+function redirectAdminStaffFromCustomer(string $redirectUrl = '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'): void
+{
+    if (isAdmin() || isStaff()) {
+        $_SESSION['error'] = 'Access denied. This page is for customers only.';
+        header('Location: ' . $redirectUrl);
+        exit();
+    }
+}
+
+/**
  * Get user permissions
  */
 function getUserPermissions(?int $userId = null): array
@@ -339,7 +368,13 @@ function getAllRoles(): array
 {
     try {
         $repo = new AccessControlRepository(Database::getConnection());
-        return $repo->getAllRoles();
+        $roles = $repo->getAllRoles();
+        return array_map(function($role) {
+            if (method_exists($role, 'toArray')) {
+                return $role->toArray();
+            }
+            return (array) $role;
+        }, $roles);
     } catch (\Exception $e) {
         return [];
     }
@@ -367,30 +402,41 @@ function getPermissionsGroupedByModule(): array
     }
 }
 
-/**
- * Check if user is customer only (not admin or staff)
- */
-function isCustomerOnly(?int $userId = null): bool
-{
-    if ($userId === null) {
-        $userId = getCurrentUserId();
-    }
-
-    if ($userId === 0) {
-        return false;
-    }
-
-    return !isAdmin($userId) && !isStaff($userId);
-}
+// ============================================
+// ✅ ACCESS CONTROL CONTROLLER GETTER
+// ============================================
 
 /**
- * Redirect admin/staff away from customer pages
+ * Get AccessControlController instance with all dependencies
  */
-function redirectAdminStaffFromCustomer(string $redirectUrl = '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'): void
+function getAccessControlController(): AccessControlController
 {
-    if (isAdmin() || isStaff()) {
-        $_SESSION['error'] = 'Access denied. This page is for customers only.';
-        header('Location: ' . $redirectUrl);
-        exit();
+    static $instance = null;
+    
+    if ($instance === null) {
+        $db = Database::getConnection();
+        $accessControlRepo = new AccessControlRepository($db);
+        
+        $getAllRolesUseCase = new \App\AccessControl\Application\Usecases\GetAllRolesUseCase($accessControlRepo);
+        $getAllPermissionsUseCase = new \App\AccessControl\Application\Usecases\GetAllPermissionsUseCase($accessControlRepo);
+        $assignRoleToUserUseCase = new \App\AccessControl\Application\Usecases\AssignRoleToUserUseCase($accessControlRepo);
+        $checkPermissionUseCase = new \App\AccessControl\Application\Usecases\CheckPermissionUseCase($accessControlRepo);
+        $createRoleUseCase = new \App\AccessControl\Application\Usecases\CreateRoleUseCase($accessControlRepo);
+        $updateRoleUseCase = new \App\AccessControl\Application\Usecases\UpdateRoleUseCase($accessControlRepo);
+        $deleteRoleUseCase = new \App\AccessControl\Application\Usecases\DeleteRoleUseCase($accessControlRepo);
+        $syncRolePermissionsUseCase = new \App\AccessControl\Application\Usecases\SyncRolePermissionsUseCase($accessControlRepo);
+        
+        $instance = new AccessControlController(
+            $getAllRolesUseCase,
+            $getAllPermissionsUseCase,
+            $assignRoleToUserUseCase,
+            $checkPermissionUseCase,
+            $createRoleUseCase,
+            $updateRoleUseCase,
+            $deleteRoleUseCase,
+            $syncRolePermissionsUseCase
+        );
     }
+    
+    return $instance;
 }

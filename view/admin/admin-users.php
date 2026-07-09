@@ -23,6 +23,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/user_helpers.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
 requirePermission('manage_users');

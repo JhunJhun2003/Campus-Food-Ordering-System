@@ -21,6 +21,7 @@ if ($_SESSION['user_role'] !== 'admin') {
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/user_helpers.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 

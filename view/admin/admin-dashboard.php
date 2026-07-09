@@ -22,6 +22,7 @@ if ($_SESSION['user_role'] !== 'admin') {
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
 requirePermission('view_dashboard');

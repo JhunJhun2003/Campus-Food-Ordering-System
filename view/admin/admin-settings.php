@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
 requirePermission('manage_settings');
@@ -621,39 +622,32 @@ function switchTab(tabId) {
 <!-- JAVASCRIPT -->
 <!-- ============================================ -->
 <script>
-// switchTab function is defined at the top of the file
-
 // ============================================
-// INITIALIZE ON PAGE LOAD
+// TAB SWITCHING
 // ============================================
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if URL has tab parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get('tab');
-    
-    if (tabParam && document.querySelector(`.tab-btn[data-tab="${tabParam}"]`)) {
-        switchTab(tabParam);
-    } else {
-        // Default to general tab
-        switchTab('general');
-    }
-    
-    // Add click listeners to tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const tabId = this.dataset.tab;
-            if (tabId) {
-                switchTab(tabId);
-                // Update URL without page reload
-                history.pushState(null, '', '?tab=' + tabId);
-            }
-        });
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
     });
-});
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active', 'border-indigo-600', 'text-indigo-600');
+        btn.classList.add('border-transparent', 'text-slate-500');
+    });
+    const targetContent = document.getElementById('tab-' + tabId);
+    if (targetContent) {
+        targetContent.classList.remove('hidden');
+    }
+    const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active', 'border-indigo-600', 'text-indigo-600');
+        activeBtn.classList.remove('border-transparent', 'text-slate-500');
+    }
+    // Update URL
+    history.pushState(null, '', '?tab=' + tabId);
+}
 
 // ============================================
-// MODALS
+// MODAL FUNCTIONS
 // ============================================
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -673,44 +667,39 @@ function closeModal(modalId) {
     }
 }
 
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.classList.add('hidden');
-            this.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-    });
-});
+// ============================================
+// PAYMENT METHODS
+// ============================================
+function openAddPaymentModal() {
+    openModal('addPaymentModal');
+}
+
+function closeAddPaymentModal() {
+    closeModal('addPaymentModal');
+}
 
 // ============================================
-// PAYMENT MODALS
+// ACCESS CONTROL
 // ============================================
-function openAddPaymentModal() { openModal('addPaymentModal'); }
-function closeAddPaymentModal() { closeModal('addPaymentModal'); }
-
-// ============================================
-// ACCESS CONTROL FUNCTIONS
-// ============================================
-function openCreateRoleModal() { openModal('createRoleModal'); }
+function openCreateRoleModal() {
+    openModal('createRoleModal');
+}
 
 function editRole(roleId) {
-    fetch(`/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=${roleId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const roles = <?php echo json_encode(is_array($roles) ? array_map(fn($r) => method_exists($r, 'toArray') ? $r->toArray() : $r, $roles) : []); ?>;
-                const role = roles.find(r => r.id == roleId);
-                document.getElementById('edit_role_id').value = roleId;
-                document.getElementById('edit_role_name').value = role ? role.name : '';
-                openModal('editRoleModal');
-            }
-        })
-        .catch(() => showToast('Error loading role data', 'error'));
+    const roles = <?php echo json_encode($roles); ?>;
+    const role = roles.find(r => r.id === roleId);
+    
+    if (role) {
+        document.getElementById('edit_role_id').value = roleId;
+        document.getElementById('edit_role_name').value = role.name;
+        openModal('editRoleModal');
+    } else {
+        showToast('Role not found', 'error');
+    }
 }
 
 function deleteRole(roleId, roleName) {
-    if (confirm(`Are you sure you want to delete the role "${roleName}"?`)) {
+    if (confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/Campus-Food-Ordering-System/access-control/delete-role';
@@ -729,47 +718,53 @@ function managePermissions(roleId) {
         showToast('Admin role has all permissions by default.', 'info');
         return;
     }
+    
     document.getElementById('perm_role_id').value = roleId;
     const container = document.getElementById('permissionsContainer');
     container.innerHTML = '<div class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mr-2"></i> Loading permissions...</div>';
+    
     openModal('managePermissionsModal');
     
     fetch(`/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=${roleId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const allPermissions = <?php echo json_encode(is_array($permissions) ? array_map(fn($p) => method_exists($p, 'toArray') ? $p->toArray() : $p, $permissions) : []); ?>;
+                const allPermissions = <?php echo json_encode($permissions); ?>;
                 const grouped = {};
+                
                 allPermissions.forEach(p => {
-                    if (!grouped[p.module]) grouped[p.module] = [];
-                    grouped[p.module].push(p);
+                    const module = p.module || 'general';
+                    if (!grouped[module]) grouped[module] = [];
+                    grouped[module].push(p);
                 });
+                
                 let html = '';
                 for (const [module, perms] of Object.entries(grouped)) {
                     html += `<div class="mb-4">
                         <h4 class="text-sm font-semibold text-slate-700 mb-2">${module.charAt(0).toUpperCase() + module.slice(1)}</h4>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">`;
                     perms.forEach(p => {
-                        const checked = data.permissions.some(rp => rp.id == p.id) ? 'checked' : '';
+                        const checked = data.permissions.some(rp => rp.id === p.id) ? 'checked' : '';
                         html += `<div class="flex items-center space-x-2">
-                            <input type="checkbox" id="perm_${p.id}" name="permissions[]" value="${p.id}" ${checked} class="w-4 h-4 text-indigo-600 border-slate-300 rounded">
-                            <label for="perm_${p.id}" class="text-sm text-slate-700">${p.display_name}</label>
+                            <input type="checkbox" id="perm_${p.id}" name="permissions[]" value="${p.id}" ${checked} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                            <label for="perm_${p.id}" class="text-sm text-slate-700 cursor-pointer">${p.display_name || p.name}</label>
                         </div>`;
                     });
                     html += `</div></div>`;
                 }
                 container.innerHTML = html || '<div class="text-center text-slate-500 py-4">No permissions available.</div>';
             } else {
-                container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions</div>`;
+                container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions: ${data.error || 'Unknown error'}</div>`;
             }
         })
-        .catch(() => {
-            container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions</div>`;
+        .catch(error => {
+            container.innerHTML = `<div class="text-red-500 text-center p-4">Error loading permissions. Please try again.</div>`;
+            console.error('Error:', error);
         });
 }
 
 // ============================================
-// TOAST
+// TOAST NOTIFICATIONS
 // ============================================
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
@@ -792,6 +787,32 @@ function showToast(message, type = 'success') {
         toast.classList.remove('translate-y-0', 'opacity-100');
     }, 3000);
 }
+
+// ============================================
+// INITIALIZE ON PAGE LOAD
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if URL has tab parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    if (tabParam && document.querySelector(`.tab-btn[data-tab="${tabParam}"]`)) {
+        switchTab(tabParam);
+    } else {
+        switchTab('general');
+    }
+    
+    // Close modals when clicking outside
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+                this.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        });
+    });
+});
 
 <?php if ($success): ?> showToast('<?php echo htmlspecialchars($success); ?>', 'success'); <?php endif; ?>
 <?php if ($error): ?> showToast('<?php echo htmlspecialchars($error); ?>', 'error'); <?php endif; ?>
