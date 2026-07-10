@@ -5,8 +5,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// ✅ Simple admin check from session (no dependencies)
+$isAdmin = isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+
 // Check if maintenance mode is actually on
-require_once __DIR__ . '/../../inc/access_control_helper.php';
 require_once __DIR__ . '/../../inc/Database.php';
 
 use Inc\Database;
@@ -46,110 +48,189 @@ $pageTitle = 'Under Maintenance - FOODIE';
     <style>
         * { font-family: 'Plus Jakarta Sans', sans-serif; }
         .maintenance-icon {
-            animation: pulse 2s ease-in-out infinite;
+            animation: float 3s ease-in-out infinite;
         }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
         .gear-spin {
-            animation: spin 8s linear infinite;
+            animation: spin 12s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
         .gear-spin-reverse {
-            animation: spin-reverse 6s linear infinite;
+            animation: spin-reverse 8s linear infinite;
         }
         @keyframes spin-reverse {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(-360deg); }
         }
+        .pulse-dot {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        .status-card {
+            transition: all 0.3s ease;
+        }
+        .status-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0,0,0,0.1);
+        }
+        .btn-home {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .btn-admin {
+            transition: all 0.3s ease;
+        }
+        .btn-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
+        }
+        .brand-text {
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-4">
     
-    <div class="max-w-2xl w-full bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+    <div class="max-w-2xl w-full">
         
-        <!-- Top Section with Icon -->
-        <div class="relative bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-12 text-center">
-            <div class="absolute inset-0 opacity-10">
-                <div class="absolute top-10 left-10 text-7xl gear-spin">⚙️</div>
-                <div class="absolute bottom-10 right-10 text-6xl gear-spin-reverse">⚙️</div>
-                <div class="absolute top-1/2 left-1/4 text-5xl gear-spin" style="animation-duration: 12s;">🔧</div>
+        <!-- Main Card -->
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden relative">
+            
+            <!-- Decorative Background Elements -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-yellow-100/30 to-orange-100/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-100/20 to-purple-100/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+            
+            <!-- Top Section with Icon -->
+            <div class="relative bg-gradient-to-r from-yellow-500 via-orange-500 to-orange-600 px-6 py-14 text-center overflow-hidden">
+                <!-- Decorative Gears -->
+                <div class="absolute inset-0 opacity-10">
+                    <div class="absolute top-8 left-8 text-6xl gear-spin">⚙️</div>
+                    <div class="absolute bottom-8 right-8 text-5xl gear-spin-reverse">⚙️</div>
+                    <div class="absolute top-1/3 left-1/4 text-4xl gear-spin" style="animation-duration: 15s;">🔧</div>
+                    <div class="absolute bottom-1/3 right-1/4 text-4xl gear-spin-reverse" style="animation-duration: 10s;">⚡</div>
+                </div>
+                
+                <div class="relative z-10">
+                    <!-- Icon -->
+                    <div class="inline-flex items-center justify-center w-28 h-28 bg-white/20 backdrop-blur-sm rounded-full mb-6 maintenance-icon shadow-lg ring-4 ring-white/30">
+                        <i class="fa-solid fa-screwdriver-wrench text-6xl text-white"></i>
+                    </div>
+                    
+                    <!-- Title -->
+                    <h1 class="text-4xl font-black text-white tracking-tight mb-2">
+                        Under Maintenance
+                    </h1>
+                    <p class="text-yellow-50/90 text-sm font-medium tracking-wide">
+                        <i class="fa-regular fa-clock mr-2"></i>
+                        We're improving your experience
+                    </p>
+                </div>
             </div>
             
-            <div class="relative z-10">
-                <div class="inline-flex items-center justify-center w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full mb-4 maintenance-icon">
-                    <i class="fa-solid fa-screwdriver-wrench text-5xl text-white"></i>
+            <!-- Content Section -->
+            <div class="relative p-8 md:p-10">
+                <!-- Status Badge -->
+                <div class="flex justify-center mb-6">
+                    <div class="inline-flex items-center gap-2.5 bg-yellow-50 border border-yellow-200 rounded-full px-5 py-2 shadow-sm">
+                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 pulse-dot"></span>
+                        <span class="text-xs font-semibold text-yellow-700 uppercase tracking-wider">Maintenance Mode Active</span>
+                    </div>
                 </div>
-                <h1 class="text-3xl font-black text-white tracking-tight">Under Maintenance</h1>
-                <p class="text-yellow-50 mt-2 text-sm font-medium">We're improving your experience</p>
+                
+                <!-- Message -->
+                <div class="text-center mb-8">
+                    <p class="text-slate-600 leading-relaxed max-w-md mx-auto">
+                        <?php echo htmlspecialchars($maintenanceMessage); ?>
+                    </p>
+                </div>
+                
+                <!-- Status Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <div class="status-card bg-red-50 border border-red-100 rounded-2xl p-5 text-center shadow-sm">
+                        <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <i class="fa-solid fa-circle-xmark text-red-500 text-xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-red-700">Login / Register</p>
+                        <p class="text-xs text-red-400 mt-0.5">Temporarily disabled</p>
+                    </div>
+                    <div class="status-card bg-yellow-50 border border-yellow-100 rounded-2xl p-5 text-center shadow-sm">
+                        <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <i class="fa-solid fa-cart-shopping text-yellow-500 text-xl"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-yellow-700">Orders & Cart</p>
+                        <p class="text-xs text-yellow-400 mt-0.5">Temporarily disabled</p>
+                    </div>
+                </div>
+                
+                <!-- Divider -->
+                <div class="relative my-6">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-slate-200"></div>
+                    </div>
+                    <div class="relative flex justify-center">
+                        <span class="bg-white px-4 text-xs text-slate-400">
+                            <i class="fa-regular fa-circle mr-1"></i>
+                            We'll be back soon
+                            <i class="fa-regular fa-circle ml-1"></i>
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                    <a href="/Campus-Food-Ordering-System" class="btn-home flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-all shadow-sm">
+                        <i class="fa-solid fa-arrow-left text-xs"></i>
+                        <span>Go to Home</span>
+                    </a>
+                    <?php if ($isAdmin): ?>
+                        <a href="/Campus-Food-Ordering-System/view/admin/admin-dashboard.php" class="btn-admin flex items-center justify-center gap-2 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-indigo-500/20">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Go to Admin Panel</span>
+                        </a>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Footer -->
+                <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-400">
+                        &copy; <?php echo date('Y'); ?> FOODIE. All rights reserved.
+                    </p>
+                    <p class="text-xs text-slate-300 mt-1">
+                        <i class="fa-regular fa-clock mr-1"></i>
+                        Last checked: <?php echo date('F j, Y \a\t h:i A'); ?>
+                    </p>
+                </div>
             </div>
         </div>
         
-        <!-- Content Section -->
-        <div class="p-8 md:p-10">
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-full px-4 py-1.5 mb-4">
-                    <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-                    <span class="text-xs font-medium text-yellow-700">Maintenance Mode Active</span>
-                </div>
-                <p class="text-slate-600 leading-relaxed">
-                    <?php echo htmlspecialchars($maintenanceMessage); ?>
-                </p>
-            </div>
-            
-            <!-- Status Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
-                    <i class="fa-solid fa-circle-xmark text-red-400 text-xl mb-2"></i>
-                    <p class="text-xs font-semibold text-red-600">Login/Register</p>
-                    <p class="text-[10px] text-red-400">Temporarily disabled</p>
-                </div>
-                <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 text-center">
-                    <i class="fa-solid fa-cart-shopping text-yellow-400 text-xl mb-2"></i>
-                    <p class="text-xs font-semibold text-yellow-600">Orders</p>
-                    <p class="text-[10px] text-yellow-400">Temporarily disabled</p>
-                </div>
-                <div class="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
-                    <i class="fa-solid fa-eye text-green-400 text-xl mb-2"></i>
-                    <p class="text-xs font-semibold text-green-600">Menu</p>
-                    <p class="text-[10px] text-green-400">Still available</p>
-                </div>
-            </div>
-            
-            <!-- Progress Bar -->
-            <div class="bg-slate-100 rounded-full h-2.5 mb-6 overflow-hidden">
-                <div class="bg-gradient-to-r from-yellow-400 to-orange-500 h-2.5 rounded-full" style="width: 65%;"></div>
-            </div>
-            <p class="text-[10px] text-slate-400 text-center">Estimated completion: 65%</p>
-            
-            <!-- Actions -->
-            <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-                <a href="/Campus-Food-Ordering-System/" class="inline-flex items-center justify-center space-x-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors">
-                    <i class="fa-solid fa-arrow-left"></i>
-                    <span>Go to Home</span>
-                </a>
-                <?php if (isset($_SESSION['user_id']) && isAdmin()): ?>
-                    <a href="/Campus-Food-Ordering-System/view/admin/admin-dashboard.php" class="inline-flex items-center justify-center space-x-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-colors">
-                        <i class="fa-solid fa-gauge-high"></i>
-                        <span>Go to Admin Panel</span>
-                    </a>
-                <?php endif; ?>
-            </div>
-            
-            <!-- Footer -->
-            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-                <p class="text-[10px] text-slate-400">
-                    &copy; <?php echo date('Y'); ?> FOODIE. All rights reserved.
-                </p>
-                <p class="text-[10px] text-slate-400 mt-1">
-                    <i class="fa-regular fa-clock mr-1"></i>
-                    Last checked: <?php echo date('F j, Y \a\t h:i A'); ?>
-                </p>
-            </div>
+        <!-- Small Brand Note -->
+        <div class="text-center mt-4">
+            <span class="text-xs text-slate-400">
+                <i class="fa-solid fa-heart text-red-400 text-[10px] mr-1"></i>
+                We appreciate your patience
+            </span>
         </div>
     </div>
     

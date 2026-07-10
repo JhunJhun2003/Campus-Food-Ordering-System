@@ -6,6 +6,7 @@ use App\Order\Application\Usecases\GetAllOrdersUseCase;
 use App\Order\Application\Usecases\GetUserOrdersUseCase;
 use App\Order\Application\Usecases\ReorderItemsUseCase;
 use App\Order\Application\Usecases\UpdateOrderStatusUseCase;
+use App\Order\Application\Usecases\GetStaffDashboardStatsUseCase;
 use App\Order\Infrastructure\Repositories\OrderRepository;
 use App\Cart\Infrastructure\Repositories\CartRepository;
 use App\Food\Infrastructure\Repositories\FoodRepository;
@@ -39,7 +40,7 @@ function getOrderController(): OrderController
             $orderRepository,
             $cartRepository
         );
-
+$getStaffDashboardStatsUseCase = new GetStaffDashboardStatsUseCase($orderRepository);
         $instance = new OrderController(
             $orderRepository,
             $cartRepository,
@@ -48,7 +49,8 @@ function getOrderController(): OrderController
             $getUserOrdersUseCase,
             $createOrderUseCase,
             $updateOrderStatusUseCase,
-            $reorderItemsUseCase
+            $reorderItemsUseCase,
+            $getStaffDashboardStatsUseCase  
         );
     }
     

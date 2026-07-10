@@ -1,97 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
-use App\AccessControl\Infrastructure\Services\AuthorizationService;
-use App\AccessControl\Application\Usecases\AuthorizeUseCase;
-use App\AccessControl\Presentation\Http\Controllers\AccessControlController;
 use Inc\Database;
-
-// ============================================
-// SERVICE GETTERS
-// ============================================
-
-function getAuthorizationService(): AuthorizationService
-{
-    static $instance = null;
-    if ($instance === null) {
-        $instance = new AuthorizationService();
-    }
-    return $instance;
-}
-
-function getAuthorizeUseCase(): AuthorizeUseCase
-{
-    static $instance = null;
-    if ($instance === null) {
-        $instance = new AuthorizeUseCase(getAuthorizationService());
-    }
-    return $instance;
-}
-
-// ============================================
-// PERMISSION CHECK FUNCTIONS
-// ============================================
-
-/**
- * Check if current user has a specific permission
- */
-function hasPermission(string $permission, ?int $userId = null): bool
-{
-    if ($userId === null) {
-        $userId = getCurrentUserId();
-    }
-
-    if ($userId === 0) {
-        return false;
-    }
-
-    try {
-        return getAuthorizationService()->hasPermission($userId, $permission);
-    } catch (\Exception $e) {
-        return false;
-    }
-}
-
-/**
- * Check if current user has any of the given permissions
- */
-function hasAnyPermission(array $permissions, ?int $userId = null): bool
-{
-    if ($userId === null) {
-        $userId = getCurrentUserId();
-    }
-
-    if ($userId === 0) {
-        return false;
-    }
-
-    try {
-        return getAuthorizationService()->hasAnyPermission($userId, $permissions);
-    } catch (\Exception $e) {
-        return false;
-    }
-}
-
-/**
- * Check if current user has all of the given permissions
- */
-function hasAllPermissions(array $permissions, ?int $userId = null): bool
-{
-    if ($userId === null) {
-        $userId = getCurrentUserId();
-    }
-
-    if ($userId === 0) {
-        return false;
-    }
-
-    try {
-        return getAuthorizationService()->hasAllPermissions($userId, $permissions);
-    } catch (\Exception $e) {
-        return false;
-    }
-}
 
 // ============================================
 // USER INFO FUNCTIONS
@@ -106,64 +16,43 @@ function getCurrentUserId(): int
 }
 
 /**
- * Get current user role
+ * Get current user role from session
  */
 function getCurrentUserRole(): ?string
 {
-    $userId = getCurrentUserId();
-    if ($userId === 0) {
-        return null;
-    }
-
-    try {
-        return getAuthorizationService()->getUserRole($userId);
-    } catch (\Exception $e) {
-        return null;
-    }
+    return $_SESSION['user_role'] ?? null;
 }
 
 // ============================================
-// ROLE CHECK FUNCTIONS
+// ROLE CHECK FUNCTIONS - Using simple session checks
 // ============================================
 
 /**
- * Check if user is admin (with database verification)
+ * Check if current user is admin
  */
 function isAdmin(?int $userId = null): bool
 {
-    if ($userId === null) {
-        $userId = getCurrentUserId();
+    // If userId is provided and different from current session user
+    if ($userId !== null && $userId !== getCurrentUserId()) {
+        return isAdminFromDatabase($userId);
     }
-
-    if ($userId === 0) {
-        return false;
-    }
-
-    try {
-        return getAuthorizationService()->isAdmin($userId);
-    } catch (\Exception $e) {
-        return false;
-    }
+    
+    // Session check for current user
+    return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
 }
 
 /**
- * Check if user is staff (with database verification)
+ * Check if current user is staff
  */
 function isStaff(?int $userId = null): bool
 {
-    if ($userId === null) {
-        $userId = getCurrentUserId();
+    // If userId is provided and different from current session user
+    if ($userId !== null && $userId !== getCurrentUserId()) {
+        return isStaffFromDatabase($userId);
     }
-
-    if ($userId === 0) {
-        return false;
-    }
-
-    try {
-        return getAuthorizationService()->isStaff($userId);
-    } catch (\Exception $e) {
-        return false;
-    }
+    
+    // Session check for current user
+    return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'staff';
 }
 
 /**
@@ -171,19 +60,75 @@ function isStaff(?int $userId = null): bool
  */
 function isCustomer(?int $userId = null): bool
 {
-    if ($userId === null) {
-        $userId = getCurrentUserId();
-    }
-
-    if ($userId === 0) {
-        return false;
-    }
-
-    try {
-        $role = getAuthorizationService()->getUserRole($userId);
+    if ($userId !== null && $userId !== getCurrentUserId()) {
+        $role = getUserRoleFromDatabase($userId);
         return $role === 'customer' || $role === 'user';
+    }
+    
+    $role = $_SESSION['user_role'] ?? 'user';
+    return $role === 'customer' || $role === 'user';
+}
+
+/**
+ * Check if user is admin from database
+ */
+function isAdminFromDatabase(int $userId): bool
+{
+    try {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("
+            SELECT r.name 
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE u.id = :user_id
+        ");
+        $stmt->execute([':user_id' => $userId]);
+        $role = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $role && strtolower($role['name']) === 'admin';
     } catch (\Exception $e) {
         return false;
+    }
+}
+
+/**
+ * Check if user is staff from database
+ */
+function isStaffFromDatabase(int $userId): bool
+{
+    try {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("
+            SELECT r.name 
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE u.id = :user_id
+        ");
+        $stmt->execute([':user_id' => $userId]);
+        $role = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $role && strtolower($role['name']) === 'staff';
+    } catch (\Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Get user role from database
+ */
+function getUserRoleFromDatabase(int $userId): ?string
+{
+    try {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("
+            SELECT r.name 
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE u.id = :user_id
+        ");
+        $stmt->execute([':user_id' => $userId]);
+        $role = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $role ? $role['name'] : null;
+    } catch (\Exception $e) {
+        return null;
     }
 }
 
@@ -203,40 +148,72 @@ function isCustomerOnly(?int $userId = null): bool
     return !isAdmin($userId) && !isStaff($userId);
 }
 
-/**
- * Redirect admin/staff away from customer pages
- */
-function redirectAdminStaffFromCustomer(string $redirectUrl = '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'): void
-{
-    if (isAdmin() || isStaff()) {
-        $_SESSION['error'] = 'Access denied. This page is for customers only.';
-        header('Location: ' . $redirectUrl);
-        exit();
-    }
-}
+// ============================================
+// PERMISSION CHECK FUNCTIONS
+// ============================================
 
 /**
- * Get user permissions
+ * Check if current user has a specific permission
  */
-function getUserPermissions(?int $userId = null): array
+function hasPermission(string $permission, ?int $userId = null): bool
 {
     if ($userId === null) {
         $userId = getCurrentUserId();
     }
 
     if ($userId === 0) {
-        return [];
+        return false;
+    }
+
+    // Admin has all permissions
+    if (isAdmin($userId)) {
+        return true;
     }
 
     try {
-        $repo = new AccessControlRepository(Database::getConnection());
-        $permissions = $repo->getUserPermissions($userId);
-        return array_map(function($p) {
-            return $p->getName();
-        }, $permissions);
+        $db = Database::getConnection();
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as count
+            FROM users u
+            JOIN role_permissions rp ON u.role_id = rp.role_id
+            JOIN permissions p ON rp.permission_id = p.id
+            WHERE u.id = :user_id AND p.name = :permission_name
+        ");
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':permission_name' => $permission
+        ]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) $result['count'] > 0;
     } catch (\Exception $e) {
-        return [];
+        return false;
     }
+}
+
+/**
+ * Check if current user has any of the given permissions
+ */
+function hasAnyPermission(array $permissions, ?int $userId = null): bool
+{
+    foreach ($permissions as $permission) {
+        if (hasPermission($permission, $userId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Check if current user has all of the given permissions
+ */
+function hasAllPermissions(array $permissions, ?int $userId = null): bool
+{
+    foreach ($permissions as $permission) {
+        if (!hasPermission($permission, $userId)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // ============================================
@@ -324,6 +301,22 @@ function requireAuth(string $redirect = '/entrance/login.php'): void
 }
 
 /**
+ * Redirect admin/staff away from customer pages
+ */
+function redirectAdminStaffFromCustomer(string $redirectUrl = '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'): void
+{
+    if (isAdmin() || isStaff()) {
+        $_SESSION['error'] = 'Access denied. This page is for customers only.';
+        header('Location: ' . $redirectUrl);
+        exit();
+    }
+}
+
+// ============================================
+// RESOURCE ACCESS
+// ============================================
+
+/**
  * Check if user can access a resource
  */
 function canAccessResource(int $resourceUserId, string $permission = 'view_orders'): bool
@@ -358,88 +351,8 @@ function requireResourceAccess(int $resourceUserId, string $permission = 'view_o
 }
 
 // ============================================
-// HELPER FUNCTIONS FOR VIEWS
+// MAINTENANCE MODE FUNCTIONS
 // ============================================
-
-/**
- * Get all roles
- */
-function getAllRoles(): array
-{
-    try {
-        $repo = new AccessControlRepository(Database::getConnection());
-        $roles = $repo->getAllRoles();
-        return array_map(function($role) {
-            if (method_exists($role, 'toArray')) {
-                return $role->toArray();
-            }
-            return (array) $role;
-        }, $roles);
-    } catch (\Exception $e) {
-        return [];
-    }
-}
-
-/**
- * Get permissions grouped by module
- */
-function getPermissionsGroupedByModule(): array
-{
-    try {
-        $repo = new AccessControlRepository(Database::getConnection());
-        $permissions = $repo->getAllPermissions();
-        $grouped = [];
-        foreach ($permissions as $permission) {
-            $module = $permission->getModule();
-            if (!isset($grouped[$module])) {
-                $grouped[$module] = [];
-            }
-            $grouped[$module][] = $permission->toArray();
-        }
-        return $grouped;
-    } catch (\Exception $e) {
-        return [];
-    }
-}
-
-// ============================================
-// ✅ ACCESS CONTROL CONTROLLER GETTER
-// ============================================
-
-/**
- * Get AccessControlController instance with all dependencies
- */
-function getAccessControlController(): AccessControlController
-{
-    static $instance = null;
-    
-    if ($instance === null) {
-        $db = Database::getConnection();
-        $accessControlRepo = new AccessControlRepository($db);
-        
-        $getAllRolesUseCase = new \App\AccessControl\Application\Usecases\GetAllRolesUseCase($accessControlRepo);
-        $getAllPermissionsUseCase = new \App\AccessControl\Application\Usecases\GetAllPermissionsUseCase($accessControlRepo);
-        $assignRoleToUserUseCase = new \App\AccessControl\Application\Usecases\AssignRoleToUserUseCase($accessControlRepo);
-        $checkPermissionUseCase = new \App\AccessControl\Application\Usecases\CheckPermissionUseCase($accessControlRepo);
-        $createRoleUseCase = new \App\AccessControl\Application\Usecases\CreateRoleUseCase($accessControlRepo);
-        $updateRoleUseCase = new \App\AccessControl\Application\Usecases\UpdateRoleUseCase($accessControlRepo);
-        $deleteRoleUseCase = new \App\AccessControl\Application\Usecases\DeleteRoleUseCase($accessControlRepo);
-        $syncRolePermissionsUseCase = new \App\AccessControl\Application\Usecases\SyncRolePermissionsUseCase($accessControlRepo);
-        
-        $instance = new AccessControlController(
-            $getAllRolesUseCase,
-            $getAllPermissionsUseCase,
-            $assignRoleToUserUseCase,
-            $checkPermissionUseCase,
-            $createRoleUseCase,
-            $updateRoleUseCase,
-            $deleteRoleUseCase,
-            $syncRolePermissionsUseCase
-        );
-    }
-    
-    return $instance;
-}
 
 /**
  * Check if maintenance mode is enabled
@@ -447,10 +360,10 @@ function getAccessControlController(): AccessControlController
 function isMaintenanceMode(): bool
 {
     try {
-        $db = \Inc\Database::getConnection();
+        $db = Database::getConnection();
         $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'maintenance_mode'");
         $stmt->execute();
-        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result && (int) $result['setting_value'] === 1;
     } catch (\Exception $e) {
         return false;
@@ -473,4 +386,117 @@ function checkMaintenanceRedirect(): void
         header('Location: /Campus-Food-Ordering-System/view/maintenance/maintenance.php');
         exit();
     }
+}
+
+// ============================================
+// HELPER FUNCTIONS FOR VIEWS
+// ============================================
+
+/**
+ * Get all roles
+ */
+function getAllRoles(): array
+{
+    try {
+        require_once __DIR__ . '/../vendor/autoload.php';
+        $repo = new \App\AccessControl\Infrastructure\Repositories\AccessControlRepository(Database::getConnection());
+        $roles = $repo->getAllRoles();
+        return array_map(function($role) {
+            if (method_exists($role, 'toArray')) {
+                return $role->toArray();
+            }
+            return (array) $role;
+        }, $roles);
+    } catch (\Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * Get permissions grouped by module
+ */
+function getPermissionsGroupedByModule(): array
+{
+    try {
+        require_once __DIR__ . '/../vendor/autoload.php';
+        $repo = new \App\AccessControl\Infrastructure\Repositories\AccessControlRepository(Database::getConnection());
+        $permissions = $repo->getAllPermissions();
+        $grouped = [];
+        foreach ($permissions as $permission) {
+            $module = $permission->getModule();
+            if (!isset($grouped[$module])) {
+                $grouped[$module] = [];
+            }
+            $grouped[$module][] = $permission->toArray();
+        }
+        return $grouped;
+    } catch (\Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * Get user permissions
+ */
+function getUserPermissions(?int $userId = null): array
+{
+    if ($userId === null) {
+        $userId = getCurrentUserId();
+    }
+
+    if ($userId === 0) {
+        return [];
+    }
+
+    try {
+        require_once __DIR__ . '/../vendor/autoload.php';
+        $repo = new \App\AccessControl\Infrastructure\Repositories\AccessControlRepository(Database::getConnection());
+        $permissions = $repo->getUserPermissions($userId);
+        return array_map(function($p) {
+            return $p->getName();
+        }, $permissions);
+    } catch (\Exception $e) {
+        return [];
+    }
+}
+
+// ============================================
+// ACCESS CONTROL CONTROLLER GETTER
+// ============================================
+
+/**
+ * Get AccessControlController instance with all dependencies
+ */
+function getAccessControlController()
+{
+    static $instance = null;
+    
+    if ($instance === null) {
+        require_once __DIR__ . '/../vendor/autoload.php';
+        
+        $db = Database::getConnection();
+        $accessControlRepo = new \App\AccessControl\Infrastructure\Repositories\AccessControlRepository($db);
+        
+        $getAllRolesUseCase = new \App\AccessControl\Application\Usecases\GetAllRolesUseCase($accessControlRepo);
+        $getAllPermissionsUseCase = new \App\AccessControl\Application\Usecases\GetAllPermissionsUseCase($accessControlRepo);
+        $assignRoleToUserUseCase = new \App\AccessControl\Application\Usecases\AssignRoleToUserUseCase($accessControlRepo);
+        $checkPermissionUseCase = new \App\AccessControl\Application\Usecases\CheckPermissionUseCase($accessControlRepo);
+        $createRoleUseCase = new \App\AccessControl\Application\Usecases\CreateRoleUseCase($accessControlRepo);
+        $updateRoleUseCase = new \App\AccessControl\Application\Usecases\UpdateRoleUseCase($accessControlRepo);
+        $deleteRoleUseCase = new \App\AccessControl\Application\Usecases\DeleteRoleUseCase($accessControlRepo);
+        $syncRolePermissionsUseCase = new \App\AccessControl\Application\Usecases\SyncRolePermissionsUseCase($accessControlRepo);
+        
+        $instance = new \App\AccessControl\Presentation\Http\Controllers\AccessControlController(
+            $getAllRolesUseCase,
+            $getAllPermissionsUseCase,
+            $assignRoleToUserUseCase,
+            $checkPermissionUseCase,
+            $createRoleUseCase,
+            $updateRoleUseCase,
+            $deleteRoleUseCase,
+            $syncRolePermissionsUseCase
+        );
+    }
+    
+    return $instance;
 }

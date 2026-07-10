@@ -8,6 +8,8 @@ use App\Order\Application\Usecases\GetAllOrdersUseCase;
 use App\Order\Application\Usecases\GetUserOrdersUseCase;
 use App\Order\Application\Usecases\ReorderItemsUseCase;
 use App\Order\Application\Usecases\UpdateOrderStatusUseCase;
+use App\Order\Application\Usecases\GetStaffDashboardStatsUseCase;
+
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Cart\Domain\Repositories\CartRepositoryInterface;
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
@@ -23,6 +25,7 @@ class OrderController extends BaseController
     private CreateOrderUseCase $createOrderUseCase;
     private UpdateOrderStatusUseCase $updateOrderStatusUseCase;
     private ReorderItemsUseCase $reorderItemsUseCase;
+    private GetStaffDashboardStatsUseCase $getStaffDashboardStatsUseCase;
 
     public function __construct(
         OrderRepositoryInterface $orderRepository,
@@ -32,7 +35,8 @@ class OrderController extends BaseController
         GetUserOrdersUseCase $getUserOrdersUseCase,
         CreateOrderUseCase $createOrderUseCase,
         UpdateOrderStatusUseCase $updateOrderStatusUseCase,
-        ReorderItemsUseCase $reorderItemsUseCase
+        ReorderItemsUseCase $reorderItemsUseCase,
+        GetStaffDashboardStatsUseCase $getStaffDashboardStatsUseCase
     ) {
         parent::__construct();
         $this->orderRepository = $orderRepository;
@@ -43,6 +47,7 @@ class OrderController extends BaseController
         $this->createOrderUseCase = $createOrderUseCase;
         $this->updateOrderStatusUseCase = $updateOrderStatusUseCase;
         $this->reorderItemsUseCase = $reorderItemsUseCase;
+        $this->getStaffDashboardStatsUseCase = $getStaffDashboardStatsUseCase;
     }
 
     /**
@@ -220,4 +225,58 @@ public function getOrderItems(int $orderId): array
         
         return $this->updateOrderStatusUseCase->execute($orderId, 6); // 6 = cancelled
     }
+     /**
+     * Get staff dashboard statistics - Staff/Admin only
+     */
+    public function getStaffDashboardStats(): array
+    {
+        $this->authorizeAny(['view_reports', 'manage_orders', 'view_dashboard']);
+        return $this->getStaffDashboardStatsUseCase->execute();
+    }
+
+    /**
+     * Get total orders count - Staff/Admin only
+     */
+    // public function getTotalOrders(): int
+    // {
+    //     $this->authorizeAny(['view_reports', 'manage_orders']);
+    //     return $this->getStaffDashboardStatsUseCase->getTotalOrders();
+    // }
+
+    /**
+     * Get pending orders count - Staff/Admin only
+     */
+    // public function getPendingOrders(): int
+    // {
+    //     $this->authorizeAny(['view_reports', 'manage_orders']);
+    //     return $this->getStaffDashboardStatsUseCase->getPendingOrders();
+    // }
+
+    /**
+     * Get preparing orders count - Staff/Admin only
+     */
+    public function getPreparingOrders(): int
+    {
+        $this->authorizeAny(['view_reports', 'manage_orders']);
+        return $this->getStaffDashboardStatsUseCase->getPreparingOrders();
+    }
+
+    /**
+     * Get completed orders count - Staff/Admin only
+     */
+    public function getCompletedOrders(): int
+    {
+        $this->authorizeAny(['view_reports', 'manage_orders']);
+        return $this->getStaffDashboardStatsUseCase->getCompletedOrders();
+    }
+
+    /**
+     * Get recent orders - Staff/Admin only
+     */
+    // public function getRecentOrders(int $limit = 5): array
+    // {
+    //     $this->authorizeAny(['view_reports', 'manage_orders', 'view_orders']);
+    //     return $this->getStaffDashboardStatsUseCase->getRecentOrders($limit);
+    // }
+
 }

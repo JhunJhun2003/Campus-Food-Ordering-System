@@ -101,6 +101,7 @@ interface OrderRepositoryInterface
     /**
      * Get number of pending orders
      */
+    public function getPreparingOrders(): int;
     public function getPendingOrders(): int;
 
     /**

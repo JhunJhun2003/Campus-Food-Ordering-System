@@ -295,6 +295,16 @@ class OrderRepository implements OrderRepositoryInterface
         // die();
         return (int) ($result['count'] ?? 0);
     }
+    public function getPreparingOrders(): int
+    {
+        $sql = "SELECT COUNT(*) as count FROM orders WHERE status_id = 3";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        // var_dump($result); // Debugging line to check the result
+        // die();
+        return (int) ($result['count'] ?? 0);
+    }
 
     // ✅ ADD THIS METHOD
     public function getCompletedOrders(): int

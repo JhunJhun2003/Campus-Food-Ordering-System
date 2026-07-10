@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/auth_helper.php';
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
 // ✅ Check maintenance mode - staff cannot access during maintenance
 checkMaintenanceRedirect();
@@ -31,21 +32,19 @@ if (!$permissions['viewDashboard']) {
     exit();
 }
 
-// ... rest of your staff-dashboard.php code ...
-
 // ============================================
-// 2. BUSINESS LOGIC - GET DATA
+// 2. BUSINESS LOGIC - Use the Use Case
 // ============================================
 
-// TODO: Replace with actual repository calls
-$stats = [
-    'totalOrders' => 0,
-    'pendingOrders' => 0,
-    'preparingOrders' => 0,
-    'completedOrders' => 0,
-];
+$orderController = getOrderController();
 
-$recentOrders = [];
+// ✅ Get staff dashboard stats from the use case
+$dashboardData = $orderController->getStaffDashboardStats();
+$totalOrders = $dashboardData['totalOrders'] ?? 0;
+$pendingOrders = $dashboardData['pendingOrders'] ?? 0;
+$preparingOrders = $dashboardData['preparingOrders'] ?? 0;
+$completedOrders = $dashboardData['completedOrders'] ?? 0;
+$recentOrders = $dashboardData['recentOrders'] ?? [];
 
 // ============================================
 // 3. VIEW RENDER
@@ -78,10 +77,10 @@ include __DIR__ . '/includes/sidebar.php';
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <?php 
         $statsCards = [
-            ['label' => 'Total Orders', 'value' => $stats['totalOrders'], 'icon' => 'fa-receipt', 'color' => 'indigo'],
-            ['label' => 'Pending Orders', 'value' => $stats['pendingOrders'], 'icon' => 'fa-clock', 'color' => 'amber'],
-            ['label' => 'Preparing', 'value' => $stats['preparingOrders'], 'icon' => 'fa-utensils', 'color' => 'blue'],
-            ['label' => 'Completed', 'value' => $stats['completedOrders'], 'icon' => 'fa-check-circle', 'color' => 'emerald'],
+            ['label' => 'Total Orders', 'value' => $totalOrders, 'icon' => 'fa-receipt', 'color' => 'indigo'],
+            ['label' => 'Pending Orders', 'value' => $pendingOrders, 'icon' => 'fa-clock', 'color' => 'amber'],
+            ['label' => 'Preparing', 'value' => $preparingOrders, 'icon' => 'fa-utensils', 'color' => 'blue'],
+            ['label' => 'Completed', 'value' => $completedOrders, 'icon' => 'fa-check-circle', 'color' => 'emerald'],
         ];
         $colorClasses = [
             'indigo' => 'bg-indigo-50 text-indigo-600',
@@ -173,13 +172,25 @@ include __DIR__ . '/includes/sidebar.php';
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <?php foreach ($recentOrders as $order): ?>
+                    <?php 
+                        $statusName = strtolower($order['status_name'] ?? 'pending');
+                        $statusColors = [
+                            'pending' => 'bg-yellow-100 text-yellow-800',
+                            'accepted' => 'bg-blue-100 text-blue-800',
+                            'preparing' => 'bg-purple-100 text-purple-800',
+                            'ready' => 'bg-cyan-100 text-cyan-800',
+                            'completed' => 'bg-green-100 text-green-800',
+                            'cancelled' => 'bg-red-100 text-red-800'
+                        ];
+                        $colorClass = $statusColors[$statusName] ?? 'bg-slate-100 text-slate-800';
+                    ?>
                     <tr>
                         <td class="px-4 py-3 font-medium text-slate-900">#<?php echo $order['id']; ?></td>
-                        <td class="px-4 py-3 text-slate-600"><?php echo htmlspecialchars($order['customer_name']); ?></td>
-                        <td class="px-4 py-3 font-medium text-slate-900">$<?php echo number_format($order['total_amount'], 2); ?></td>
+                        <td class="px-4 py-3 text-slate-600"><?php echo htmlspecialchars($order['customer_name'] ?? 'Unknown'); ?></td>
+                        <td class="px-4 py-3 font-medium text-slate-900">$<?php echo number_format((float)$order['total_amount'] ?? 0, 2); ?></td>
                         <td class="px-4 py-3">
-                            <span class="status-badge <?php echo $order['status_class'] ?? 'status-pending'; ?>">
-                                <?php echo ucfirst($order['status_name'] ?? 'Pending'); ?>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $colorClass; ?>">
+                                <?php echo ucfirst($statusName); ?>
                             </span>
                         </td>
                         <td class="px-4 py-3 text-right">
