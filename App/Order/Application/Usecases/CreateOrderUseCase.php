@@ -5,6 +5,7 @@ use App\Order\Domain\Entities\Order;
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Cart\Domain\Repositories\CartRepositoryInterface;
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use Inc\Database;
 
 class CreateOrderUseCase
 {
@@ -33,15 +34,19 @@ class CreateOrderUseCase
         ?string $accountName = null,
         ?string $accountNumber = null,
         ?string $transactionImage = null
-
     ): array {
+        $db = Database::getConnection();
+        
         try {
-            // Validate
+            // ✅ Start transaction - Multiple operations must succeed together
+            $db->beginTransaction();
+            
+            // 1. Validate
             if (empty($items)) {
-                return ['success' => false, 'message' => 'Cart is empty.'];
+                throw new \Exception('Cart is empty.');
             }
 
-            // CHECK STOCK
+            // 2. CHECK STOCK
             foreach ($items as $item) {
                 $foodId = $item['food_id'];
                 $quantity = $item['quantity'];
@@ -50,26 +55,20 @@ class CreateOrderUseCase
                 if ($currentStock < $quantity) {
                     $food = $this->foodRepository->findById($foodId);
                     $foodName = $food ? $food->getName() : "Item #$foodId";
-                    return [
-                        'success' => false, 
-                        'message' => "Not enough stock for '$foodName'. Available: $currentStock"
-                    ];
+                    throw new \Exception("Not enough stock for '$foodName'. Available: $currentStock");
                 }
             }
 
-            // REDUCE STOCK
+            // 3. REDUCE STOCK
             foreach ($items as $item) {
                 $this->foodRepository->reduceStock($item['food_id'], $item['quantity']);
             }
 
-            // status_id = 1 means 'pending'
-            $statusId = 1;
-
-            // Create order entity with all fields
+            // 4. Create order (status_id = 1 means 'pending')
             $order = new Order(
                 null,
                 $userId,
-                $statusId,
+                1,
                 $total,
                 $address,
                 $paymentMethod,
@@ -80,10 +79,10 @@ class CreateOrderUseCase
                 $transactionImage
             );
 
-            // Save order
+            // 5. Save order
             $orderId = $this->orderRepository->save($order);
 
-            // Save order items
+            // 6. Save order items
             foreach ($items as $item) {
                 $this->orderRepository->addItem(
                     $orderId,
@@ -93,8 +92,11 @@ class CreateOrderUseCase
                 );
             }
 
-            // Clear cart
+            // 7. Clear cart
             $this->cartRepository->clear($userId);
+
+            // ✅ All operations succeeded, commit transaction
+            $db->commit();
 
             return [
                 'success' => true,
@@ -103,6 +105,9 @@ class CreateOrderUseCase
             ];
 
         } catch (\Exception $e) {
+            // ✅ Rollback all changes on any error
+            $db->rollBack();
+            
             return [
                 'success' => false,
                 'message' => $e->getMessage()

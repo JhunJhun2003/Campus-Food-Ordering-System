@@ -2,6 +2,7 @@
 namespace App\Food\Application\Usecases;
 
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use Inc\Database;
 
 class DeleteFoodUseCase
 {
@@ -14,19 +15,36 @@ class DeleteFoodUseCase
 
     public function execute(int $id): array
     {
+        $db = Database::getConnection();
+        
         try {
+            // ✅ Start transaction - Delete food and related records
+            $db->beginTransaction();
+            
             // Check if food exists
             $food = $this->foodRepository->findById($id);
             if (!$food) {
-                return ['success' => false, 'message' => 'Food item not found.'];
+                throw new \Exception('Food item not found.');
             }
 
             $deleted = $this->foodRepository->deleteFood($id);
+            
+            if (!$deleted) {
+                throw new \Exception('Failed to delete food item.');
+            }
+            
+            // ✅ All operations succeeded
+            $db->commit();
+            
             return [
-                'success' => $deleted,
-                'message' => $deleted ? 'Food item deleted successfully!' : 'Failed to delete food item.'
+                'success' => true,
+                'message' => 'Food item deleted successfully!'
             ];
+            
         } catch (\Exception $e) {
+            // ✅ Rollback on any error
+            $db->rollBack();
+            
             return ['success' => false, 'message' => 'Failed to delete food item: ' . $e->getMessage()];
         }
     }

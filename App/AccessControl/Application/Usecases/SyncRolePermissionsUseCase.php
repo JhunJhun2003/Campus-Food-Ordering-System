@@ -1,8 +1,8 @@
 <?php
-
 namespace App\AccessControl\Application\Usecases;
 
 use App\AccessControl\Domain\Repositories\AccessControlRepositoryInterface;
+use Inc\Database;
 
 class SyncRolePermissionsUseCase
 {
@@ -15,11 +15,29 @@ class SyncRolePermissionsUseCase
 
     public function execute(int $roleId, array $permissionIds): bool
     {
-        $role = $this->repository->getRoleById($roleId);
-        if (!$role) {
-            throw new \RuntimeException("Role with ID {$roleId} not found");
-        }
+        $db = Database::getConnection();
+        
+        try {
+            // ✅ Start transaction - Delete old and insert new permissions atomically
+            $db->beginTransaction();
+            
+            $role = $this->repository->getRoleById($roleId);
+            if (!$role) {
+                throw new \RuntimeException("Role with ID {$roleId} not found");
+            }
 
-        return $this->repository->syncRolePermissions($roleId, $permissionIds);
+            // This method should handle the sync with transaction support
+            $result = $this->repository->syncRolePermissions($roleId, $permissionIds);
+            
+            // ✅ All operations succeeded
+            $db->commit();
+            
+            return $result;
+            
+        } catch (\Exception $e) {
+            // ✅ Rollback on any error
+            $db->rollBack();
+            throw $e;
+        }
     }
 }
