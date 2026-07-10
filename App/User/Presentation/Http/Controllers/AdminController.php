@@ -18,6 +18,8 @@ class AdminController extends BaseController
     private OrderRepositoryInterface $orderRepository;
     private FoodRepositoryInterface $foodRepository;
     private UserController $userController;
+    private GetSettingsUseCase $getSettingsUseCase;
+    private UpdateSettingsUseCase $updateSettingsUseCase;
 
     public function __construct(
         UserRepositoryInterface $userRepository,
@@ -30,6 +32,10 @@ class AdminController extends BaseController
         $this->orderRepository = $orderRepository;
         $this->foodRepository = $foodRepository;
         $this->userController = $userController;
+        
+        // ✅ Initialize settings use cases
+        $this->getSettingsUseCase = new GetSettingsUseCase($userRepository);
+        $this->updateSettingsUseCase = new UpdateSettingsUseCase($userRepository);
     }
 
     /**
@@ -69,28 +75,42 @@ class AdminController extends BaseController
     // SETTINGS METHODS - Admin only
     // ============================================
 
+    /**
+     * Get all settings
+     */
     public function getSettings(): array
     {
         $this->authorize('manage_settings');
         return $this->userRepository->getAllSettings();
     }
 
-    // public function updateSettingsFromRequest(): array
-    // {
-    //     $this->authorize('manage_settings');
+    /**
+     * Update settings from request data
+     */
+    public function updateSettingsFromRequest(): array
+    {
+        $this->authorize('manage_settings');
         
-    //     $postData = array_filter($_POST, function($key) {
-    //         return strpos($key, 'setting_') === 0;
-    //     }, ARRAY_FILTER_USE_KEY);
+        $postData = array_filter($_POST, function($key) {
+            return strpos($key, 'setting_') === 0;
+        }, ARRAY_FILTER_USE_KEY);
         
-    //     $settingsToUpdate = [];
-    //     foreach ($postData as $key => $value) {
-    //         $cleanKey = str_replace('setting_', '', $key);
-    //         $settingsToUpdate[$cleanKey] = trim($value);
-    //     }
+        $settingsToUpdate = [];
+        foreach ($postData as $key => $value) {
+            $cleanKey = str_replace('setting_', '', $key);
+            $settingsToUpdate[$cleanKey] = trim($value);
+        }
         
-    //     return $this->userRepository->updateSettings($settingsToUpdate);
-    // }
+        $result = $this->userRepository->updateSettings($settingsToUpdate);
+        
+        // ✅ If maintenance mode was changed, log it
+        if (isset($settingsToUpdate['maintenance_mode'])) {
+            $status = $settingsToUpdate['maintenance_mode'] == '1' ? 'ON' : 'OFF';
+            $_SESSION['success'] = "Maintenance mode turned {$status}";
+        }
+        
+        return $result;
+    }
 
     // ============================================
     // USER MANAGEMENT - Admin only
@@ -206,31 +226,4 @@ class AdminController extends BaseController
             return ['success' => false, 'message' => 'Failed to fetch users: ' . $e->getMessage(), 'users' => []];
         }
     }
-    /**
- * Update settings - Admin only
- */
-public function updateSettingsFromRequest(): array
-{
-    $this->authorize('manage_settings');
-    
-    $postData = array_filter($_POST, function($key) {
-        return strpos($key, 'setting_') === 0;
-    }, ARRAY_FILTER_USE_KEY);
-    
-    $settingsToUpdate = [];
-    foreach ($postData as $key => $value) {
-        $cleanKey = str_replace('setting_', '', $key);
-        $settingsToUpdate[$cleanKey] = trim($value);
-    }
-    
-    $result = $this->userRepository->updateSettings($settingsToUpdate);
-    
-    // ✅ If maintenance mode was changed, log it
-    if (isset($settingsToUpdate['maintenance_mode'])) {
-        $status = $settingsToUpdate['maintenance_mode'] == '1' ? 'ON' : 'OFF';
-        $_SESSION['success'] = "Maintenance mode turned {$status}";
-    }
-    
-    return $result;
-}
 }
