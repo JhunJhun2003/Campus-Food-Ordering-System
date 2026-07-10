@@ -9,10 +9,10 @@ use App\Order\Application\Usecases\GetUserOrdersUseCase;
 use App\Order\Application\Usecases\ReorderItemsUseCase;
 use App\Order\Application\Usecases\UpdateOrderStatusUseCase;
 use App\Order\Application\Usecases\GetStaffDashboardStatsUseCase;
-
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Cart\Domain\Repositories\CartRepositoryInterface;
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use App\Payment\Application\Services\PaymentService;
 use App\Shared\Presentation\Http\Controllers\BaseController;
 
 class OrderController extends BaseController
@@ -26,6 +26,7 @@ class OrderController extends BaseController
     private UpdateOrderStatusUseCase $updateOrderStatusUseCase;
     private ReorderItemsUseCase $reorderItemsUseCase;
     private GetStaffDashboardStatsUseCase $getStaffDashboardStatsUseCase;
+    private PaymentService $paymentService;
 
     public function __construct(
         OrderRepositoryInterface $orderRepository,
@@ -36,7 +37,8 @@ class OrderController extends BaseController
         CreateOrderUseCase $createOrderUseCase,
         UpdateOrderStatusUseCase $updateOrderStatusUseCase,
         ReorderItemsUseCase $reorderItemsUseCase,
-        GetStaffDashboardStatsUseCase $getStaffDashboardStatsUseCase
+        GetStaffDashboardStatsUseCase $getStaffDashboardStatsUseCase,
+        PaymentService $paymentService
     ) {
         parent::__construct();
         $this->orderRepository = $orderRepository;
@@ -48,6 +50,7 @@ class OrderController extends BaseController
         $this->updateOrderStatusUseCase = $updateOrderStatusUseCase;
         $this->reorderItemsUseCase = $reorderItemsUseCase;
         $this->getStaffDashboardStatsUseCase = $getStaffDashboardStatsUseCase;
+        $this->paymentService = $paymentService;
     }
 
     /**
@@ -79,6 +82,7 @@ class OrderController extends BaseController
 
     /**
      * Create order - Customers can place orders
+     * Uses PaymentService to handle payment creation
      */
     public function createOrder(
         int $userId,
@@ -99,7 +103,13 @@ class OrderController extends BaseController
             throw new \RuntimeException('Cannot create order for another user', 403);
         }
         
-        return $this->createOrderUseCase->execute(
+        // Ensure all values are strings
+        $accountName = $accountName ?? '';
+        $accountNumber = $accountNumber ?? '';
+        $transactionImage = $transactionImage ?? '';
+        
+        // Create the order
+        $result = $this->createOrderUseCase->execute(
             $userId,
             $items,
             $total,
@@ -111,6 +121,18 @@ class OrderController extends BaseController
             $accountNumber,
             $transactionImage
         );
+        
+        // If order created successfully, create payment record using PaymentService
+        if ($result['success'] && isset($result['order_id'])) {
+            $this->paymentService->createPaymentForOrder(
+                $result['order_id'],
+                $paymentMethod,
+                $total,
+                $transactionImage
+            );
+        }
+        
+        return $result;
     }
 
     /**
@@ -139,28 +161,20 @@ class OrderController extends BaseController
         return $this->orderRepository->getOrderStatuses();
     }
 
-/**
- * Get order items - Users can view their own, staff/admin can view any
- */
-public function getOrderItems(int $orderId): array
-{
-    // ✅ First, get the order to check ownership
-    $order = $this->orderRepository->findById($orderId);
-    
-    // ✅ Check if order exists
-    if (!$order) {
-        throw new \RuntimeException('Order not found', 404);
+    /**
+     * Get order items - Users can view their own, staff/admin can view any
+     */
+    public function getOrderItems(int $orderId): array
+    {
+        $order = $this->orderRepository->findById($orderId);
+        if (!$order) {
+            throw new \RuntimeException('Order not found', 404);
+        }
+        
+        $userId = $order->getUserId();
+        $this->authorizeResource($userId, 'view_orders');
+        return $this->orderRepository->getOrderItems($orderId);
     }
-    
-    // ✅ Check if user has access to this order
-    $userId = $order->getUserId(); // If Order object has getUserId()
-    // OR if it's an array: $userId = $order['user_id'] ?? 0;
-    
-    $this->authorizeResource($userId, 'view_orders');
-    
-    // ✅ Return the order items (array)
-    return $this->orderRepository->getOrderItems($orderId);
-}
 
     /**
      * Get total orders count - Staff/Admin only
@@ -181,16 +195,34 @@ public function getOrderItems(int $orderId): array
     }
 
     /**
+     * Get preparing orders count - Staff/Admin only
+     */
+    public function getPreparingOrders(): int
+    {
+        $this->authorizeAny(['view_reports', 'manage_orders']);
+        return $this->getStaffDashboardStatsUseCase->getPreparingOrders();
+    }
+
+    /**
+     * Get completed orders count - Staff/Admin only
+     */
+    public function getCompletedOrders(): int
+    {
+        $this->authorizeAny(['view_reports', 'manage_orders']);
+        return $this->getStaffDashboardStatsUseCase->getCompletedOrders();
+    }
+
+    /**
      * Get single order - Users can view their own, staff/admin can view any
      */
-    public function getOrder(int $orderId)
+    public function getOrder(int $orderId): object
     {
         $order = $this->orderRepository->findById($orderId);
         if (!$order) {
             throw new \RuntimeException('Order not found', 404);
         }
         
-        $this->authorizeResource($order['user_id'] ?? 0, 'view_orders');
+        $this->authorizeResource($order->getUserId(), 'view_orders');
         return $order;
     }
 
@@ -217,15 +249,16 @@ public function getOrderItems(int $orderId): array
             throw new \RuntimeException('Order not found', 404);
         }
         
-        $this->authorizeResource($order['user_id'] ?? 0, 'update_order_status');
+        $this->authorizeResource($order->getUserId(), 'update_order_status');
         
-        if (($order['status_id'] ?? 0) !== 1) {
+        if ($order->getStatusId() !== 1) {
             throw new \RuntimeException('Only pending orders can be cancelled', 400);
         }
         
-        return $this->updateOrderStatusUseCase->execute($orderId, 6); // 6 = cancelled
+        return $this->updateOrderStatusUseCase->execute($orderId, 6);
     }
-     /**
+
+    /**
      * Get staff dashboard statistics - Staff/Admin only
      */
     public function getStaffDashboardStats(): array
@@ -235,48 +268,38 @@ public function getOrderItems(int $orderId): array
     }
 
     /**
-     * Get total orders count - Staff/Admin only
+     * Get order with payment details for staff view
+     * Uses PaymentService to get payment information
      */
-    // public function getTotalOrders(): int
-    // {
-    //     $this->authorizeAny(['view_reports', 'manage_orders']);
-    //     return $this->getStaffDashboardStatsUseCase->getTotalOrders();
-    // }
-
-    /**
-     * Get pending orders count - Staff/Admin only
-     */
-    // public function getPendingOrders(): int
-    // {
-    //     $this->authorizeAny(['view_reports', 'manage_orders']);
-    //     return $this->getStaffDashboardStatsUseCase->getPendingOrders();
-    // }
-
-    /**
-     * Get preparing orders count - Staff/Admin only
-     */
-    public function getPreparingOrders(): int
+    public function getOrderWithDetails(int $orderId): ?array
     {
-        $this->authorizeAny(['view_reports', 'manage_orders']);
-        return $this->getStaffDashboardStatsUseCase->getPreparingOrders();
+        $this->authorizeAny(['manage_orders', 'view_orders']);
+        
+        $order = $this->orderRepository->findById($orderId);
+        if (!$order) {
+            throw new \RuntimeException('Order not found', 404);
+        }
+        
+        // Get payment details using PaymentService
+        $payment = $this->paymentService->getPaymentByOrderId($orderId);
+        
+        // If no payment record, assume COD
+        if (!$payment) {
+            $payment = [
+                'payment_method_name' => 'Cash on Delivery',
+                'payment_account_name' => null,
+                'payment_account_number' => null,
+                'payment_status_name' => 'pending',
+                'payment_amount' => $order->getTotalAmount(),
+                'transaction_no' => null,
+                'transaction_image' => null
+            ];
+        }
+        
+        return [
+            'order' => $order,
+            'payment' => $payment,
+            'items' => $this->orderRepository->getOrderItems($orderId)
+        ];
     }
-
-    /**
-     * Get completed orders count - Staff/Admin only
-     */
-    public function getCompletedOrders(): int
-    {
-        $this->authorizeAny(['view_reports', 'manage_orders']);
-        return $this->getStaffDashboardStatsUseCase->getCompletedOrders();
-    }
-
-    /**
-     * Get recent orders - Staff/Admin only
-     */
-    // public function getRecentOrders(int $limit = 5): array
-    // {
-    //     $this->authorizeAny(['view_reports', 'manage_orders', 'view_orders']);
-    //     return $this->getStaffDashboardStatsUseCase->getRecentOrders($limit);
-    // }
-
 }

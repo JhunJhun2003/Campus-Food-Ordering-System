@@ -7,13 +7,14 @@ use App\Order\Application\Usecases\GetUserOrdersUseCase;
 use App\Order\Application\Usecases\ReorderItemsUseCase;
 use App\Order\Application\Usecases\UpdateOrderStatusUseCase;
 use App\Order\Application\Usecases\GetStaffDashboardStatsUseCase;
+use App\Payment\Application\Services\PaymentService;
 use App\Order\Infrastructure\Repositories\OrderRepository;
 use App\Cart\Infrastructure\Repositories\CartRepository;
 use App\Food\Infrastructure\Repositories\FoodRepository;
 use App\Cart\Presentation\Http\Controllers\CartControllerFactory;
 use App\Food\Presentation\Http\Controllers\FoodControllerFactory;
 use App\Payment\Presentation\Http\Controllers\PaymentControllerFactory;
-
+use App\Payment\Infrastructure\Repositories\PaymentRepository;
 /**
  * Get Order Controller with all dependencies injected
  */
@@ -26,6 +27,7 @@ function getOrderController(): OrderController
         $orderRepository = new OrderRepository();
         $cartRepository = new CartRepository();
         $foodRepository = new FoodRepository();
+        $paymentRepository = new PaymentRepository();
 
         // Use Cases
         $getAllOrdersUseCase = new GetAllOrdersUseCase($orderRepository);
@@ -41,6 +43,7 @@ function getOrderController(): OrderController
             $cartRepository
         );
 $getStaffDashboardStatsUseCase = new GetStaffDashboardStatsUseCase($orderRepository);
+$paymentService = new PaymentService($paymentRepository);
         $instance = new OrderController(
             $orderRepository,
             $cartRepository,
@@ -50,7 +53,8 @@ $getStaffDashboardStatsUseCase = new GetStaffDashboardStatsUseCase($orderReposit
             $createOrderUseCase,
             $updateOrderStatusUseCase,
             $reorderItemsUseCase,
-            $getStaffDashboardStatsUseCase  
+            $getStaffDashboardStatsUseCase  ,
+            $paymentService 
         );
     }
     

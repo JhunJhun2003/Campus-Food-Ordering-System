@@ -10,7 +10,7 @@ session_start();
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
-require_once __DIR__ . '/../../inc/order_helpers.php'; // ✅ ADD THIS
+require_once __DIR__ . '/../../inc/order_helpers.php';
 
 // ✅ Check maintenance mode - staff cannot access during maintenance
 checkMaintenanceRedirect();
@@ -72,7 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         try {
             $orderRepository = new \App\Order\Infrastructure\Repositories\OrderRepository();
-            $order = $orderRepository->findById($orderId);
+            
+            // ✅ Use the new method that includes payment details
+            $order = $orderRepository->findByIdWithDetails($orderId);
             
             if (!$order) {
                 echo json_encode(['success' => false, 'message' => 'Order not found.']);
@@ -80,31 +82,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
             
             $items = $orderRepository->getOrderItems($orderId);
-            $statuses = $orderController->getStatuses();
-            $statusName = '';
-            foreach ($statuses as $status) {
-                if ($status['id'] == $order->getStatusId()) {
-                    $statusName = $status['status_name'];
-                    break;
-                }
-            }
+            
+            // Get status name from the order data
+            $statusName = $order['status_name'] ?? 'pending';
+            
+            // ✅ Get payment details
+            $paymentMethod = $order['payment_method_name'] ?? 'Cash on Delivery';
+            $accountName = $order['payment_account_name'] ?? '';
+            $accountNumber = $order['payment_account_number'] ?? '';
+            $transactionNo = $order['transaction_no'] ?? '';
+            $paymentStatus = $order['payment_status_name'] ?? '';
+            $isCOD = $paymentMethod === 'Cash on Delivery';
             
             echo json_encode([
                 'success' => true,
                 'order' => [
-                    'id' => $order->getId(),
-                    'order_date' => $order->getOrderDate()->format('Y-m-d H:i:s'),
-                    'customer_name' => $order->getCustomerName() ?? 'Unknown',
-                    'customer_phone' => $order->getCustomerPhone() ?? 'N/A',
-                    'delivery_address' => $order->getDeliveryAddress() ?? 'N/A',
-                    'payment_method' => $order->getPaymentMethod() ?? 'N/A',
-                    'account_name' => $order->getAccountName() ?? 'N/A',
-                    'account_number' => $order->getAccountNumber() ?? 'N/A',
-                    'transaction_image' => $order->getTransactionImage() ?? null,
-                    'total_amount' => $order->getTotalAmount(),
+                    'id' => $order['id'],
+                    'order_date' => $order['order_date'],
+                    'customer_name' => $order['customer_name'] ?? $order['customer_name_from_user'] ?? 'Unknown',
+                    'customer_phone' => $order['customer_phone'] ?? $order['customer_phone_from_user'] ?? 'N/A',
+                    'delivery_address' => $order['delivery_address'] ?? 'N/A',
+                    'payment_method' => $paymentMethod,
+                    'account_name' => $accountName,
+                    'account_number' => $accountNumber,
+                    'transaction_no' => $transactionNo,
+                    'payment_status' => $paymentStatus,
+                    'is_cod' => $isCOD,
+                    'total_amount' => $order['total_amount'],
                     'items' => $items,
-                    'status_id' => $order->getStatusId(),
-                    'status_name' => $statusName
+                    'status_id' => $order['status_id'],
+                    'status_name' => $statusName,
+                    // ✅ ADD THIS LINE:
+                    'transaction_image' => $order['transaction_image'] ?? null
                 ]
             ]);
             
@@ -117,8 +126,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 $orders = $orderController->index();
 $statuses = $orderController->getStatuses();
-
-// ... rest of your staff-orders.php code (unchanged) ...
 
 // ============================================
 // 3. VIEW RENDER
@@ -449,30 +456,176 @@ function renderOrderDetails(order) {
     let itemsHtml = '';
     if (order.items && order.items.length > 0) {
         order.items.forEach(item => {
-            itemsHtml += `<div class="order-item-row"><span>${item.food_name} (Qty: ${item.quantity})</span><span class="font-medium">$${parseFloat(item.subtotal).toFixed(2)}</span></div>`;
+            itemsHtml += `
+                <div class="order-item-row">
+                    <span>${item.food_name} (Qty: ${item.quantity})</span>
+                    <span class="font-medium">$${parseFloat(item.subtotal).toFixed(2)}</span>
+                </div>
+            `;
         });
     } else {
         itemsHtml = '<p class="text-sm text-slate-400">No items found</p>';
     }
     
-    let imageHtml = order.transaction_image 
-        ? `<img src="/Campus-Food-Ordering-System/Public/uploads/transactions/${order.transaction_image}" class="max-w-[200px] max-h-[200px] rounded-lg border border-slate-200" alt="Transaction Image" onerror="this.style.display='none'">`
-        : '<span class="text-slate-400 text-sm italic">No transaction image uploaded</span>';
+    // ✅ Check if payment method is Cash on Delivery or digital
+    const paymentMethod = order.payment_method || 'Cash on Delivery';
+    const accountName = order.account_name || '';
+    const accountNumber = order.account_number || '';
+    const transactionNo = order.transaction_no || '';
+    const paymentStatus = order.payment_status || '';
+    const isCOD = paymentMethod === 'Cash on Delivery';
+    
+    // ✅ Build payment section based on payment type
+    let paymentHtml = '';
+    if (isCOD) {
+        paymentHtml = `
+            <div class="detail-row">
+                <span class="detail-label">Payment Method</span>
+                <span class="detail-value">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <i class="fa-solid fa-truck mr-1.5"></i> Cash on Delivery
+                    </span>
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Payment Status</span>
+                <span class="detail-value">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Pending (Pay upon delivery)
+                    </span>
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Account Details</span>
+                <span class="detail-value text-slate-400 text-sm italic">Not applicable for Cash on Delivery</span>
+            </div>
+        `;
+    } else {
+        paymentHtml = `
+            <div class="detail-row">
+                <span class="detail-label">Payment Method</span>
+                <span class="detail-value">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <i class="fa-solid fa-credit-card mr-1.5"></i> ${paymentMethod}
+                    </span>
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Payment Status</span>
+                <span class="detail-value">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                        ${paymentStatus ? paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1) : 'Pending'}
+                    </span>
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Account Name</span>
+                <span class="detail-value font-medium">${accountName || 'N/A'}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Account Number</span>
+                <span class="detail-value font-mono text-sm">${accountNumber || 'N/A'}</span>
+            </div>
+            ${transactionNo ? `<div class="detail-row"><span class="detail-label">Transaction No.</span><span class="detail-value font-mono text-sm">${transactionNo}</span></div>` : ''}
+        `;
+    }
+    
+    // ✅ Transaction Image Section
+    let imageHtml = '';
+    const imagePath = order.transaction_image || '';
+    
+    if (imagePath && imagePath !== 'N/A' && imagePath !== '') {
+        const imageUrl = '/Campus-Food-Ordering-System/Public/' + imagePath;
+        
+        imageHtml = `
+            <div class="border-t border-slate-100 pt-3">
+                <h3 class="font-semibold text-slate-900 text-sm mb-2">Transaction Image</h3>
+                <div class="bg-slate-50 rounded-lg p-3 text-center">
+                    <div class="flex flex-col items-center">
+                        <img src="${imageUrl}" 
+                             class="max-w-[300px] max-h-[300px] rounded-lg border border-slate-200 shadow-sm object-cover" 
+                             alt="Transaction Image"
+                             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'text-center py-4\\'><i class=\\'fa-regular fa-image text-3xl text-red-300 mb-2 block\\'></i><span class=\\'text-sm text-red-500\\'>Image not found</span></div>'">
+                        <div class="mt-2 flex gap-3">
+                            <a href="${imageUrl}" target="_blank" 
+                               class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                                <i class="fa-regular fa-eye mr-1"></i> View Full Size
+                            </a>
+                            <a href="${imageUrl}" download 
+                               class="text-xs text-slate-500 hover:text-slate-700 font-medium">
+                                <i class="fa-regular fa-download mr-1"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (isCOD) {
+        imageHtml = `
+            <div class="border-t border-slate-100 pt-3">
+                <h3 class="font-semibold text-slate-900 text-sm mb-2">Transaction Image</h3>
+                <div class="bg-slate-50 rounded-lg p-3 text-center">
+                    <span class="text-sm text-slate-400 italic">Cash on Delivery - No image required</span>
+                </div>
+            </div>
+        `;
+    } else {
+        imageHtml = `
+            <div class="border-t border-slate-100 pt-3">
+                <h3 class="font-semibold text-slate-900 text-sm mb-2">Transaction Image</h3>
+                <div class="bg-slate-50 rounded-lg p-3 text-center">
+                    <span class="text-sm text-slate-400 italic">No transaction image uploaded</span>
+                </div>
+            </div>
+        `;
+    }
     
     document.getElementById('orderDetailsContent').innerHTML = `
         <div class="space-y-4">
-            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}">${order.status_name || 'N/A'}</span></span></div>
-            <div class="detail-row"><span class="detail-label">Order ID</span><span class="detail-value font-medium">#${order.id}</span></div>
-            <div class="detail-row"><span class="detail-label">Customer Name</span><span class="detail-value">${order.customer_name}</span></div>
-            <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${order.customer_phone}</span></div>
-            <div class="detail-row"><span class="detail-label">Delivery Address</span><span class="detail-value">${order.delivery_address}</span></div>
-            <div class="detail-row"><span class="detail-label">Payment Method</span><span class="detail-value">${order.payment_method}</span></div>
-            <div class="detail-row"><span class="detail-label">Account Name</span><span class="detail-value">${order.account_name}</span></div>
-            <div class="detail-row"><span class="detail-label">Account Number</span><span class="detail-value">${order.account_number}</span></div>
-            <div class="detail-row"><span class="detail-label">Transaction Image</span><span class="detail-value">${imageHtml}</span></div>
-            <div class="border-t border-slate-100 pt-3"><h3 class="font-semibold text-slate-900 text-sm mb-2">Order Items</h3><div class="bg-slate-50 rounded-lg p-3">${itemsHtml}</div></div>
-            <div class="border-t border-slate-100 pt-3 flex justify-between font-bold text-slate-900"><span>Total Amount</span><span class="text-emerald-600">$${parseFloat(order.total_amount).toFixed(2)}</span></div>
-            <div class="text-xs text-slate-400 text-right border-t border-slate-100 pt-3">Order placed: ${new Date(order.order_date).toLocaleString()}</div>
+            <div class="detail-row">
+                <span class="detail-label">Status</span>
+                <span class="detail-value">
+                    <span class="inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}">
+                        ${order.status_name || 'N/A'}
+                    </span>
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Order ID</span>
+                <span class="detail-value font-medium">#${order.id}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Customer Name</span>
+                <span class="detail-value">${order.customer_name}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Phone</span>
+                <span class="detail-value">${order.customer_phone}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Delivery Address</span>
+                <span class="detail-value">${order.delivery_address}</span>
+            </div>
+            
+            ${paymentHtml}
+            
+            <div class="border-t border-slate-100 pt-3">
+                <h3 class="font-semibold text-slate-900 text-sm mb-2">Order Items</h3>
+                <div class="bg-slate-50 rounded-lg p-3">
+                    ${itemsHtml}
+                </div>
+            </div>
+            
+            ${imageHtml}
+            
+            <div class="border-t border-slate-100 pt-3 flex justify-between font-bold text-slate-900">
+                <span>Total Amount</span>
+                <span class="text-emerald-600">$${parseFloat(order.total_amount).toFixed(2)}</span>
+            </div>
+            
+            <div class="text-xs text-slate-400 text-right border-t border-slate-100 pt-3">
+                Order placed: ${new Date(order.order_date).toLocaleString()}
+            </div>
         </div>
     `;
 }

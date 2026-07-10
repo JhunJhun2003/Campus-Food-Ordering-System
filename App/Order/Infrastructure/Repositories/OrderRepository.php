@@ -88,6 +88,63 @@ class OrderRepository implements OrderRepositoryInterface
         return $data ? $this->hydrate($data) : null;
     }
 
+    /**
+     * Find order by ID with payment details (for staff/order details view)
+     */
+    /**
+ * Find order by ID with payment details
+ */
+public function findByIdWithDetails(int $id): ?array
+{
+    $sql = "SELECT 
+                o.*,
+                os.status_name,
+                u.name as customer_name_from_user,
+                u.phone as customer_phone_from_user,
+                p.id as payment_id,
+                p.payment_method_id,
+                p.payment_status_id,
+                p.amount as payment_amount,
+                p.transaction_no,
+                p.transaction_image,  -- ✅ Add this
+                p.payment_date,
+                pm.method_name as payment_method_name,
+                pm.account_name as payment_account_name,
+                pm.account_number as payment_account_number,
+                ps.status_name as payment_status_name
+            FROM orders o
+            LEFT JOIN order_statuses os ON o.status_id = os.id
+            LEFT JOIN users u ON o.user_id = u.id
+            LEFT JOIN payments p ON o.id = p.order_id
+            LEFT JOIN payment_methods pm ON p.payment_method_id = pm.id
+            LEFT JOIN payment_statuses ps ON p.payment_status_id = ps.id
+            WHERE o.id = :id";
+    
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':id' => $id]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$order) {
+        return null;
+    }
+    
+    // If no payment record exists, assume Cash on Delivery
+    if ($order['payment_method_name'] === null) {
+        $order['payment_method_name'] = 'Cash on Delivery';
+        $order['payment_account_name'] = null;
+        $order['payment_account_number'] = null;
+        $order['payment_status_name'] = 'pending';
+        $order['payment_amount'] = $order['total_amount'];
+        $order['payment_method_id'] = 1;
+        $order['transaction_image'] = null;  // ✅ No image for COD
+    }
+    
+    // Get order items
+    $order['items'] = $this->getOrderItems($id);
+    
+    return $order;
+}
+
     public function findAll(): array
     {
         $sql = "SELECT o.*, 
@@ -226,7 +283,6 @@ class OrderRepository implements OrderRepositoryInterface
         ]);
     }
 
-    // ✅ ADD THIS METHOD
     public function saveItems(int $orderId, array $items): void
     {
         $sql = "DELETE FROM order_items WHERE order_id = :order_id";
@@ -291,29 +347,23 @@ class OrderRepository implements OrderRepositoryInterface
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        // var_dump($result); // Debugging line to check the result
-        // die();
         return (int) ($result['count'] ?? 0);
     }
+
     public function getPreparingOrders(): int
     {
         $sql = "SELECT COUNT(*) as count FROM orders WHERE status_id = 3";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        // var_dump($result); // Debugging line to check the result
-        // die();
         return (int) ($result['count'] ?? 0);
     }
 
-    // ✅ ADD THIS METHOD
     public function getCompletedOrders(): int
     {
         $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM orders WHERE status_id = 5");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        // var_dump($result); // Debugging line to check the result
-        // die();
         return (int) ($result['count'] ?? 0);
     }
 
@@ -330,7 +380,6 @@ class OrderRepository implements OrderRepositoryInterface
         return (int) ($result['count'] ?? 0);
     }
 
-    // ✅ ADD THIS METHOD
     public function getTotalRevenue(): float
     {
         $stmt = $this->db->query("
@@ -345,7 +394,6 @@ class OrderRepository implements OrderRepositoryInterface
         return (float) ($result['total'] ?? 0);
     }
 
-    // ✅ ADD THIS METHOD
     public function getMonthlyRevenue(int $months = 6): array
     {
         $sql = "SELECT 
@@ -378,7 +426,6 @@ class OrderRepository implements OrderRepositoryInterface
         return $chartData;
     }
 
-    // ✅ ADD THIS METHOD
     public function getOrderStats(): array
     {
         $sql = "SELECT 
