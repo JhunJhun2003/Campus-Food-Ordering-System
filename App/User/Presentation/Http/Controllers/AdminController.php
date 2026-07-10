@@ -75,22 +75,22 @@ class AdminController extends BaseController
         return $this->userRepository->getAllSettings();
     }
 
-    public function updateSettingsFromRequest(): array
-    {
-        $this->authorize('manage_settings');
+    // public function updateSettingsFromRequest(): array
+    // {
+    //     $this->authorize('manage_settings');
         
-        $postData = array_filter($_POST, function($key) {
-            return strpos($key, 'setting_') === 0;
-        }, ARRAY_FILTER_USE_KEY);
+    //     $postData = array_filter($_POST, function($key) {
+    //         return strpos($key, 'setting_') === 0;
+    //     }, ARRAY_FILTER_USE_KEY);
         
-        $settingsToUpdate = [];
-        foreach ($postData as $key => $value) {
-            $cleanKey = str_replace('setting_', '', $key);
-            $settingsToUpdate[$cleanKey] = trim($value);
-        }
+    //     $settingsToUpdate = [];
+    //     foreach ($postData as $key => $value) {
+    //         $cleanKey = str_replace('setting_', '', $key);
+    //         $settingsToUpdate[$cleanKey] = trim($value);
+    //     }
         
-        return $this->userRepository->updateSettings($settingsToUpdate);
-    }
+    //     return $this->userRepository->updateSettings($settingsToUpdate);
+    // }
 
     // ============================================
     // USER MANAGEMENT - Admin only
@@ -206,4 +206,31 @@ class AdminController extends BaseController
             return ['success' => false, 'message' => 'Failed to fetch users: ' . $e->getMessage(), 'users' => []];
         }
     }
+    /**
+ * Update settings - Admin only
+ */
+public function updateSettingsFromRequest(): array
+{
+    $this->authorize('manage_settings');
+    
+    $postData = array_filter($_POST, function($key) {
+        return strpos($key, 'setting_') === 0;
+    }, ARRAY_FILTER_USE_KEY);
+    
+    $settingsToUpdate = [];
+    foreach ($postData as $key => $value) {
+        $cleanKey = str_replace('setting_', '', $key);
+        $settingsToUpdate[$cleanKey] = trim($value);
+    }
+    
+    $result = $this->userRepository->updateSettings($settingsToUpdate);
+    
+    // ✅ If maintenance mode was changed, log it
+    if (isset($settingsToUpdate['maintenance_mode'])) {
+        $status = $settingsToUpdate['maintenance_mode'] == '1' ? 'ON' : 'OFF';
+        $_SESSION['success'] = "Maintenance mode turned {$status}";
+    }
+    
+    return $result;
+}
 }

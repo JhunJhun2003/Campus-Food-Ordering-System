@@ -9,6 +9,11 @@ session_start();
 
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
+require_once __DIR__ . '/../../inc/order_helpers.php'; // ✅ ADD THIS
+
+// ✅ Check maintenance mode - staff cannot access during maintenance
+checkMaintenanceRedirect();
 
 requireStaffAuth();
 
@@ -29,9 +34,8 @@ if (!$permissions['viewOrders']) {
 // 2. BUSINESS LOGIC
 // ============================================
 
-use App\Order\Presentation\Http\Controllers\OrderController;
-
-$orderController = new OrderController();
+// ✅ Use the helper function instead of creating a new instance
+$orderController = getOrderController();
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -113,6 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 $orders = $orderController->index();
 $statuses = $orderController->getStatuses();
+
+// ... rest of your staff-orders.php code (unchanged) ...
 
 // ============================================
 // 3. VIEW RENDER

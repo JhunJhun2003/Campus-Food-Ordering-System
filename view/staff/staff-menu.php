@@ -9,6 +9,11 @@ session_start();
 
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
+require_once __DIR__ . '/../../inc/order_helpers.php'; // ✅ ADD THIS if exists, or create it
+
+// ✅ Check maintenance mode - staff cannot access during maintenance
+checkMaintenanceRedirect();
 
 requireStaffAuth();
 
@@ -29,9 +34,8 @@ if (!$permissions['viewMenu']) {
 // 2. BUSINESS LOGIC
 // ============================================
 
-use App\Food\Presentation\Http\Controllers\FoodController;
-
-$foodController = new FoodController();
+// ✅ Use the helper function
+$foodController = getFoodController();
 
 // Block modifications if user doesn't have management permissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$permissions['manageMenu']) {
@@ -46,6 +50,8 @@ $editFood = $result['editFood'] ?? null;
 
 $foods = $foodController->index();
 $categories = $foodController->getCategories();
+
+// ... rest of your staff-menu.php code (unchanged) ...
 
 // ============================================
 // 3. VIEW RENDER

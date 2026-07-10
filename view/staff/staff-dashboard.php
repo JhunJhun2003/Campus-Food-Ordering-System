@@ -11,6 +11,10 @@ session_start();
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/auth_helper.php';
 require_once __DIR__ . '/includes/permissions.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
+
+// ✅ Check maintenance mode - staff cannot access during maintenance
+checkMaintenanceRedirect();
 
 requireStaffAuth();
 
@@ -26,6 +30,8 @@ if (!$permissions['viewDashboard']) {
     header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
     exit();
 }
+
+// ... rest of your staff-dashboard.php code ...
 
 // ============================================
 // 2. BUSINESS LOGIC - GET DATA

@@ -440,3 +440,37 @@ function getAccessControlController(): AccessControlController
     
     return $instance;
 }
+
+/**
+ * Check if maintenance mode is enabled
+ */
+function isMaintenanceMode(): bool
+{
+    try {
+        $db = \Inc\Database::getConnection();
+        $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'maintenance_mode'");
+        $stmt->execute();
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $result && (int) $result['setting_value'] === 1;
+    } catch (\Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Redirect to maintenance page if maintenance mode is ON and user is not admin
+ */
+function checkMaintenanceRedirect(): void
+{
+    // Admin can always access
+    if (isAdmin()) {
+        return;
+    }
+    
+    // Check if maintenance is ON
+    if (isMaintenanceMode()) {
+        $_SESSION['maintenance_message'] = 'The system is currently under maintenance. Please try again later.';
+        header('Location: /Campus-Food-Ordering-System/view/maintenance/maintenance.php');
+        exit();
+    }
+}

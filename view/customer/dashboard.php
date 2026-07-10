@@ -11,7 +11,11 @@ require_once __DIR__ . '/../../inc/user_helpers.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 
+
+// ✅ Check maintenance mode
+checkMaintenanceRedirect();
 // Guest access is allowed on the dashboard. No requireCustomerAuth() check is needed here.
+
 // ✅ Redirect admin/staff away from customer dashboard
 redirectAdminStaffFromCustomer();
 
