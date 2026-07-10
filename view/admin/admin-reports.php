@@ -75,7 +75,9 @@ include __DIR__ . '/includes/sidebar.php';
             </div>
         </div>
         <div class="flex items-baseline space-x-2">
-            <span class="text-3xl font-extrabold text-slate-900"><?php echo $totalOrders; ?></span>
+            <span class="text-3xl font-extrabold text-slate-900"><?php
+           
+            echo $totalOrders; ?></span>
         </div>
     </div>
 

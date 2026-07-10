@@ -291,6 +291,8 @@ class OrderRepository implements OrderRepositoryInterface
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        // var_dump($result); // Debugging line to check the result
+        // die();
         return (int) ($result['count'] ?? 0);
     }
 
@@ -300,6 +302,8 @@ class OrderRepository implements OrderRepositoryInterface
         $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM orders WHERE status_id = 5");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        // var_dump($result); // Debugging line to check the result
+        // die();
         return (int) ($result['count'] ?? 0);
     }
 

@@ -57,7 +57,9 @@ class AdminController extends BaseController
         
         return [
             'total_revenue' => $this->orderRepository->getTotalRevenue(),
+            'total_orders' => $this->orderRepository->getTotalOrders(),
             'completed_orders' => $this->orderRepository->getCompletedOrders(),
+            'pending_orders' => $this->orderRepository->getPendingOrders(),
             'monthly_revenue' => $this->orderRepository->getMonthlyRevenue(6),
             'order_stats' => $this->orderRepository->getOrderStats(),
         ];
