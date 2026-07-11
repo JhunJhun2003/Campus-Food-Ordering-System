@@ -11,11 +11,22 @@ $brandSubtitle = $brandSubtitle ?? 'Delicious Food, Delivered Fast';
 ?>
 <div class="brand-panel">
     <div class="brand-logo">
-        <svg viewBox="0 0 100 100" class="w-16 h-16 fill-current text-slate-950">
+        <!-- <svg viewBox="0 0 100 100" class="w-16 h-16 fill-current text-slate-950">
             <path d="M42,28 C26,28 22,35 22,41 C22,43 23,45 25,45 L59,45 C61,45 62,43 62,41 C62,35 58,28 42,28 Z M22,49 C21,49 20,50 20,51 C20,53 23,55 25,55 L59,55 C61,55 64,53 64,51 C64,50 63,49 62,49 L22,49 Z M25,59 C21,59 21,63 21,65 C21,72 29,76 42,76 C55,76 63,72 63,65 C63,63 63,59 59,59 L25,59 Z" />
             <path d="M68,20 L80,20 C81,20 82,21 82,22 L76,72 C76,73 75,74 74,74 L64,74 C63,74 62,73 62,72 L65,48 L68,20 Z" />
             <line x1="74" y1="20" x2="63" y2="8" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
-        </svg>
+        </svg> -->
+                       <script
+  src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.14/dist/dotlottie-wc.js"
+  type="module"
+></script>
+
+<dotlottie-wc
+  src="https://lottie.host/ea75b4fe-1d6d-4e5e-97eb-df01f2e490df/FTXFOlVlea.lottie"
+  style="width: 130px;height: 130px"
+  autoplay
+  loop
+></dotlottie-wc>
         <span class="brand-name"><?php echo htmlspecialchars($brandTitle); ?></span>
     </div>
     <p class="brand-tagline"><?php echo htmlspecialchars($brandSubtitle); ?></p>

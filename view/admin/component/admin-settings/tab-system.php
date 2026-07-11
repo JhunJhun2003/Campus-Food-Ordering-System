@@ -33,9 +33,9 @@
                         </p>
                         <ul class="text-xs text-slate-500 mt-1.5 space-y-1 list-disc list-inside">
                             <li>Customers and staff cannot login or register</li>
-                            <li>Logged-in customers and staff will be automatically logged out</li>
+                            <!-- <li>Logged-in customers and staff will be automatically logged out</li> -->
                             <li>Admin can still access the system</li>
-                            <li>Guests can still view the landing page and browse menu</li>
+                            <!-- <li>Guests can still view the landing page and browse menu</li> -->
                         </ul>
                     </div>
                 </div>
