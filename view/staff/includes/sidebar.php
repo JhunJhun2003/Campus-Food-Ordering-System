@@ -52,10 +52,21 @@ $navItems = [
     <div>
         <!-- Logo -->
         <div class="flex flex-col items-center justify-center mb-8 px-6">
-            <div class="relative flex items-center justify-center text-slate-900 mb-1">
+            <div class="relative flex items-center justify-center text-slate-900 mb-2">
                 <span class="fa-stack fa-xl">
-                    <i class="fa-solid fa-building fa-stack-2x opacity-10 -translate-y-1"></i>
-                    <i class="fa-solid fa-hamburger fa-stack-1x text-slate-950"></i>
+                    <!-- <i class="fa-solid fa-building fa-stack-2x opacity-10 -translate-y-1"></i>
+                    <i class="fa-solid fa-hamburger fa-stack-1x text-slate-950"></i> -->
+                                 <script
+  src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.14/dist/dotlottie-wc.js"
+  type="module"
+></script>
+
+<dotlottie-wc
+  src="https://lottie.host/ea75b4fe-1d6d-4e5e-97eb-df01f2e490df/FTXFOlVlea.lottie"
+  style="width: 55px;height: 55px"
+  autoplay
+  loop
+></dotlottie-wc>
                 </span>
             </div>
             <span class="text-xl font-black tracking-wider text-slate-950">FOODIE</span>

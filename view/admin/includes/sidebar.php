@@ -29,9 +29,20 @@ $activePage = $activePage ?? 'dashboard';
             <!-- Logo -->
             <div class="flex flex-col items-center justify-center mb-8 px-6">
                 <div class="relative flex items-center justify-center text-black mb-1">
-                    <span class="fa-stack fa-xl">
+                    <!-- <span class="fa-stack fa-xl">
                         <i class="fa-solid fa-building fa-stack-2x opacity-20 -translate-y-1"></i>
-                        <i class="fa-solid fa-hamburger fa-stack-1x text-black"></i>
+                        <i class="fa-solid fa-hamburger fa-stack-1x text-black"></i> -->
+                               <script
+  src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.14/dist/dotlottie-wc.js"
+  type="module"
+></script>
+
+<dotlottie-wc
+  src="https://lottie.host/ea75b4fe-1d6d-4e5e-97eb-df01f2e490df/FTXFOlVlea.lottie"
+  style="width: 55px;height: 55px"
+  autoplay
+  loop
+></dotlottie-wc>
                     </span>
                 </div>
                 <span class="text-xl font-black tracking-wider text-black">FOODIE</span>
