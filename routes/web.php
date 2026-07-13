@@ -268,5 +268,13 @@ $router->get('/{any}', function($any) {
     echo '<a href="/Campus-Food-Ordering-System/">Go Home</a>';
 });
 
+$router->get('/user/google-login', function() {
+    $controller = getUserController();
+    $controller->googleLogin();
+});
+
+$router->get('/google-callback', function() {
+    require_once __DIR__ . '/../Public/google-callback.php';
+});
 // Return the router
 return $router;

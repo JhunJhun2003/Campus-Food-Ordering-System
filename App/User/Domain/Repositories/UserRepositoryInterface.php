@@ -47,5 +47,18 @@ interface UserRepositoryInterface
     public function getUserForEdit(int $userId): ?array;
 public function emailExistsExcluding(string $email, int $userId): bool;
 
+ /**
+     * Find user by Google ID
+     */
+    public function findByGoogleId(string $googleId): ?User;
 
+    /**
+     * Find user by email or create with Google data
+     */
+    public function findOrCreateFromGoogle(array $googleUser): User;
+
+    /**
+     * Update user's Google ID and avatar
+     */
+    public function updateGoogleCredentials(int $userId, string $googleId, string $avatar): bool;
 }

@@ -13,16 +13,45 @@ use App\User\Domain\Repositories\UserRepositoryInterface;
 use App\User\Domain\ValueObjects\UserId;
 use App\User\Domain\ValueObjects\Password;
 use App\Shared\Presentation\Http\Controllers\BaseController;
+use App\User\Application\Usecases\LoginWithGoogleUseCase;
+use App\User\Application\DTOs\GoogleLoginRequest;
+use App\User\Domain\Services\GoogleAuthServiceInterface;
+use App\User\Application\Usecases\SendVerificationUseCase;
+use App\User\Application\Usecases\VerifyEmailUseCase;
 
-class UserController extends BaseController  // ✅ Extend BaseController
+class UserController extends BaseController
 {
     private UserRepositoryInterface $userRepository;
+    private RegisterUserUseCase $registerUserUseCase;
+    private LoginUserUseCase $loginUserUseCase;
+    private GetProfileUseCase $getProfileUseCase;
+    private UpdateProfileUseCase $updateProfileUseCase;
+    private SendVerificationUseCase $sendVerificationUseCase;
+    private VerifyEmailUseCase $verifyEmailUseCase;
+    private LoginWithGoogleUseCase $loginWithGoogleUseCase;
+    private GoogleAuthServiceInterface $googleAuthService;
 
     public function __construct(
-        UserRepositoryInterface $userRepository
+        UserRepositoryInterface $userRepository,
+        RegisterUserUseCase $registerUserUseCase,
+        LoginUserUseCase $loginUserUseCase,
+        GetProfileUseCase $getProfileUseCase,
+        UpdateProfileUseCase $updateProfileUseCase,
+        SendVerificationUseCase $sendVerificationUseCase,
+        VerifyEmailUseCase $verifyEmailUseCase,
+        LoginWithGoogleUseCase $loginWithGoogleUseCase,
+        GoogleAuthServiceInterface $googleAuthService
     ) {
-        parent::__construct();  // ✅ Call parent constructor
+        parent::__construct();
         $this->userRepository = $userRepository;
+        $this->registerUserUseCase = $registerUserUseCase;
+        $this->loginUserUseCase = $loginUserUseCase;
+        $this->getProfileUseCase = $getProfileUseCase;
+        $this->updateProfileUseCase = $updateProfileUseCase;
+        $this->sendVerificationUseCase = $sendVerificationUseCase;
+        $this->verifyEmailUseCase = $verifyEmailUseCase;
+        $this->loginWithGoogleUseCase = $loginWithGoogleUseCase;
+        $this->googleAuthService = $googleAuthService;
     }
 
     /**
@@ -37,8 +66,7 @@ class UserController extends BaseController  // ✅ Extend BaseController
             $_POST['phone'] ?? ''
         );
 
-        $useCase = new RegisterUserUseCase($this->userRepository);
-        $response = $useCase->execute($request);
+        $response = $this->registerUserUseCase->execute($request);
 
         return [
             'success' => $response->success,
@@ -59,8 +87,7 @@ class UserController extends BaseController  // ✅ Extend BaseController
             isset($_POST['remember'])
         );
 
-        $useCase = new LoginUserUseCase($this->userRepository);
-        $response = $useCase->execute($request);
+        $response = $this->loginUserUseCase->execute($request);
 
         if ($response->success && $response->user) {
             $_SESSION['user_id'] = $response->user->getId()->getValue();
@@ -132,8 +159,7 @@ class UserController extends BaseController  // ✅ Extend BaseController
         $this->requireAuthentication();
         $this->authorizeResource($userId, 'manage_users');
         
-        $useCase = new GetProfileUseCase($this->userRepository);
-        return $useCase->execute($userId);
+        return $this->getProfileUseCase->execute($userId);
     }
 
     /**
@@ -144,8 +170,7 @@ class UserController extends BaseController  // ✅ Extend BaseController
         $this->requireAuthentication();
         $this->authorizeResource($userId, 'manage_users');
         
-        $useCase = new UpdateProfileUseCase($this->userRepository);
-        return $useCase->execute($userId, $data);
+        return $this->updateProfileUseCase->execute($userId, $data);
     }
 
     /**
@@ -173,6 +198,53 @@ class UserController extends BaseController  // ✅ Extend BaseController
         } catch (\Exception $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    // ============================================
+    // GOOGLE LOGIN METHODS
+    // ============================================
+
+    /**
+     * Redirect to Google OAuth
+     */
+    public function googleLogin(): void
+    {
+        $authUrl = $this->googleAuthService->getAuthUrl();
+        header('Location: ' . $authUrl);
+        exit();
+    }
+
+    /**
+     * Handle Google OAuth callback
+     */
+    public function googleCallback(): void
+    {
+        $code = $_GET['code'] ?? null;
+        $error = $_GET['error'] ?? null;
+
+        if ($error) {
+            $_SESSION['error'] = 'Google authentication failed: ' . $error;
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit();
+        }
+
+        if (!$code) {
+            $_SESSION['error'] = 'No authorization code received from Google.';
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+            exit();
+        }
+
+        $request = new GoogleLoginRequest($code);
+        $response = $this->loginWithGoogleUseCase->execute($request);
+
+        if ($response->success) {
+            $_SESSION['success'] = $response->message;
+            header('Location: ' . $response->redirectUrl);
+        } else {
+            $_SESSION['error'] = $response->message;
+            header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+        }
+        exit();
     }
 
     // ============================================
@@ -242,6 +314,6 @@ class UserController extends BaseController  // ✅ Extend BaseController
      */
     public function getCurrentUserId(): int
     {
-        return (int) ($_SESSION['user_id'] ?? 0);
+        return parent::getCurrentUserId();
     }
 }

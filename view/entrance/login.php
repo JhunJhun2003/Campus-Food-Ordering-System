@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/helpers.php';
-require_once __DIR__ . '/../../inc/user_helpers.php';  // ✅ Add this
+require_once __DIR__ . '/../../inc/user_helpers.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 
@@ -22,7 +22,6 @@ redirectIfLoggedIn();
 // 2. BUSINESS LOGIC - HANDLE REQUESTS
 // ============================================
 
-// ✅ Use helper - NO 'new' keyword!
 $controller = getUserController();
 $error = getErrorMessage();
 $success = getVerificationSuccess();
@@ -52,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
         $registeredUserId = $user->getId()->getValue();
         $registeredEmail = $user->getEmail()->getValue();
         
-        // Send verification code
         $userRepo = new \App\User\Infrastructure\Repositories\UserRepository();
         $sendVerification = new \App\User\Application\Usecases\SendVerificationUseCase($userRepo);
         $verifyResult = $sendVerification->execute($registeredUserId);
@@ -115,12 +113,7 @@ include __DIR__ . '/includes/header.php';
                         <span><?php echo htmlspecialchars($success); ?></span>
                     </div>
                 <?php endif; ?>
-
-                <!-- Top Tabs -->
-                <!-- <div class="auth-tabs">
-                    <button id="tab-login" onclick="switchTab('login')" class="auth-tab active">Login</button>
-                    <button id="tab-register" onclick="switchTab('register')" class="auth-tab">Register</button>
-                </div> -->
+                    
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-slate-900">Login</h2>
                     <p class="text-sm text-slate-500">Login your account to start ordering</p>
@@ -187,28 +180,24 @@ include __DIR__ . '/includes/header.php';
                     <button id="submit-btn" type="submit" name="login" value="1" class="btn-submit">Login</button>
                 </form>
 
-                <!-- Divider -->
+                <!-- ============================================ -->
+                <!-- ✅ GOOGLE LOGIN - Just this section -->
+                <!-- ============================================ -->
                 <div class="auth-divider">
                     <span>Or</span>
                 </div>
 
-                <!-- Social Buttons -->
-                <div class="space-y-3 max-w-sm mx-auto">
-                    <button onclick="handleSocialAuth('Google')" class="social-btn">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24">
-                            <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.64l3.15-3.15C17.45 1.74 14.93 1 12 1 7.35 1 3.39 3.65 1.5 7.5l3.86 3C6.27 7.42 8.91 5.04 12 5.04z"/>
-                            <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.44h6.44c-.28 1.48-1.12 2.73-2.38 3.58l3.69 2.87c2.16-1.99 3.74-4.92 3.74-8.55z"/>
-                            <path fill="#FBBC05" d="M5.36 14.5c-.24-.72-.38-1.49-.38-2.5s.14-1.78.38-2.5L1.5 6.5C.54 8.42 0 10.58 0 13s.54 4.58 1.5 6.5l3.86-3z"/>
-                            <path fill="#34A853" d="M12 23c3.24 0 5.97-1.08 7.96-2.91l-3.69-2.87c-1.02.68-2.33 1.09-4.27 1.09-3.09 0-5.73-2.38-6.66-5.46l-3.86 3C3.39 20.35 7.35 23 12 23z"/>
-                        </svg>
-                        <span>Continue with Google</span>
-                    </button>
+                <a href="/Campus-Food-Ordering-System/user/google-login" 
+                   class="social-btn google-btn">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.64l3.15-3.15C17.45 1.74 14.93 1 12 1 7.35 1 3.39 3.65 1.5 7.5l3.86 3C6.27 7.42 8.91 5.04 12 5.04z"/>
+                        <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.44h6.44c-.28 1.48-1.12 2.73-2.38 3.58l3.69 2.87c2.16-1.99 3.74-4.92 3.74-8.55z"/>
+                        <path fill="#FBBC05" d="M5.36 14.5c-.24-.72-.38-1.49-.38-2.5s.14-1.78.38-2.5L1.5 6.5C.54 8.42 0 10.58 0 13s.54 4.58 1.5 6.5l3.86-3z"/>
+                        <path fill="#34A853" d="M12 23c3.24 0 5.97-1.08 7.96-2.91l-3.69-2.87c-1.02.68-2.33 1.09-4.27 1.09-3.09 0-5.73-2.38-6.66-5.46l-3.86 3C3.39 20.35 7.35 23 12 23z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </a>
 
-                    <!-- <button onclick="handleSocialAuth('Apple')" class="social-btn social-btn-apple">
-                        <i class="fa-brands fa-apple text-base"></i>
-                        <span>Continue with Apple</span>
-                    </button> -->
-                </div>
             </div>
 
             <!-- Bottom Redirect -->

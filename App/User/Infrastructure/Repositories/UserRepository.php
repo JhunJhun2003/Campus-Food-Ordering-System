@@ -506,4 +506,128 @@ public function createUser(string $name, string $email, string $password, string
 {
     return $this->db;
 }
+/**
+     * Find user by Google ID
+     */
+    public function findByGoogleId(string $googleId): ?User
+    {
+        $sql = "SELECT u.*, r.name as role_name 
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE u.google_id = :google_id";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':google_id' => $googleId]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $data ? $this->hydrate($data) : null;
+    }
+
+    /**
+     * Find or create user from Google data
+     */
+    public function findOrCreateFromGoogle(array $googleUser): User
+    {
+        // Check if user exists by Google ID
+        $user = $this->findByGoogleId($googleUser['id']);
+        
+        if ($user) {
+            // Update avatar if changed
+            if ($googleUser['avatar'] && $user->getAvatar() !== $googleUser['avatar']) {
+                $this->updateGoogleCredentials(
+                    $user->getId()->getValue(),
+                    $googleUser['id'],
+                    $googleUser['avatar']
+                );
+            }
+            return $user;
+        }
+
+        // Check if user exists by email
+        $email = new Email($googleUser['email']);
+        $user = $this->findByEmail($email);
+        
+        if ($user) {
+            // Link Google account to existing user
+            $this->updateGoogleCredentials(
+                $user->getId()->getValue(),
+                $googleUser['id'],
+                $googleUser['avatar'] ?? ''
+            );
+            return $user;
+        }
+
+        // Create new user from Google data
+        return $this->createFromGoogle($googleUser);
+    }
+
+    /**
+     * Create new user from Google data
+     */
+    private function createFromGoogle(array $googleUser): User
+    {
+        $roleId = $this->getRoleId('user');
+        $randomPassword = bin2hex(random_bytes(16));
+        $hashedPassword = password_hash($randomPassword, PASSWORD_DEFAULT);
+
+        $sql = "INSERT INTO users (
+                    role_id, 
+                    name, 
+                    email, 
+                    password, 
+                    google_id, 
+                    avatar, 
+                    provider, 
+                    is_verified, 
+                    email_verified_at,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    :role_id, 
+                    :name, 
+                    :email, 
+                    :password, 
+                    :google_id, 
+                    :avatar, 
+                    'google', 
+                    1,
+                    NOW(),
+                    NOW(),
+                    NOW()
+                )";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':role_id' => $roleId,
+            ':name' => $googleUser['name'],
+            ':email' => $googleUser['email'],
+            ':password' => $hashedPassword,
+            ':google_id' => $googleUser['id'],
+            ':avatar' => $googleUser['avatar'] ?? ''
+        ]);
+
+        $userId = (int) $this->db->lastInsertId();
+        
+        return $this->findById(new UserId($userId));
+    }
+
+    /**
+     * Update user's Google credentials
+     */
+    public function updateGoogleCredentials(int $userId, string $googleId, string $avatar): bool
+    {
+        $sql = "UPDATE users SET 
+                    google_id = :google_id,
+                    avatar = :avatar,
+                    provider = 'google',
+                    updated_at = NOW()
+                WHERE id = :user_id";
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':google_id' => $googleId,
+            ':avatar' => $avatar
+        ]);
+    }
 }

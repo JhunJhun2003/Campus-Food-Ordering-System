@@ -22,6 +22,9 @@ class User
     private ?DateTime $emailVerifiedAt;
     private DateTime $createdAt;
     private ?DateTime $updatedAt;
+    private ?string $googleId;
+    private ?string $avatar;
+    private ?string $provider;
 
     public function __construct(
         UserId $id,
@@ -35,7 +38,10 @@ class User
         bool $isVerified = false,
         ?string $verificationCode = null,
         ?DateTime $verificationExpiresAt = null,
-        ?DateTime $emailVerifiedAt = null
+        ?DateTime $emailVerifiedAt = null,
+        ?string $googleId = null,
+        ?string $avatar = null,
+        ?string $provider = 'local'
     ) {
         $this->id = $id;
         $this->roleId = $roleId;
@@ -51,6 +57,9 @@ class User
         $this->emailVerifiedAt = $emailVerifiedAt;
         $this->createdAt = new DateTime();
         $this->updatedAt = null;
+        $this->googleId = $googleId;
+        $this->avatar = $avatar;
+        $this->provider = $provider;
     }
 
     // Getters
@@ -163,5 +172,25 @@ class User
             'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $this->updatedAt ? $this->updatedAt->format('Y-m-d H:i:s') : null
         ];
+    }
+
+     public function getGoogleId(): ?string
+    {
+        return $this->googleId;
+    }
+
+    public function getAvatar(): ?string
+    {
+        return $this->avatar;
+    }
+
+    public function getProvider(): ?string
+    {
+        return $this->provider;
+    }
+
+    public function isGoogleUser(): bool
+    {
+        return $this->provider === 'google' && $this->googleId !== null;
     }
 }
