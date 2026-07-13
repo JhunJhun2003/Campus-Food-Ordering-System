@@ -53,7 +53,7 @@ class CreateOrderUseCase
                 $currentStock = $this->foodRepository->getStock($foodId);
                 
                 if ($currentStock < $quantity) {
-                    $food = $this->foodRepository->findById($foodId);
+                    $food = $this->foodRepository->findById($foodId); //I added the locking (for update)
                     $foodName = $food ? $food->getName() : "Item #$foodId";
                     throw new \Exception("Not enough stock for '$foodName'. Available: $currentStock");
                 }

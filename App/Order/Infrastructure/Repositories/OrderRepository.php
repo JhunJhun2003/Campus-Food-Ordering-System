@@ -49,8 +49,8 @@ class OrderRepository implements OrderRepositoryInterface
             }
         }
 
-        $sql = "INSERT INTO orders (" . implode(', ', $columns) . ") 
-                VALUES (" . implode(', ', $values) . ")";
+       $sql = "INSERT INTO orders (" . implode(', ', $columns) . ") 
+                VALUES (" . implode(', ', $values) . ")"; 
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

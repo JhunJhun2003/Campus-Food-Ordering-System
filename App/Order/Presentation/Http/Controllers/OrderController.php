@@ -84,6 +84,9 @@ class OrderController extends BaseController
      * Create order - Customers can place orders
      * Uses PaymentService to handle payment creation
      */
+  /**
+     * Create order - Customers can place orders
+     */
     public function createOrder(
         int $userId,
         array $items,
@@ -94,7 +97,8 @@ class OrderController extends BaseController
         string $phone,
         ?string $accountName = null,
         ?string $accountNumber = null,
-        ?string $transactionImage = null
+        ?string $transactionImage = null,
+        ?string $idempotencyKey = null
     ): array {
         $this->authorize('place_orders');
         
@@ -122,14 +126,17 @@ class OrderController extends BaseController
             $transactionImage
         );
         
-        // If order created successfully, create payment record using PaymentService
+        // If order created successfully, create payment record with idempotency
         if ($result['success'] && isset($result['order_id'])) {
-            $this->paymentService->createPaymentForOrder(
+            $paymentId = $this->paymentService->createPaymentForOrder(
                 $result['order_id'],
                 $paymentMethod,
                 $total,
-                $transactionImage
+                $transactionImage,
+                $idempotencyKey
             );
+            
+            $result['payment_id'] = $paymentId;
         }
         
         return $result;

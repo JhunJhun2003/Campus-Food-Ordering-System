@@ -34,34 +34,64 @@ class PaymentService
     }
 
     /**
-     * Create payment for order
+     * Create payment for order with IDEMPOTENCY
      */
     public function createPaymentForOrder(
         int $orderId,
         string $paymentMethodName,
         float $amount,
-        ?string $transactionImage = null
+        ?string $transactionImage = null,
+        ?string $idempotencyKey = null
     ): ?int {
-        $paymentMethod = $this->getPaymentMethodByName($paymentMethodName);
+        $db = Database::getConnection();
         
-        if (!$paymentMethod) {
-            return null;
-        }
-
-        $isCOD = $paymentMethodName === 'Cash on Delivery';
-        $statusId = $isCOD ? 1 : 2; // 1 = pending, 2 = paid
-        $transactionNo = $isCOD ? null : 'TXN-' . strtoupper(uniqid());
-
         try {
-            $db = Database::getConnection();
+            // ✅ Start transaction
+            $db->beginTransaction();
             
-            // Check if payment already exists
-            $stmt = $db->prepare("SELECT id FROM payments WHERE order_id = :order_id");
-            $stmt->execute([':order_id' => $orderId]);
-            if ($stmt->fetch()) {
-                return null; // Payment already exists
+            // ✅ Lock the order to prevent duplicate payment processing
+            $order = $this->lockOrder($orderId);
+            
+            if (!$order) {
+                throw new \Exception("Order not found.");
             }
             
+            // ✅ Check if payment already exists for this order
+            $stmt = $db->prepare("SELECT id FROM payments WHERE order_id = :order_id FOR UPDATE");
+            $stmt->execute([':order_id' => $orderId]);
+            if ($existingPayment = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                // Payment already exists - return existing ID (idempotent)
+                $db->commit();
+                return (int) $existingPayment['id'];
+            }
+            
+            // ✅ If idempotency key provided, check if already processed
+            if ($idempotencyKey) {
+                $stmt = $db->prepare("SELECT id FROM payments WHERE idempotency_key = :key FOR UPDATE");
+                $stmt->execute([':key' => $idempotencyKey]);
+                if ($existing = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                    // Duplicate request detected! Return existing payment
+                    $db->commit();
+                    return (int) $existing['id'];
+                }
+            }
+            
+            $paymentMethod = $this->getPaymentMethodByName($paymentMethodName);
+            
+            if (!$paymentMethod) {
+                throw new \Exception("Payment method '{$paymentMethodName}' not found.");
+            }
+
+            $isCOD = $paymentMethodName === 'Cash on Delivery';
+            $statusId = $isCOD ? 1 : 2; // 1 = pending, 2 = paid
+            $transactionNo = $isCOD ? null : 'TXN-' . strtoupper(uniqid());
+
+            // ✅ Generate idempotency key if not provided
+            if (!$idempotencyKey) {
+                $idempotencyKey = $this->generateIdempotencyKey($orderId);
+            }
+
+            // ✅ Insert payment with idempotency key
             $stmt = $db->prepare("
                 INSERT INTO payments (
                     order_id, 
@@ -70,6 +100,7 @@ class PaymentService
                     amount, 
                     transaction_no, 
                     transaction_image,
+                    idempotency_key,
                     payment_date
                 ) VALUES (
                     :order_id, 
@@ -77,7 +108,8 @@ class PaymentService
                     :payment_status_id, 
                     :amount, 
                     :transaction_no, 
-                    :transaction_image,
+                    :transaction_image, 
+                    :idempotency_key, 
                     NOW()
                 )
             ");
@@ -88,15 +120,42 @@ class PaymentService
                 ':payment_status_id' => $statusId,
                 ':amount' => $amount,
                 ':transaction_no' => $transactionNo,
-                ':transaction_image' => $isCOD ? null : $transactionImage
+                ':transaction_image' => $isCOD ? null : $transactionImage,
+                ':idempotency_key' => $idempotencyKey
             ]);
             
-            return (int) $db->lastInsertId();
+            $paymentId = (int) $db->lastInsertId();
+            
+            // ✅ Commit transaction
+            $db->commit();
+            return $paymentId;
             
         } catch (\Exception $e) {
+            // ✅ Rollback on any error
+            $db->rollBack();
             error_log("Failed to create payment record for order {$orderId}: " . $e->getMessage());
-            return null;
+            throw $e;
         }
+    }
+
+    /**
+     * Lock order for payment processing (pessimistic locking)
+     */
+    private function lockOrder(int $orderId): ?array
+    {
+        $db = Database::getConnection();
+        $stmt = $db->prepare("SELECT id, status_id, total_amount FROM orders WHERE id = :id FOR UPDATE");
+        $stmt->execute([':id' => $orderId]);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
+    /**
+     * Generate idempotency key
+     */
+    private function generateIdempotencyKey(int $orderId): string
+    {
+        return 'PAY-' . date('Ymd') . '-' . $orderId . '-' . uniqid();
     }
 
     /**
@@ -114,6 +173,7 @@ class PaymentService
                     p.amount as payment_amount,
                     p.transaction_no,
                     p.transaction_image,
+                    p.idempotency_key,
                     p.payment_date,
                     pm.method_name as payment_method_name,
                     pm.account_name as payment_account_name,

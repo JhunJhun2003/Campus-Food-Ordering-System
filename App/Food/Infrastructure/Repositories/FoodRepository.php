@@ -68,7 +68,7 @@ class FoodRepository implements FoodRepositoryInterface
         $sql = "SELECT f.*, fs.status_name 
                 FROM foods f
                 LEFT JOIN food_statuses fs ON f.status_id = fs.id
-                WHERE f.id = :id";
+                WHERE f.id = :id FOR UPDATE";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id' => $id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -63,6 +63,7 @@ $deliveryAddress = '';
 $fullName = '';
 $phone = '';
 $selectedPaymentMethodId = isset($_POST['payment_method_id']) ? (int) $_POST['payment_method_id'] : 0;
+$idempotencyKey = $_POST['idempotency_key'] ?? null; // ✅ Get idempotency key
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $fullName = trim($_POST['full_name'] ?? '');
@@ -129,7 +130,9 @@ $isDigital = $paymentMethodName !== 'Cash on Delivery';
     $phone, 
     $accountName, 
     $selectedMethod ? $selectedMethod->getAccountNumber() : '',  // <-- Use getter
-    $transactionImage
+  
+    $transactionImage,
+    $idempotencyKey,
 );
             
             if ($result['success']) {
@@ -588,6 +591,27 @@ function removeFile() {
 }
 
 // ============================================
+// IDEMPOTENCY KEY GENERATION
+// ============================================
+function generateIdempotencyKey() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 10);
+    const sessionId = getSessionId();
+    return `ORDER-${timestamp}-${sessionId}-${random}`;
+}
+
+function getSessionId() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const parts = cookie.trim().split('=');
+        if (parts[0] === 'PHPSESSID') {
+            return parts[1];
+        }
+    }
+    return 'unknown';
+}
+
+// ============================================
 // TOAST NOTIFICATION
 // ============================================
 function triggerToast(message, isSuccess = true) {
@@ -665,16 +689,32 @@ function goToStep1() {
     document.getElementById('panel-step-1').classList.remove('hidden');
 }
 
+// ============================================
+// SUBMIT ORDER WITH IDEMPOTENCY
+// ============================================
 function submitOrder(button) {
     if (orderSubmitInProgress) {
+        triggerToast('Order is already being submitted. Please wait...', false);
         return;
     }
 
     const form = document.getElementById('checkout-form');
+    
+    // ✅ Generate idempotency key
+    const idempotencyKey = generateIdempotencyKey();
+    
+    // ✅ Add idempotency key to form
+    const keyInput = document.createElement('input');
+    keyInput.type = 'hidden';
+    keyInput.name = 'idempotency_key';
+    keyInput.value = idempotencyKey;
+    form.appendChild(keyInput);
+    
     orderSubmitInProgress = true;
 
     if (button) {
         button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
         button.classList.add('opacity-70', 'cursor-not-allowed');
     }
 
@@ -683,6 +723,8 @@ function submitOrder(button) {
     document.getElementById('label-step-3').className = "text-xs font-bold text-slate-900 mt-2 transition-all duration-300";
 
     triggerToast('Submitting your order...');
+    
+    // ✅ Submit the form
     if (form.requestSubmit) {
         form.requestSubmit();
         return;
