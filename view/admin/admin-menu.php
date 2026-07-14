@@ -37,12 +37,80 @@ $currentUser = $adminController->getCurrentUser();
 
 $foodController = getFoodController();
 
-$result = $foodController->handleRequest();
-$message = $result['message'] ?? null;
-$editFood = $result['editFood'] ?? null;
+// Handle form submissions with redirect (PRG Pattern)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $redirectUrl = 'admin-menu.php';
+    $successParam = '';
+    
+    // Add Food
+    if (isset($_POST['add_food'])) {
+        $result = $foodController->handleRequest();
+        if ($result['message'] && $result['message']['success']) {
+            $successParam = '?success=added';
+        } else {
+            $_SESSION['form_error'] = $result['message']['message'] ?? 'Failed to add food item';
+            $successParam = '?error=1';
+        }
+        header('Location: ' . $redirectUrl . $successParam);
+        exit();
+    }
+    
+    // Edit Food
+    if (isset($_POST['edit_food'])) {
+        $result = $foodController->handleRequest();
+        if ($result['message'] && $result['message']['success']) {
+            $successParam = '?success=updated';
+        } else {
+            $_SESSION['form_error'] = $result['message']['message'] ?? 'Failed to update food item';
+            $successParam = '?error=1';
+        }
+        header('Location: ' . $redirectUrl . $successParam);
+        exit();
+    }
+    
+    // Delete Food
+    if (isset($_POST['delete_food'])) {
+        $result = $foodController->handleRequest();
+        if ($result['message'] && $result['message']['success']) {
+            $successParam = '?success=deleted';
+        } else {
+            $_SESSION['form_error'] = $result['message']['message'] ?? 'Failed to delete food item';
+            $successParam = '?error=1';
+        }
+        header('Location: ' . $redirectUrl . $successParam);
+        exit();
+    }
+}
 
+// Check for success/error messages from session
+$message = null;
+if (isset($_GET['success'])) {
+    switch ($_GET['success']) {
+        case 'added':
+            $message = ['success' => true, 'message' => 'Food item added successfully!'];
+            break;
+        case 'updated':
+            $message = ['success' => true, 'message' => 'Food item updated successfully!'];
+            break;
+        case 'deleted':
+            $message = ['success' => true, 'message' => 'Food item deleted successfully!'];
+            break;
+    }
+} elseif (isset($_GET['error']) && isset($_SESSION['form_error'])) {
+    $message = ['success' => false, 'message' => $_SESSION['form_error']];
+    unset($_SESSION['form_error']);
+}
+
+// Get data for display
 $foods = $foodController->index();
 $categories = $foodController->getCategories();
+
+// Handle edit mode
+$editFood = null;
+if (isset($_GET['edit'])) {
+    $editId = (int) $_GET['edit'];
+    $editFood = $foodController->getForEdit($editId);
+}
 
 // ============================================
 // 3. VIEW RENDER
@@ -114,19 +182,45 @@ include __DIR__ . '/includes/sidebar.php';
                         <tr class="hover:bg-gray-50/50 transition-colors" data-category="<?php echo $food->getCategoryId(); ?>">
                             <td class="py-4 px-6">
                                 <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-2xl">
+                                    <?php if ($food->getImage()): ?>
                                         <?php 
-                                            $emoji = match($food->getCategoryId()) {
-                                                1 => '🍔',
-                                                2 => '🍕',
-                                                3 => '🥤',
-                                                4 => '🍰',
-                                                5 => '🍚',
-                                                default => '🍽️'
-                                            };
-                                            echo $emoji;
+                                            $imagePath = '/Campus-Food-Ordering-System/Public/uploads/foods/' . htmlspecialchars($food->getImage());
+                                            $fullPath = $_SERVER['DOCUMENT_ROOT'] . $imagePath;
+                                            if (file_exists($fullPath)): 
                                         ?>
-                                    </div>
+                                            <img src="<?php echo $imagePath; ?>" 
+                                                 alt="<?php echo htmlspecialchars($food->getName()); ?>" 
+                                                 class="w-10 h-10 rounded-lg object-cover border border-gray-200">
+                                        <?php else: ?>
+                                            <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-2xl">
+                                                <?php 
+                                                    $emoji = match($food->getCategoryId()) {
+                                                        1 => '🍔',
+                                                        2 => '🍕',
+                                                        3 => '🥤',
+                                                        4 => '🍰',
+                                                        5 => '🍚',
+                                                        default => '🍽️'
+                                                    };
+                                                    echo $emoji;
+                                                ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-2xl">
+                                            <?php 
+                                                $emoji = match($food->getCategoryId()) {
+                                                    1 => '🍔',
+                                                    2 => '🍕',
+                                                    3 => '🥤',
+                                                    4 => '🍰',
+                                                    5 => '🍚',
+                                                    default => '🍽️'
+                                                };
+                                                echo $emoji;
+                                            ?>
+                                        </div>
+                                    <?php endif; ?>
                                     <span class="font-medium text-gray-900"><?php echo htmlspecialchars($food->getName()); ?></span>
                                 </div>
                             </td>
@@ -212,7 +306,7 @@ include __DIR__ . '/includes/sidebar.php';
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="" id="addFoodForm">
+        <form method="POST" action="" id="addFoodForm" enctype="multipart/form-data">
             <input type="hidden" name="add_food" value="1">
             
             <div class="mb-4">
@@ -254,9 +348,25 @@ include __DIR__ . '/includes/sidebar.php';
                 <textarea name="description" rows="3" placeholder="Describe the food item..." class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm"></textarea>
             </div>
             
+            <!-- IMAGE UPLOAD -->
             <div class="mb-4">
-                <label class="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
-                <input type="text" name="image" placeholder="e.g., burger.png" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Food Image</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 border-dashed rounded-lg hover:border-indigo-500 transition-colors cursor-pointer" id="addImageDropZone">
+                    <div class="space-y-1 text-center">
+                        <i class="fa-regular fa-image text-3xl text-slate-400"></i>
+                        <div class="flex text-sm text-slate-600">
+                            <label for="addFoodImage" class="relative cursor-pointer rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                <span>Upload a file</span>
+                                <input id="addFoodImage" name="image" type="file" class="sr-only" accept="image/*" onchange="previewImage(event, 'addImagePreview')">
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-slate-500">PNG, JPG, GIF up to 2MB</p>
+                        <div id="addImagePreview" class="hidden mt-2">
+                            <img id="addImagePreviewImg" src="#" alt="Preview" class="max-h-32 mx-auto rounded-lg border border-slate-200">
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">Add Food Item</button>
@@ -285,7 +395,7 @@ include __DIR__ . '/includes/sidebar.php';
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="">
+        <form method="POST" action="" enctype="multipart/form-data">
             <input type="hidden" name="edit_food" value="1">
             <input type="hidden" name="food_id" value="<?php echo $editFood['id']; ?>">
             
@@ -327,9 +437,34 @@ include __DIR__ . '/includes/sidebar.php';
                 <textarea name="description" rows="3" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm"><?php echo htmlspecialchars($editFood['description'] ?? ''); ?></textarea>
             </div>
             
+            <!-- IMAGE UPLOAD WITH CURRENT IMAGE -->
             <div class="mb-4">
-                <label class="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
-                <input type="text" name="image" value="<?php echo htmlspecialchars($editFood['image'] ?? ''); ?>" placeholder="e.g., burger.png" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Food Image</label>
+                <?php if (!empty($editFood['image'])): ?>
+                    <div class="mb-2">
+                        <img src="/Campus-Food-Ordering-System/Public/uploads/foods/<?php echo htmlspecialchars($editFood['image']); ?>" 
+                             alt="Current Image" 
+                             class="max-h-20 rounded-lg border border-slate-200">
+                        <p class="text-xs text-slate-500 mt-1">Current image: <?php echo htmlspecialchars($editFood['image']); ?></p>
+                    </div>
+                <?php endif; ?>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 border-dashed rounded-lg hover:border-indigo-500 transition-colors cursor-pointer" id="editImageDropZone">
+                    <div class="space-y-1 text-center">
+                        <i class="fa-regular fa-image text-3xl text-slate-400"></i>
+                        <div class="flex text-sm text-slate-600">
+                            <label for="editFoodImage" class="relative cursor-pointer rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                <span>Upload new image</span>
+                                <input id="editFoodImage" name="image" type="file" class="sr-only" accept="image/*" onchange="previewImage(event, 'editImagePreview')">
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-slate-500">PNG, JPG, GIF up to 2MB</p>
+                        <div id="editImagePreview" class="hidden mt-2">
+                            <img id="editImagePreviewImg" src="#" alt="Preview" class="max-h-32 mx-auto rounded-lg border border-slate-200">
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="existing_image" value="<?php echo htmlspecialchars($editFood['image'] ?? ''); ?>">
             </div>
             
             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">Update Food Item</button>
@@ -382,6 +517,7 @@ function closeAddFoodModal() {
     document.getElementById('addFoodModal').style.display = 'none';
     document.body.style.overflow = '';
     document.getElementById('addFoodForm')?.reset();
+    document.getElementById('addImagePreview')?.classList.add('hidden');
 }
 
 // ============================================
@@ -405,6 +541,97 @@ function confirmDelete(event) {
     }
     return true;
 }
+
+// ============================================
+// IMAGE PREVIEW
+// ============================================
+function previewImage(event, previewId) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const previewContainer = document.getElementById(previewId);
+        const previewImg = document.getElementById(previewId + 'Img');
+        previewImg.src = e.target.result;
+        previewContainer.classList.remove('hidden');
+        previewContainer.classList.add('block');
+    }
+    reader.readAsDataURL(file);
+}
+
+// ============================================
+// DRAG AND DROP SUPPORT
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Add drag and drop for add modal
+    const addDropZone = document.getElementById('addImageDropZone');
+    if (addDropZone) {
+        addDropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+        addDropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+        addDropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-indigo-500', 'bg-indigo-50');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const input = document.getElementById('addFoodImage');
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                const event = new Event('change');
+                input.dispatchEvent(event);
+            }
+        });
+    }
+    
+    // Add drag and drop for edit modal
+    const editDropZone = document.getElementById('editImageDropZone');
+    if (editDropZone) {
+        editDropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+        editDropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+        editDropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-indigo-500', 'bg-indigo-50');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const input = document.getElementById('editFoodImage');
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                const event = new Event('change');
+                input.dispatchEvent(event);
+            }
+        });
+    }
+});
+
+// ============================================
+// PREVENT DOUBLE FORM SUBMISSION
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form[method="POST"]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...';
+            }
+        });
+    });
+});
 
 // ============================================
 // TOAST

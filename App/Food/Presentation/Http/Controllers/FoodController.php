@@ -29,6 +29,61 @@ class FoodController extends BaseController
     }
 
     /**
+     * Handle image upload
+     */
+    private function uploadImage(array $file, ?string $existingImage = null): ?string
+    {
+        // If no file uploaded, return existing image
+        if (!isset($file['image']) || $file['image']['error'] === UPLOAD_ERR_NO_FILE) {
+            return $existingImage;
+        }
+
+        // Check for upload errors
+        if ($file['image']['error'] !== UPLOAD_ERR_OK) {
+            error_log("Upload error: " . $file['image']['error']);
+            return $existingImage;
+        }
+
+        // Validate file type
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $fileType = mime_content_type($file['image']['tmp_name']);
+        
+        if (!in_array($fileType, $allowedTypes)) {
+            error_log("Invalid file type: " . $fileType);
+            return $existingImage;
+        }
+
+        // Validate file size (max 2MB)
+        if ($file['image']['size'] > 2 * 1024 * 1024) {
+            error_log("File too large: " . $file['image']['size']);
+            return $existingImage;
+        }
+
+        // Generate unique filename
+        $extension = pathinfo($file['image']['name'], PATHINFO_EXTENSION);
+        $filename = uniqid() . '_' . time() . '.' . $extension;
+        $uploadPath = $_SERVER['DOCUMENT_ROOT'] . '/Campus-Food-Ordering-System/Public/uploads/foods/';
+
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0777, true);
+        }
+
+        // Move uploaded file
+        $destination = $uploadPath . $filename;
+        if (move_uploaded_file($file['image']['tmp_name'], $destination)) {
+            // Delete old image if exists
+            if ($existingImage && file_exists($uploadPath . $existingImage)) {
+                unlink($uploadPath . $existingImage);
+            }
+            return $filename;
+        }
+
+        error_log("Failed to move uploaded file");
+        return $existingImage;
+    }
+
+    /**
      * Get all foods - No permission needed (public)
      */
     public function index(): array
@@ -90,24 +145,20 @@ class FoodController extends BaseController
     }
 
     /**
-     * Handle form submission
-     * This is a helper method for the view layer
+     * Handle form submission with file uploads
+     * This handles POST requests for add, edit, delete
      */
     public function handleRequest(): array
     {
         $message = null;
         $editFood = null;
 
-        // GET: Edit - Staff/Admin only
-        if (isset($_GET['edit'])) {
-            $this->authorize('manage_menu');
-            $editId = (int) $_GET['edit'];
-            $editFood = $this->getForEdit($editId);
-        }
-
-        // POST: Add - Staff/Admin only
+        // ✅ Handle POST: Add - Staff/Admin only
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_food'])) {
             $this->authorize('manage_menu');
+            
+            // Upload image
+            $imageName = $this->uploadImage($_FILES);
             
             $request = new CreateFoodRequest(
                 (int) ($_POST['category_id'] ?? 0),
@@ -116,17 +167,26 @@ class FoodController extends BaseController
                 (float) ($_POST['price'] ?? 0),
                 (int) ($_POST['stock'] ?? 0),
                 (int) ($_POST['preparation_time'] ?? 15),
-                trim($_POST['image'] ?? '')
+                $imageName
             );
             
             $message = $this->create($request);
+            return ['message' => $message];
         }
 
-        // POST: Edit - Staff/Admin only
+        // ✅ Handle POST: Edit - Staff/Admin only
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_food'])) {
             $this->authorize('manage_menu');
             
             $foodId = (int) ($_POST['food_id'] ?? 0);
+            
+            // Get existing food to get current image
+            $existingFood = $this->getForEdit($foodId);
+            $existingImage = $existingFood['image'] ?? null;
+            
+            // Upload new image if provided
+            $imageName = $this->uploadImage($_FILES, $existingImage);
+            
             $request = new UpdateFoodRequest(
                 $foodId,
                 (int) ($_POST['category_id'] ?? 0),
@@ -135,23 +195,37 @@ class FoodController extends BaseController
                 (float) ($_POST['price'] ?? 0),
                 (int) ($_POST['stock'] ?? 0),
                 (int) ($_POST['preparation_time'] ?? 15),
-                trim($_POST['image'] ?? '')
+                $imageName
             );
             
             $message = $this->update($request);
-            if ($message['success']) {
-                $editFood = null;
-            }
+            return ['message' => $message];
         }
 
-        // POST: Delete - Admin only
+        // ✅ Handle POST: Delete - Admin only
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_food'])) {
             $this->authorize('delete_food');
             
             $foodId = (int) ($_POST['food_id'] ?? 0);
             if ($foodId > 0) {
+                // Get food to delete image
+                $existingFood = $this->getForEdit($foodId);
+                if ($existingFood && isset($existingFood['image'])) {
+                    $imagePath = $_SERVER['DOCUMENT_ROOT'] . '/Campus-Food-Ordering-System/Public/uploads/foods/' . $existingFood['image'];
+                    if (file_exists($imagePath)) {
+                        unlink($imagePath);
+                    }
+                }
                 $message = $this->delete($foodId);
+                return ['message' => $message];
             }
+        }
+
+        // ✅ Handle GET: Edit mode
+        if (isset($_GET['edit'])) {
+            $this->authorize('manage_menu');
+            $editId = (int) $_GET['edit'];
+            $editFood = $this->getForEdit($editId);
         }
 
         return [
