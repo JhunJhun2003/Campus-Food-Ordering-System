@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../inc/order_helpers.php';
 require_once __DIR__ . '/../inc/admin_helpers.php';
 require_once __DIR__ . '/../inc/user_helpers.php';
+require_once __DIR__ . '/../inc/refund_helpers.php';
 require_once __DIR__ . '/../inc/access_control_helper.php';  // ✅ Add this if not already in order_helpers.php
 
 use App\Kernel\HttpKernel;
@@ -21,6 +22,7 @@ $foodController = getFoodController();
 $cartController = getCartController();
 $orderController = getOrderController();
 $paymentController = getPaymentController();
+$refundController = getRefundController();
 
 // ============================================
 // PUBLIC ROUTES (Guest only)
@@ -225,6 +227,64 @@ $router->get('/api/payment-methods', function($request) use ($paymentController)
     }
     exit();
 });
+
+// ============================================
+// REFUND & RECEIPT ROUTES
+// ============================================
+
+$router->post('/api/refund/request.php', function($request) use ($refundController) {
+    header('Content-Type: application/json');
+    echo json_encode($refundController->requestRefund());
+    exit();
+})->withMiddleware(HttpKernel::customer());
+
+$router->post('/api/refund/approve.php', function($request) use ($refundController) {
+    header('Content-Type: application/json');
+    echo json_encode($refundController->approveRefund());
+    exit();
+})->withMiddleware(HttpKernel::withRole(['admin', 'staff']));
+
+$router->post('/api/refund/reject.php', function($request) use ($refundController) {
+    header('Content-Type: application/json');
+    echo json_encode($refundController->rejectRefund());
+    exit();
+})->withMiddleware(HttpKernel::withRole(['admin', 'staff']));
+
+$router->get('/admin/refunds', function() {
+    require_once __DIR__ . '/../view/admin/admin-refunds.php';
+    exit();
+})->withMiddleware(HttpKernel::admin());
+
+$router->get('/staff/refunds', function() {
+    require_once __DIR__ . '/../view/staff/staff-refunds.php';
+    exit();
+})->withMiddleware(HttpKernel::staff());
+
+$router->get('/order/receipt', function($request) {
+    $orderId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+    if ($orderId <= 0) {
+        http_response_code(400);
+        echo "Invalid Order ID";
+        exit();
+    }
+    
+    $userRole = $_SESSION['user_role'] ?? '';
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    
+    if (!in_array($userRole, ['admin', 'staff'])) {
+        $orderRepo = new \App\Order\Infrastructure\Repositories\OrderRepository();
+        $order = $orderRepo->findById($orderId);
+        if (!$order || $order->getUserId() !== $userId) {
+            http_response_code(403);
+            echo "Access Denied";
+            exit();
+        }
+    }
+    
+    $pdfService = new \App\Order\Application\Services\ReceiptPdfService();
+    $pdfService->generateReceiptPdf($orderId);
+    exit();
+})->withMiddleware(HttpKernel::withRole(['admin', 'staff', 'user', 'customer']));
 
 // ============================================
 // TEST ROUTES

@@ -67,6 +67,10 @@ $activePage = $activePage ?? 'dashboard';
                     <i class="fa-solid fa-receipt text-lg w-6 text-center"></i>
                     <span>Orders</span>
                 </a>
+                <a href="admin-refunds.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 <?php echo $activePage === 'refunds' ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'; ?> rounded-lg font-medium transition-colors">
+                    <i class="fa-solid fa-rotate-left text-lg w-6 text-center"></i>
+                    <span>Refunds</span>
+                </a>
                 <a href="admin-reports.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 <?php echo $activePage === 'reports' ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'; ?> rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-chart-simple text-lg w-6 text-center"></i>
                     <span>Reports</span>

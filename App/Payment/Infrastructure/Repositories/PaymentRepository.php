@@ -116,6 +116,137 @@ class PaymentRepository implements PaymentRepositoryInterface
     }
 
     // ============================================
+    // PAYMENT RECORD OPERATIONS (For Refund Module)
+    // ============================================
+
+    /**
+     * Find payment record by order ID
+     */
+    public function findByOrderId(int $orderId): ?array
+    {
+        $sql = "SELECT 
+                    p.*,
+                    pm.method_name as payment_method_name,
+                    pm.account_name as payment_account_name,
+                    pm.account_number as payment_account_number,
+                    ps.status_name as payment_status_name
+                FROM payments p
+                LEFT JOIN payment_methods pm ON p.payment_method_id = pm.id
+                LEFT JOIN payment_statuses ps ON p.payment_status_id = ps.id
+                WHERE p.order_id = :order_id";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':order_id' => $orderId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
+    /**
+     * Find payment by transaction number
+     */
+    public function findByTransactionNo(string $transactionNo): ?array
+    {
+        $sql = "SELECT 
+                    p.*,
+                    pm.method_name as payment_method_name,
+                    pm.account_name as payment_account_name,
+                    pm.account_number as payment_account_number,
+                    ps.status_name as payment_status_name
+                FROM payments p
+                LEFT JOIN payment_methods pm ON p.payment_method_id = pm.id
+                LEFT JOIN payment_statuses ps ON p.payment_status_id = ps.id
+                WHERE p.transaction_no = :transaction_no";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':transaction_no' => $transactionNo]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
+    /**
+     * Update payment status
+     */
+    public function updateStatus(int $paymentId, int $statusId): bool
+    {
+        $sql = "UPDATE payments SET payment_status_id = :status_id WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':id' => $paymentId,
+            ':status_id' => $statusId
+        ]);
+    }
+
+    /**
+     * Lock payment for update (pessimistic locking)
+     * Must be called inside a transaction
+     */
+    public function lockPayment(int $paymentId): ?array
+    {
+        $sql = "SELECT p.*, 
+                       pm.method_name as payment_method_name,
+                       ps.status_name as payment_status_name
+                FROM payments p
+                LEFT JOIN payment_methods pm ON p.payment_method_id = pm.id
+                LEFT JOIN payment_statuses ps ON p.payment_status_id = ps.id
+                WHERE p.id = :id 
+                FOR UPDATE";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $paymentId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
+    /**
+     * Create payment record
+     */
+    public function create(array $data): int
+    {
+        $sql = "INSERT INTO payments (
+                    order_id, 
+                    payment_method_id, 
+                    payment_status_id, 
+                    amount, 
+                    transaction_no, 
+                    transaction_image,
+                    idempotency_key,
+                    payment_date
+                ) VALUES (
+                    :order_id, 
+                    :payment_method_id, 
+                    :payment_status_id, 
+                    :amount, 
+                    :transaction_no, 
+                    :transaction_image, 
+                    :idempotency_key, 
+                    NOW()
+                )";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':order_id' => $data['order_id'],
+            ':payment_method_id' => $data['payment_method_id'],
+            ':payment_status_id' => $data['payment_status_id'],
+            ':amount' => $data['amount'],
+            ':transaction_no' => $data['transaction_no'] ?? null,
+            ':transaction_image' => $data['transaction_image'] ?? null,
+            ':idempotency_key' => $data['idempotency_key'] ?? null
+        ]);
+        
+        return (int) $this->db->lastInsertId();
+    }
+
+    // ============================================
+    // PAYMENT STATUS CONSTANTS
+    // ============================================
+
+    public const STATUS_PENDING = 1;
+    public const STATUS_PAID = 2;
+    public const STATUS_REFUND_PENDING = 3;
+    public const STATUS_REFUNDED = 4;
+    public const STATUS_FAILED = 5;
+
+    // ============================================
     // HYDRATION
     // ============================================
 

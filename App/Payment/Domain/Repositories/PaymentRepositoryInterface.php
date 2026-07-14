@@ -49,4 +49,33 @@ interface PaymentRepositoryInterface
      * Delete a payment method
      */
     public function delete(int $id): bool;
+
+    // ============================================
+    // PAYMENT RECORD OPERATIONS (For Refund Module)
+    // ============================================
+
+    /**
+     * Find payment record by order ID
+     */
+    public function findByOrderId(int $orderId): ?array;
+
+    /**
+     * Update payment status
+     */
+    public function updateStatus(int $paymentId, int $statusId): bool;
+
+    /**
+     * Lock payment for update (pessimistic locking)
+     */
+    public function lockPayment(int $paymentId): ?array;
+
+    /**
+     * Create payment record
+     */
+    public function create(array $data): int;
+
+    /**
+     * Find payment by transaction number
+     */
+    public function findByTransactionNo(string $transactionNo): ?array;
 }

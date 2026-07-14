@@ -361,4 +361,40 @@ class FoodRepository implements FoodRepositoryInterface
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int) ($result['count'] ?? 0);
     }
+
+     // ============================================
+    // STOCK MANAGEMENT - ADD THESE METHODS
+    // ============================================
+
+    /**
+     * Restore stock with pessimistic locking
+     * Must be called inside a transaction
+     */
+    public function restoreStockWithLock(int $foodId, int $quantity): bool
+    {
+        try {
+            // First, lock the row for update
+            $sql = "SELECT stock FROM foods WHERE id = :id FOR UPDATE";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':id' => $foodId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$result) {
+                throw new \Exception("Food item not found: $foodId");
+            }
+            
+            // Then update the stock
+            $sql = "UPDATE foods SET stock = stock + :quantity WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':quantity' => $quantity,
+                ':id' => $foodId
+            ]);
+            
+        } catch (\PDOException $e) {
+            error_log('Error restoring stock with lock: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
 }

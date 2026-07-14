@@ -187,14 +187,29 @@ include __DIR__ . '/includes/header.php';
             <?php foreach ($orders as $order): ?>
                 <?php 
                     $statusId = $order['status_id'] ?? 1;
+                    $orderId = $order['id'] ?? 0;
                     $statusName = $statusMap[$statusId] ?? 'pending';
                     $statusColor = $statusColors[$statusName] ?? 'bg-slate-50 border-slate-200 text-slate-700';
                     $statusIcon = $statusIcons[$statusName] ?? 'fa-solid fa-circle';
-                    $orderId = $order['id'] ?? 0;
                     $isPreparing = $statusName === 'preparing';
                     $isReady = $statusName === 'ready';
                     $isPending = $statusName === 'pending';
                     $pulseColor = $isPreparing ? '#F59E0B' : ($isReady ? '#10B981' : ($isPending ? '#3B82F6' : '#64748B'));
+                    
+                    // Check if order can request refund
+                    $canRefund = in_array($statusId, [1, 2]); // pending or confirmed
+                    $hasPendingRefund = false;
+                    
+                    // Check if order has pending refund
+                    try {
+                        $db = \Inc\Database::getConnection();
+                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM refunds WHERE order_id = :order_id AND refund_status_id = 1");
+                        $stmt->execute([':order_id' => $orderId]);
+                        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+                        $hasPendingRefund = (int) ($result['count'] ?? 0) > 0;
+                    } catch (\Exception $e) {
+                        $hasPendingRefund = false;
+                    }
                 ?>
                 <div class="order-card bg-white border border-slate-150 rounded-2xl shadow-sm shadow-slate-100/60 overflow-hidden" data-status="<?php echo $statusName; ?>">
                     <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
@@ -230,6 +245,14 @@ include __DIR__ . '/includes/header.php';
                             <?php if ($isReady || $isPreparing): ?>
                                 <button onclick="openLiveTracking('#<?php echo sprintf('%06d', (int) $orderId); ?>', <?php echo $isReady ? 2 : 1; ?>)" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-5 py-3 rounded-xl text-xs shadow-md shadow-emerald-500/15 hover:shadow-emerald-500/30 transition-all flex items-center justify-center space-x-2">
                                     <i class="fa-solid fa-location-crosshairs"></i><span>Track Live</span>
+                                </button>
+                            <?php endif; ?>
+                            <a href="/Campus-Food-Ordering-System/order/receipt?id=<?php echo $orderId; ?>" target="_blank" class="border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-print"></i><span>Print Receipt</span>
+                            </a>
+                            <?php if ($canRefund && !$hasPendingRefund): ?>
+                                <button class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-amber-500/15 hover:shadow-amber-500/30 transition-all flex items-center justify-center space-x-2 btn-refund-order" data-order-id="<?php echo $orderId; ?>">
+                                    <i class="fa-solid fa-rotate-left"></i><span>Request Refund</span>
                                 </button>
                             <?php endif; ?>
                         </div>
@@ -314,6 +337,45 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- REFUND MODAL -->
+<!-- ============================================ -->
+<div id="refundModal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl transform scale-95 transition-all duration-300" id="refundModalCard">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-slate-900">Request Refund</h2>
+            <button onclick="closeRefundModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        
+        <form id="refundForm" class="space-y-4">
+            <input type="hidden" name="order_id" id="refundOrderId">
+            
+            <div>
+                <label for="refundReason" class="block text-sm font-medium text-slate-700 mb-1">Reason for Refund</label>
+                <textarea id="refundReason" name="reason" rows="4" 
+                          class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-sm placeholder-slate-400"
+                          placeholder="Please explain why you want to refund this order..."></textarea>
+                <p class="text-xs text-slate-400 mt-1">Minimum 5 characters, maximum 500 characters</p>
+            </div>
+            
+            <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeRefundModal()" 
+                        class="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    Submit Refund Request
+                </button>
+            </div>
+        </form>
+        
+        <div id="refundResponse" class="hidden mt-4 p-4 rounded-lg"></div>
     </div>
 </div>
 
@@ -522,6 +584,121 @@ function setMilestonePending(stepNum) {
         bullet.innerHTML = "<div class='w-2 h-2 rounded-full bg-slate-200'></div>";
     }
 }
+
+// ============================================
+// REFUND FUNCTIONALITY
+// ============================================
+
+// Refund button click handler
+document.querySelectorAll('.btn-refund-order').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const orderId = this.dataset.orderId;
+        openRefundModal(orderId);
+    });
+});
+
+// Open refund modal
+function openRefundModal(orderId) {
+    const modal = document.getElementById('refundModal');
+    const card = document.getElementById('refundModalCard');
+    document.getElementById('refundOrderId').value = orderId;
+    document.getElementById('refundReason').value = '';
+    document.getElementById('refundResponse').classList.add('hidden');
+    modal.classList.remove('hidden');
+    card.classList.remove('scale-95');
+    card.classList.add('scale-100');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close refund modal
+function closeRefundModal() {
+    const modal = document.getElementById('refundModal');
+    const card = document.getElementById('refundModalCard');
+    modal.classList.add('hidden');
+    card.classList.add('scale-95');
+    card.classList.remove('scale-100');
+    document.body.style.overflow = '';
+}
+
+// Handle refund form submission
+document.getElementById('refundForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const orderId = document.getElementById('refundOrderId').value;
+    const reason = document.getElementById('refundReason').value;
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const responseDiv = document.getElementById('refundResponse');
+    
+    // Validate
+    if (!reason || reason.length < 5) {
+        responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+        responseDiv.innerHTML = 'Please provide a reason (minimum 5 characters).';
+        responseDiv.classList.remove('hidden');
+        return;
+    }
+    
+    if (reason.length > 500) {
+        responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+        responseDiv.innerHTML = 'Reason is too long (maximum 500 characters).';
+        responseDiv.classList.remove('hidden');
+        return;
+    }
+    
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...';
+    responseDiv.classList.add('hidden');
+    
+    fetch('/Campus-Food-Ordering-System/api/refund/request.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `order_id=${orderId}&reason=${encodeURIComponent(reason)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            responseDiv.className = 'mt-4 p-4 rounded-lg bg-green-50 text-green-700 text-sm';
+            responseDiv.innerHTML = `
+                <i class="fa-solid fa-check-circle mr-2"></i>
+                ${data.message}
+                ${data.data?.refund_id ? `<br><span class="text-xs">Refund ID: #${data.data.refund_id}</span>` : ''}
+            `;
+            responseDiv.classList.remove('hidden');
+            
+            // Close modal after 3 seconds and reload
+            setTimeout(() => {
+                closeRefundModal();
+                location.reload();
+            }, 3000);
+        } else {
+            responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+            responseDiv.innerHTML = `
+                <i class="fa-solid fa-exclamation-circle mr-2"></i>
+                ${data.message}
+                ${data.errors ? `<br><span class="text-xs">${Object.values(data.errors).join(' ')}</span>` : ''}
+            `;
+            responseDiv.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Submit Refund Request';
+        }
+    })
+    .catch(error => {
+        responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+        responseDiv.innerHTML = 'An error occurred. Please try again.';
+        responseDiv.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit Refund Request';
+        console.error('Error:', error);
+    });
+});
+
+// Close refund modal on overlay click
+document.getElementById('refundModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRefundModal();
+    }
+});
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

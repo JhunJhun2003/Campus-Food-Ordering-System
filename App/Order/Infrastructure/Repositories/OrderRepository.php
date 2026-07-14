@@ -546,4 +546,33 @@ public function findByIdWithDetails(int $id): ?array
         
         return $emojiMap[$categoryId] ?? '🍽️';
     }
+
+        /**
+     * Lock order for update (pessimistic locking)
+     * Must be called inside a transaction
+     */
+    public function lockOrder(int $orderId): ?array
+    {
+        try {
+            $sql = "SELECT o.*, 
+                           {$this->customerNameSelect()} as customer_name, 
+                           {$this->customerPhoneSelect()} as customer_phone,
+                           os.status_name
+                    FROM orders o
+                    LEFT JOIN order_statuses os ON o.status_id = os.id
+                    JOIN users u ON o.user_id = u.id
+                    WHERE o.id = :id 
+                    FOR UPDATE";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':id' => $orderId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ?: null;
+            
+        } catch (\PDOException $e) {
+            error_log('Error locking order: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
 }

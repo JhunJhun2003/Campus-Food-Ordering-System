@@ -31,7 +31,7 @@ interface FoodRepositoryInterface
     // ============================================
     // STOCK MANAGEMENT
     // ============================================
-
+public function restoreStockWithLock(int $foodId, int $quantity): bool;
     public function reduceStock(int $foodId, int $quantity): bool;
     public function reduceStockForItems(array $items): bool;
     public function getStock(int $foodId): int;

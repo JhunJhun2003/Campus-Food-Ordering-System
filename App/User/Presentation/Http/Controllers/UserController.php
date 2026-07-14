@@ -135,6 +135,7 @@ class UserController extends BaseController
 
     /**
      * Get current user data - Authenticated users only
+     * Overrides parent to add session data
      */
     public function getCurrentUser(): ?array
     {
@@ -156,6 +157,7 @@ class UserController extends BaseController
      */
     public function getProfile(int $userId): ?array
     {
+        // Use parent's requireAuthentication and authorize methods
         $this->requireAuthentication();
         $this->authorizeResource($userId, 'manage_users');
         
@@ -167,6 +169,7 @@ class UserController extends BaseController
      */
     public function updateProfile(int $userId, array $data): array
     {
+        // Use parent's requireAuthentication and authorize methods
         $this->requireAuthentication();
         $this->authorizeResource($userId, 'manage_users');
         
@@ -178,6 +181,7 @@ class UserController extends BaseController
      */
     public function changePassword(int $userId, string $currentPassword, string $newPassword): array
     {
+        // Use parent's requireAuthentication method
         $this->requireAuthentication();
         $this->authorizeResource($userId);
         
@@ -248,53 +252,49 @@ class UserController extends BaseController
     }
 
     // ============================================
-    // AUTHENTICATION HELPERS (Using BaseController methods)
+    // AUTHENTICATION HELPERS - REMOVED OVERRIDES
+    // These methods now use parent's implementation
     // ============================================
 
+    /**
+     * Check if user is logged in
+     */
     public function isLoggedIn(): bool
     {
         return $this->isAuthenticated();
     }
 
+    /**
+     * Check if user is verified
+     */
     public function isVerified(): bool
     {
         return !empty($_SESSION['user_verified']) && $_SESSION['user_verified'] === true;
     }
 
+    /**
+     * Require authentication - uses parent method
+     */
     public function requireAuth(): void
     {
         $this->requireAuthentication();
     }
 
+    /**
+     * Require verified email
+     */
     public function requireVerified(): void
     {
-        $this->requireAuth();
+        $this->requireAuthentication();
         if (!$this->isVerified()) {
             header('Location: /Campus-Food-Ordering-System/view/entrance/verify-email.php');
             exit();
         }
     }
 
-    public function requireAdmin(): void
-    {
-        $this->requireAuth();
-        $role = $_SESSION['user_role'] ?? '';
-        if ($role !== 'admin') {
-            header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
-            exit();
-        }
-    }
-
-    public function requireStaff(): void
-    {
-        $this->requireAuth();
-        $role = $_SESSION['user_role'] ?? '';
-        if (!in_array($role, ['admin', 'staff'])) {
-            header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
-            exit();
-        }
-    }
-
+    /**
+     * Require guest (not logged in)
+     */
     public function requireGuest(): void
     {
         if ($this->isLoggedIn()) {

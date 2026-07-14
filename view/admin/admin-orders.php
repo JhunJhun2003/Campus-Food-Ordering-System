@@ -103,7 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     'items' => $items,
                     'status_id' => $orderData['status_id'],
                     'status_name' => $orderData['status_name'] ?? 'pending',
-                    // ✅ FIX: Added transaction_image to response
                     'transaction_image' => $orderData['transaction_image'] ?? null
                 ]
             ]);
@@ -189,9 +188,26 @@ include __DIR__ . '/includes/sidebar.php';
                 <?php else: ?>
                     <?php $counter = 1; ?>
                     <?php foreach ($orders as $order): ?>
-                        <tr class="hover:bg-gray-50/50 transition-colors">
+                        <?php 
+                            $orderId = $order->getId();
+                            $statusId = $order->getStatusId();
+                            $canRefund = in_array($statusId, [1, 2]); // pending or confirmed
+                            $hasPendingRefund = false;
+                            
+                            // Check if order has pending refund
+                            try {
+                                $db = \Inc\Database::getConnection();
+                                $stmt = $db->prepare("SELECT COUNT(*) as count FROM refunds WHERE order_id = :order_id AND refund_status_id = 1");
+                                $stmt->execute([':order_id' => $orderId]);
+                                $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+                                $hasPendingRefund = (int) ($result['count'] ?? 0) > 0;
+                            } catch (\Exception $e) {
+                                $hasPendingRefund = false;
+                            }
+                        ?>
+                        <tr class="hover:bg-gray-50/50 transition-colors" data-order-id="<?php echo $orderId; ?>" data-status-id="<?php echo $statusId; ?>">
                             <td class="py-4 px-6 text-center text-gray-400 text-xs"><?php echo $counter++; ?></td>
-                            <td class="py-4 px-6 font-medium text-gray-900">#<?php echo $order->getId(); ?></td>
+                            <td class="py-4 px-6 font-medium text-gray-900">#<?php echo $orderId; ?></td>
                             <td class="py-4 px-6 text-gray-600"><?php echo htmlspecialchars($order->getCustomerName() ?? 'Unknown'); ?></td>
                             <td class="py-4 px-6 text-gray-600"><?php echo htmlspecialchars($order->getCustomerPhone() ?? 'N/A'); ?></td>
                             <td class="py-4 px-6 font-medium text-gray-900">$<?php echo number_format($order->getTotalAmount(), 2); ?></td>
@@ -223,9 +239,17 @@ include __DIR__ . '/includes/sidebar.php';
                             </td>
                             <td class="py-4 px-6">
                                 <div class="flex items-center justify-center space-x-2">
-                                    <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium btn-view-details" data-order-id="<?php echo $order->getId(); ?>" title="View Order Details">
+                                    <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium btn-view-details" data-order-id="<?php echo $orderId; ?>" title="View Order Details">
                                         <i class="fa-regular fa-eye"></i>
                                     </button>
+                                    <a href="/Campus-Food-Ordering-System/order/receipt?id=<?php echo $orderId; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
+                                        <i class="fa-solid fa-print"></i>
+                                    </a>
+                                    <?php if ($canRefund && !$hasPendingRefund): ?>
+                                        <button class="text-emerald-600 hover:text-emerald-800 text-sm font-medium btn-refund-order" data-order-id="<?php echo $orderId; ?>" title="Request Refund">
+                                            <i class="fa-solid fa-rotate-left"></i>
+                                        </button>
+                                    <?php endif; ?>
                                     <div class="status-action">
                                         <select class="status-select" data-original-status-id="<?php echo $order->getStatusId(); ?>">
                                             <?php foreach ($statuses as $status): ?>
@@ -234,7 +258,7 @@ include __DIR__ . '/includes/sidebar.php';
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <button type="button" class="status-save-btn" data-order-id="<?php echo $order->getId(); ?>" title="Save status" disabled>
+                                        <button type="button" class="status-save-btn" data-order-id="<?php echo $orderId; ?>" title="Save status" disabled>
                                             <i class="fa-solid fa-check text-xs"></i>
                                         </button>
                                     </div>
@@ -282,6 +306,45 @@ include __DIR__ . '/includes/sidebar.php';
                 <p class="text-sm text-gray-400 mt-2">Loading order details...</p>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- REFUND MODAL -->
+<!-- ============================================ -->
+<div id="refundModal" class="modal-overlay hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-slate-900">Request Refund</h2>
+            <button onclick="closeRefundModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        
+        <form id="refundForm" class="space-y-4">
+            <input type="hidden" name="order_id" id="refundOrderId">
+            
+            <div>
+                <label for="refundReason" class="block text-sm font-medium text-slate-700 mb-1">Reason for Refund</label>
+                <textarea id="refundReason" name="reason" rows="4" 
+                          class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm placeholder-slate-400"
+                          placeholder="Please explain why you want to refund this order..."></textarea>
+                <p class="text-xs text-slate-400 mt-1">Minimum 5 characters, maximum 500 characters</p>
+            </div>
+            
+            <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeRefundModal()" 
+                        class="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    Submit Refund Request
+                </button>
+            </div>
+        </form>
+        
+        <div id="refundResponse" class="hidden mt-4 p-4 rounded-lg"></div>
     </div>
 </div>
 
@@ -507,11 +570,9 @@ function renderOrderDetails(order) {
     }
     
     let imageHtml = '';
-    // ✅ FIX: Use the transaction_image from the order data
     const imagePath = order.transaction_image || '';
     
     if (imagePath && imagePath !== 'N/A' && imagePath !== '') {
-        // The path is already "uploads/transactions/filename.png"
         const imageUrl = '/Campus-Food-Ordering-System/Public/' + imagePath;
         
         imageHtml = `
@@ -616,6 +677,117 @@ function closeOrderDetails() {
 document.getElementById('orderDetailsModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeOrderDetails();
+    }
+});
+
+// ============================================
+// REFUND FUNCTIONALITY
+// ============================================
+
+// Refund button click handler
+document.querySelectorAll('.btn-refund-order').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const orderId = this.dataset.orderId;
+        openRefundModal(orderId);
+    });
+});
+
+// Open refund modal
+function openRefundModal(orderId) {
+    const modal = document.getElementById('refundModal');
+    document.getElementById('refundOrderId').value = orderId;
+    document.getElementById('refundReason').value = '';
+    document.getElementById('refundResponse').classList.add('hidden');
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Close refund modal
+function closeRefundModal() {
+    const modal = document.getElementById('refundModal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Handle refund form submission
+document.getElementById('refundForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const orderId = document.getElementById('refundOrderId').value;
+    const reason = document.getElementById('refundReason').value;
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const responseDiv = document.getElementById('refundResponse');
+    
+    // Validate
+    if (!reason || reason.length < 5) {
+        responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+        responseDiv.innerHTML = 'Please provide a reason (minimum 5 characters).';
+        responseDiv.classList.remove('hidden');
+        return;
+    }
+    
+    if (reason.length > 500) {
+        responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+        responseDiv.innerHTML = 'Reason is too long (maximum 500 characters).';
+        responseDiv.classList.remove('hidden');
+        return;
+    }
+    
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...';
+    responseDiv.classList.add('hidden');
+    
+    fetch('/Campus-Food-Ordering-System/api/refund/request.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `order_id=${orderId}&reason=${encodeURIComponent(reason)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            responseDiv.className = 'mt-4 p-4 rounded-lg bg-green-50 text-green-700 text-sm';
+            responseDiv.innerHTML = `
+                <i class="fa-solid fa-check-circle mr-2"></i>
+                ${data.message}
+                ${data.data?.refund_id ? `<br><span class="text-xs">Refund ID: #${data.data.refund_id}</span>` : ''}
+            `;
+            responseDiv.classList.remove('hidden');
+            
+            // Close modal after 3 seconds and reload
+            setTimeout(() => {
+                closeRefundModal();
+                location.reload();
+            }, 3000);
+        } else {
+            responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+            responseDiv.innerHTML = `
+                <i class="fa-solid fa-exclamation-circle mr-2"></i>
+                ${data.message}
+                ${data.errors ? `<br><span class="text-xs">${Object.values(data.errors).join(' ')}</span>` : ''}
+            `;
+            responseDiv.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Submit Refund Request';
+        }
+    })
+    .catch(error => {
+        responseDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 text-red-700 text-sm';
+        responseDiv.innerHTML = 'An error occurred. Please try again.';
+        responseDiv.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit Refund Request';
+        console.error('Error:', error);
+    });
+});
+
+// Close refund modal on overlay click
+document.getElementById('refundModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRefundModal();
     }
 });
 

@@ -143,4 +143,6 @@ interface OrderRepositoryInterface
      * Count orders placed this month
      */
     public function countMonthly(): int;
+
+      public function lockOrder(int $orderId): ?array;
 }

@@ -43,6 +43,14 @@ abstract class BaseController
     }
 
     /**
+     * Check if user is customer
+     */
+    protected function isCustomer(): bool
+    {
+        return $this->currentUserRole === 'customer' || $this->currentUserRole === 'user';
+    }
+
+    /**
      * Get current user ID
      */
     protected function getCurrentUserId(): int
@@ -59,6 +67,38 @@ abstract class BaseController
     }
 
     /**
+     * Get current user data
+     */
+    protected function getCurrentUser(): ?array
+    {
+        if (!$this->isAuthenticated()) {
+            return null;
+        }
+
+        try {
+            $db = \Inc\Database::getConnection();
+            $stmt = $db->prepare("
+                SELECT u.*, r.name as role_name 
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE u.id = :user_id
+            ");
+            $stmt->execute([':user_id' => $this->currentUserId]);
+            $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                $user['id'] = (int) $user['id'];
+                $user['role_id'] = isset($user['role_id']) ? (int) $user['role_id'] : null;
+                return $user;
+            }
+        } catch (\Exception $e) {
+            error_log('Error getting current user: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
      * Require authentication - throws exception if not authenticated
      */
     protected function requireAuthentication(): void
@@ -69,25 +109,59 @@ abstract class BaseController
     }
 
     /**
-     * Require admin access - throws exception if not admin
+     * Require admin access - returns user data if authorized
      */
-    protected function requireAdmin(): void
+    protected function requireAdmin(): ?array
     {
         $this->requireAuthentication();
+        
         if (!$this->isAdmin()) {
             throw new \RuntimeException('Admin access required', 403);
         }
+
+        return $this->getCurrentUser();
     }
 
     /**
-     * Require staff access - throws exception if not staff or admin
+     * Require staff access - returns user data if authorized
      */
-    protected function requireStaff(): void
+    protected function requireStaff(): ?array
     {
         $this->requireAuthentication();
+        
         if (!$this->isStaff() && !$this->isAdmin()) {
             throw new \RuntimeException('Staff access required', 403);
         }
+
+        return $this->getCurrentUser();
+    }
+
+    /**
+     * Require customer access - returns user data if authorized
+     */
+    protected function requireCustomer(): ?array
+    {
+        $this->requireAuthentication();
+        
+        if (!$this->isCustomer()) {
+            throw new \RuntimeException('Customer access required', 403);
+        }
+
+        return $this->getCurrentUser();
+    }
+
+    /**
+     * Require staff or customer access - returns user data if authorized
+     */
+    protected function requireStaffOrCustomer(): ?array
+    {
+        $this->requireAuthentication();
+        
+        if (!$this->isStaff() && !$this->isAdmin() && !$this->isCustomer()) {
+            throw new \RuntimeException('Access denied', 403);
+        }
+
+        return $this->getCurrentUser();
     }
 
     /**
@@ -104,17 +178,25 @@ abstract class BaseController
     /**
      * JSON error response
      */
-    protected function jsonError(string $message, int $statusCode = 400): void
+    protected function jsonError(string $message, int $statusCode = 400, array $errors = []): void
     {
-        $this->jsonResponse(['success' => false, 'error' => $message], $statusCode);
+        $response = ['success' => false, 'error' => $message];
+        if (!empty($errors)) {
+            $response['errors'] = $errors;
+        }
+        $this->jsonResponse($response, $statusCode);
     }
 
     /**
      * JSON success response
      */
-    protected function jsonSuccess(array $data = [], string $message = 'Success'): void
+    protected function jsonSuccess(array $data = [], string $message = 'Success', ?array $extra = null): void
     {
-        $this->jsonResponse(['success' => true, 'message' => $message, 'data' => $data]);
+        $response = ['success' => true, 'message' => $message, 'data' => $data];
+        if ($extra !== null) {
+            $response = array_merge($response, $extra);
+        }
+        $this->jsonResponse($response);
     }
 
     /**
@@ -123,6 +205,20 @@ abstract class BaseController
     protected function redirectWithError(string $url, string $errorMessage): void
     {
         $_SESSION['error'] = $errorMessage;
+        if (headers_sent()) {
+            echo '<script>window.location.href="' . $url . '";</script>';
+            exit();
+        }
+        header('Location: ' . $url);
+        exit();
+    }
+
+    /**
+     * Redirect with success message
+     */
+    protected function redirectWithSuccess(string $url, string $successMessage): void
+    {
+        $_SESSION['success'] = $successMessage;
         if (headers_sent()) {
             echo '<script>window.location.href="' . $url . '";</script>';
             exit();
@@ -143,5 +239,41 @@ abstract class BaseController
         }
         header('Location: ' . $referer);
         exit();
+    }
+
+    /**
+     * Get POST data as array
+     */
+    protected function getPostData(): array
+    {
+        $input = file_get_contents('php://input');
+        if (empty($input)) {
+            return $_POST;
+        }
+        
+        $data = json_decode($input, true);
+        return is_array($data) ? $data : $_POST;
+    }
+
+    /**
+     * Get query parameters
+     */
+    protected function getQueryParams(): array
+    {
+        return $_GET;
+    }
+
+    /**
+     * Validate required fields
+     */
+    protected function validateRequired(array $data, array $requiredFields): array
+    {
+        $errors = [];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || $data[$field] === '' || $data[$field] === null) {
+                $errors[$field] = "The {$field} field is required";
+            }
+        }
+        return $errors;
     }
 }

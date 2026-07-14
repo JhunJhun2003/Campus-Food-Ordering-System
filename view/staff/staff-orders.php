@@ -241,6 +241,9 @@ include __DIR__ . '/includes/sidebar.php';
                                                 data-order-id="<?php echo $order->getId(); ?>" title="View Order Details">
                                             <i class="fa-regular fa-eye"></i>
                                         </button>
+                                        <a href="/Campus-Food-Ordering-System/order/receipt?id=<?php echo $order->getId(); ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
+                                            <i class="fa-solid fa-print"></i>
+                                        </a>
                                         
                                         <!-- Update Status -->
                                         <?php if ($permissions['updateOrderStatus']): ?>

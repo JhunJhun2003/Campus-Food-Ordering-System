@@ -22,6 +22,12 @@ $navItems = [
         'label' => 'Orders',
         'permission' => $permissions['viewOrders'] ?? false
     ],
+    'refunds' => [
+        'url' => 'staff-refunds.php',
+        'icon' => 'fa-rotate-left',
+        'label' => 'Refunds',
+        'permission' => $permissions['viewOrders'] ?? false
+    ],
     'menu' => [
         'url' => 'staff-menu.php',
         'icon' => 'fa-book-open',
