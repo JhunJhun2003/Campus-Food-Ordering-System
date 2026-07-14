@@ -25,12 +25,12 @@ $paymentController = getPaymentController();
 $refundController = getRefundController();
 
 // ============================================
-// PUBLIC ROUTES (Guest only)
+// HOME ROUTE
 // ============================================
 
 $router->get('/', function() {
-    require_once __DIR__ . '/../view/public/landing.php';
-})->withMiddleware(HttpKernel::guest());
+    require_once __DIR__ . '/../view/customer/dashboard.php';
+});
 
 // ============================================
 // AUTH ROUTES (Guest only)

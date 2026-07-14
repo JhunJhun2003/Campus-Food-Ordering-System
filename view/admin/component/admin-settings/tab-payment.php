@@ -56,14 +56,14 @@
                                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
                                         <i class="fa-regular fa-pen-to-square mr-1"></i>Edit
                                     </a>
-                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this payment method?');">
+                                    <!-- <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this payment method?');">
                                         <input type="hidden" name="delete_payment_method" value="1">
                                         <input type="hidden" name="payment_id" value="<?php echo $pm->getId(); ?>">
                                         <input type="hidden" name="tab" value="payment">
                                         <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
                                             <i class="fa-regular fa-trash-can mr-1"></i>Delete
                                         </button>
-                                    </form>
+                                    </form> -->
                                 </td>
                             </tr>
                         <?php endforeach; ?>

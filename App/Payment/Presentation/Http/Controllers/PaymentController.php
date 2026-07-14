@@ -68,10 +68,10 @@ class PaymentController extends BaseController
         
         $request = new UpdatePaymentMethodRequest(
             $id,
-            $data['name'] ?? null,
+            $data['name'] ?? $data['method_name'] ?? null,
             $data['account_name'] ?? null,
             $data['account_number'] ?? null,
-            $data['is_active'] ?? null
+            isset($data['is_active']) ? (bool) $data['is_active'] : null
         );
         return $this->updatePaymentMethodUseCase->execute($request);
     }

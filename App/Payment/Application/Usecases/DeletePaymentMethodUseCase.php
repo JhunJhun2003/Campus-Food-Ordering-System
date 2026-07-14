@@ -27,8 +27,25 @@ class DeletePaymentMethodUseCase
             return ['success' => false, 'message' => 'Cash on Delivery cannot be deleted.'];
         }
 
-        // Delete
-        $deleted = $this->paymentRepository->delete($id);
+        if ($this->paymentRepository->countPaymentsByMethodId($id) > 0) {
+            return [
+                'success' => false,
+                'message' => 'Cannot delete this payment method because it has existing payment records. Deactivate it instead.',
+            ];
+        }
+
+        try {
+            $deleted = $this->paymentRepository->delete($id);
+        } catch (\PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return [
+                    'success' => false,
+                    'message' => 'Cannot delete this payment method because it is linked to existing payments. Deactivate it instead.',
+                ];
+            }
+
+            throw $e;
+        }
 
         return [
             'success' => $deleted,

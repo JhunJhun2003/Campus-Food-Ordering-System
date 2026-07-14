@@ -104,8 +104,7 @@ if ($response === null) {
         header('Location: ' . ($redirectMap[$role] ?? $redirectMap['user']));
         exit();
     } else {
-        // Show landing page
-        require_once __DIR__ . '/../view/public/landing.php';
+        require_once __DIR__ . '/../view/customer/dashboard.php';
         exit();
     }
 }

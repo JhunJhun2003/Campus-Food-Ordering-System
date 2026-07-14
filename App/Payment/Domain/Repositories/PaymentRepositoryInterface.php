@@ -50,6 +50,11 @@ interface PaymentRepositoryInterface
      */
     public function delete(int $id): bool;
 
+    /**
+     * Count payment records using a payment method
+     */
+    public function countPaymentsByMethodId(int $id): int;
+
     // ============================================
     // PAYMENT RECORD OPERATIONS (For Refund Module)
     // ============================================

@@ -115,6 +115,15 @@ class PaymentRepository implements PaymentRepositoryInterface
         return $stmt->execute([':id' => $id]);
     }
 
+    public function countPaymentsByMethodId(int $id): int
+    {
+        $sql = "SELECT COUNT(*) FROM payments WHERE payment_method_id = :id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $id]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     // ============================================
     // PAYMENT RECORD OPERATIONS (For Refund Module)
     // ============================================
