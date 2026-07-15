@@ -247,9 +247,9 @@ include __DIR__ . '/includes/header.php';
                                     <i class="fa-solid fa-location-crosshairs"></i><span>Track Live</span>
                                 </button>
                             <?php endif; ?>
-                            <a href="/Campus-Food-Ordering-System/order/receipt?id=<?php echo $orderId; ?>" target="_blank" class="border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center justify-center space-x-2">
-                                <i class="fa-solid fa-print"></i><span>Print Receipt</span>
-                            </a>
+                            <a href="/Campus-Food-Ordering-System/Public/receipt.php?id=<?php echo $orderId; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
+    <i class="fa-solid fa-print"></i>
+</a>
                             <?php if ($canRefund && !$hasPendingRefund): ?>
                                 <button class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-amber-500/15 hover:shadow-amber-500/30 transition-all flex items-center justify-center space-x-2 btn-refund-order" data-order-id="<?php echo $orderId; ?>">
                                     <i class="fa-solid fa-rotate-left"></i><span>Request Refund</span>

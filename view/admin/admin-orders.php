@@ -242,9 +242,9 @@ include __DIR__ . '/includes/sidebar.php';
                                     <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium btn-view-details" data-order-id="<?php echo $orderId; ?>" title="View Order Details">
                                         <i class="fa-regular fa-eye"></i>
                                     </button>
-                                    <a href="/Campus-Food-Ordering-System/order/receipt?id=<?php echo $orderId; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
-                                        <i class="fa-solid fa-print"></i>
-                                    </a>
+                                    <a href="/Campus-Food-Ordering-System/Public/receipt.php?id=<?php echo $orderId; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
+    <i class="fa-solid fa-print"></i>
+</a>
                                     <?php if ($canRefund && !$hasPendingRefund): ?>
                                         <button class="text-emerald-600 hover:text-emerald-800 text-sm font-medium btn-refund-order" data-order-id="<?php echo $orderId; ?>" title="Request Refund">
                                             <i class="fa-solid fa-rotate-left"></i>
