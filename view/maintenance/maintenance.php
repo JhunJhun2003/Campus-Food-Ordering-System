@@ -200,7 +200,7 @@ $pageTitle = 'Under Maintenance - FOODIE';
                 
                 <!-- Actions -->
                 <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-                    <a href="/Campus-Food-Ordering-System" class="btn-home flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-all shadow-sm">
+                    <a href="/Campus-Food-Ordering-System/Public" class="btn-home flex items-center justify-center gap-2 px-8 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-all shadow-sm">
                         <i class="fa-solid fa-arrow-left text-xs"></i>
                         <span>Go to Home</span>
                     </a>

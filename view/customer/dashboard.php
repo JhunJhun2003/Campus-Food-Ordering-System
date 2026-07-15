@@ -60,13 +60,19 @@ foreach ($foods as $food) {
             break;
         }
     }
+    $imagePath = null;
+    if (!empty($food->getImage())) {
+        $imagePath = '/Campus-Food-Ordering-System/Public/uploads/foods/' . rawurlencode($food->getImage());
+    }
+
     $menuData[] = [
         'id' => $food->getId(),
         'name' => $food->getName(),
         'price' => $food->getPrice(),
         'category' => $categoryName ?: 'Uncategorized',
         'emoji' => $emojiMap[$food->getCategoryId()] ?? '🍽️',
-        'stock' => $food->getStock()
+        'stock' => $food->getStock(),
+        'image' => $imagePath
     ];
 }
 

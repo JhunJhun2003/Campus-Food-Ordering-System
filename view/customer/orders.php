@@ -54,6 +54,8 @@ $statuses = $orderController->getStatuses();
 $statusMap = [];
 $statusColors = [];
 $statusIcons = [];
+$refundStatusColors = [];
+$refundStatusIcons = [];
 
 foreach ($statuses as $status) {
     $id = $status['id'];
@@ -80,6 +82,20 @@ foreach ($statuses as $status) {
         default => 'fa-solid fa-circle'
     };
 }
+
+$refundStatusColors = [
+    'refund pending' => 'bg-amber-50 border-amber-200 text-amber-700',
+    'refund approved' => 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    'refund rejected' => 'bg-rose-50 border-rose-100 text-rose-600',
+    'refund completed' => 'bg-sky-50 border-sky-200 text-sky-700',
+];
+
+$refundStatusIcons = [
+    'refund pending' => 'fa-solid fa-clock',
+    'refund approved' => 'fa-solid fa-circle-check',
+    'refund rejected' => 'fa-solid fa-circle-xmark',
+    'refund completed' => 'fa-solid fa-hand-holding-dollar',
+];
 
 // ✅ Build filter tabs dynamically
 $filterTabs = [];
@@ -196,20 +212,41 @@ include __DIR__ . '/includes/header.php';
                     $isPending = $statusName === 'pending';
                     $pulseColor = $isPreparing ? '#F59E0B' : ($isReady ? '#10B981' : ($isPending ? '#3B82F6' : '#64748B'));
                     
-                    // Check if order can request refund
-                    $canRefund = in_array($statusId, [1, 2]); // pending or confirmed
-                    $hasPendingRefund = false;
+                    $refundStatusId = null;
+                    $refundStatusName = null;
+                    $hasRefundRecord = false;
                     
-                    // Check if order has pending refund
                     try {
                         $db = \Inc\Database::getConnection();
-                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM refunds WHERE order_id = :order_id AND refund_status_id = 1");
+                        $stmt = $db->prepare("SELECT refund_status_id FROM refunds WHERE order_id = :order_id ORDER BY created_at DESC LIMIT 1");
                         $stmt->execute([':order_id' => $orderId]);
-                        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-                        $hasPendingRefund = (int) ($result['count'] ?? 0) > 0;
+                        $refundRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+                        $refundStatusId = (int) ($refundRow['refund_status_id'] ?? 0);
+                        $hasRefundRecord = $refundStatusId > 0;
+                        if ($hasRefundRecord) {
+                            $refundStatusName = match($refundStatusId) {
+                                1 => 'refund pending',
+                                2 => 'refund approved',
+                                3 => 'refund rejected',
+                                4 => 'refund completed',
+                                default => null,
+                            };
+                        }
                     } catch (\Exception $e) {
-                        $hasPendingRefund = false;
+                        $refundStatusId = null;
+                        $refundStatusName = null;
+                        $hasRefundRecord = false;
                     }
+
+                    if ($refundStatusName !== null) {
+                        $statusName = $refundStatusName;
+                        $statusColor = $refundStatusColors[$statusName] ?? 'bg-slate-50 border-slate-200 text-slate-700';
+                        $statusIcon = $refundStatusIcons[$statusName] ?? 'fa-solid fa-circle';
+                        $pulseColor = $statusName === 'refund approved' ? '#10B981' : ($statusName === 'refund pending' ? '#F59E0B' : '#64748B');
+                    }
+                    
+                    // Check if order can request refund
+                    $canRefund = in_array($statusId, [1, 2]) && !$hasRefundRecord; // pending or confirmed and no refund record
                 ?>
                 <div class="order-card bg-white border border-slate-150 rounded-2xl shadow-sm shadow-slate-100/60 overflow-hidden" data-status="<?php echo $statusName; ?>">
                     <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
@@ -250,7 +287,7 @@ include __DIR__ . '/includes/header.php';
                             <a href="/Campus-Food-Ordering-System/Public/receipt.php?id=<?php echo $orderId; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
     <i class="fa-solid fa-print"></i>
 </a>
-                            <?php if ($canRefund && !$hasPendingRefund): ?>
+                            <?php if ($canRefund): ?>
                                 <button class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-amber-500/15 hover:shadow-amber-500/30 transition-all flex items-center justify-center space-x-2 btn-refund-order" data-order-id="<?php echo $orderId; ?>">
                                     <i class="fa-solid fa-rotate-left"></i><span>Request Refund</span>
                                 </button>

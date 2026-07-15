@@ -28,12 +28,18 @@ function renderMenuGrid() {
     filteredItems.forEach(item => {
         const isOutOfStock = (item.stock || 0) <= 0;
         const stockDisplay = item.stock || 0;
+        const imageSrc = item.image ? item.image : '';
+        const imageMarkup = imageSrc
+            ? `<img src="${imageSrc}" alt="${item.name}" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.remove(); this.parentElement.insertAdjacentHTML('beforeend', '<div class=\"w-full h-full flex items-center justify-center text-3.5xl\">`
+            : `<div class="w-full h-full flex items-center justify-center text-3.5xl select-none">${item.emoji || '🍽️'}</div>`;
         
         const card = document.createElement('div');
         card.className = 'bg-white border border-slate-150 rounded-2xl shadow-sm p-4 hover:shadow-md hover:border-slate-200 transition-all flex items-center justify-between';
         card.innerHTML = `
             <div class="flex items-center space-x-4">
-                <div class="w-16 h-16 bg-slate-50/50 rounded-xl flex items-center justify-center border border-slate-100 text-3.5xl select-none">${item.emoji}</div>
+                <div class="w-16 h-16 bg-slate-50/50 rounded-xl overflow-hidden border border-slate-100 flex items-center justify-center select-none">
+                    ${imageMarkup}
+                </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-800">${item.name}</h3>
                     <p class="text-sm font-extrabold text-slate-900 mt-1">$ ${item.price}</p>
@@ -188,6 +194,10 @@ function showToast(message, isSuccess = true) {
 }
 
 // Initialize on page load
-window.onload = function() {
+window.addEventListener('DOMContentLoaded', function() {
     renderMenuGrid();
-};
+});
+
+window.addEventListener('load', function() {
+    renderMenuGrid();
+});

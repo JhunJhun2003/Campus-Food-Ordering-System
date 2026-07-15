@@ -96,8 +96,9 @@ class RequestRefundUseCase
             // You may need to add this status to order_statuses table
             $this->orderRepository->updateStatus($request->orderId, 7); // 7 = refund_requested
 
-            // 11. Update payment status to 'refund_pending' (status_id = 3)
-            $this->paymentRepository->updateStatus($payment['id'], 3); // 3 = refund_pending
+            // 11. Update payment status to 'failed' (status_id = 3)
+            // The schema only supports payment statuses 1=pending, 2=paid, 3=failed.
+            $this->paymentRepository->updateStatus($payment['id'], 3);
 
             $db->commit();
 

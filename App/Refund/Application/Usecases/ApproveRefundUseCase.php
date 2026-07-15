@@ -70,8 +70,9 @@ class ApproveRefundUseCase
             $refund->approve($request->adminId, $request->notes);
             $this->refundRepository->save($refund);
 
-            // 8. Update payment status to refunded (status_id = 4)
-            $this->paymentRepository->updateStatus($refund->getPaymentId(), 4);
+            // 8. Update payment status to failed (status_id = 3)
+            // The database schema only allows payment statuses 1=pending, 2=paid, 3=failed.
+            $this->paymentRepository->updateStatus($refund->getPaymentId(), 3);
 
             // 9. Update order status to cancelled (status_id = 6)
             $this->orderRepository->updateStatus($refund->getOrderId(), 6);

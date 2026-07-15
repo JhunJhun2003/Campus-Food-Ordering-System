@@ -25,8 +25,9 @@
                             <div class="flex items-center space-x-3">
                                 <?php if ($food->getImage()): ?>
                                     <?php 
-                                        $imagePath = '/Campus-Food-Ordering-System/Public/uploads/foods/' . htmlspecialchars($food->getImage());
-                                        $fullPath = $_SERVER['DOCUMENT_ROOT'] . $imagePath;
+                                        $imageFile = $food->getImage();
+                                        $imagePath = '/Campus-Food-Ordering-System/Public/uploads/foods/' . rawurlencode($imageFile);
+                                        $fullPath = $_SERVER['DOCUMENT_ROOT'] . '/Campus-Food-Ordering-System/Public/uploads/foods/' . $imageFile;
                                         if (file_exists($fullPath)): 
                                     ?>
                                         <img src="<?php echo $imagePath; ?>" 
@@ -68,7 +69,8 @@
                         <td class="py-4 px-6 text-gray-600">
                             <?php 
                                 $categoryName = '';
-                                foreach ($categories as $cat) {
+                                $availableCategories = $categories ?? [];
+                                foreach ($availableCategories as $cat) {
                                     if ($cat['id'] == $food->getCategoryId()) {
                                         $categoryName = $cat['name'];
                                         break;
