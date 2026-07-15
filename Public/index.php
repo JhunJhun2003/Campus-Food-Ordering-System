@@ -48,7 +48,10 @@ if (strpos($requestUri, $basePath) === 0) {
 
 // Remove /Public/ if present
 if (strpos($requestUri, '/Public/') === 0) {
-    $requestUri = substr($requestUri, 7);
+    $requestUri = substr($requestUri, strlen('/Public/'));
+    if ($requestUri === '' || $requestUri[0] !== '/') {
+        $requestUri = '/' . $requestUri;
+    }
 }
 
 // If empty, set to '/'

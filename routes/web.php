@@ -317,6 +317,15 @@ $router->get('/debug-routes', function() use ($router) {
     exit;
 });
 
+$router->get('/user/google-login', function() {
+    $controller = getUserController();
+    $controller->googleLogin();
+});
+
+$router->get('/google-callback', function() {
+    require_once __DIR__ . '/../Public/google-callback.php';
+});
+
 // ============================================
 // 404 NOT FOUND
 // ============================================
@@ -328,13 +337,20 @@ $router->get('/{any}', function($any) {
     echo '<a href="/Campus-Food-Ordering-System/">Go Home</a>';
 });
 
-$router->get('/user/google-login', function() {
-    $controller = getUserController();
-    $controller->googleLogin();
-});
-
-$router->get('/google-callback', function() {
-    require_once __DIR__ . '/../Public/google-callback.php';
+$router->get('/debug-routes', function() use ($router) {
+    echo '<h1>All Registered Routes</h1>';
+    echo '<pre>';
+    foreach ($router->getRoutes() as $route) {
+        echo $route->getMethod() . ' - ' . $route->getPath() . "\n";
+    }
+    echo '</pre>';
+    echo '<h2>Request Info</h2>';
+    echo '<pre>';
+    echo 'REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
+    echo 'SCRIPT_NAME: ' . ($_SERVER['SCRIPT_NAME'] ?? 'N/A') . "\n";
+    echo 'PHP_SELF: ' . ($_SERVER['PHP_SELF'] ?? 'N/A') . "\n";
+    echo '</pre>';
+    exit;
 });
 // Return the router
 return $router;
