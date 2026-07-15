@@ -66,7 +66,7 @@ if ($isLoggedIn) {
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             
             <!-- Brand Logo -->
-            <a href="/Campus-Food-Ordering-System/" class="flex items-center space-x-3 group">
+            <a href="/Campus-Food-Ordering-System/Public" class="flex items-center space-x-3 group">
                 <div class="relative flex items-center justify-center text-slate-950">
                     <!-- <svg viewBox="0 0 100 100" class="w-11 h-11 fill-current text-slate-950 group-hover:scale-105 interactive-transition">
                         <path d="M42,28 C26,28 22,35 22,41 C22,43 23,45 25,45 L59,45 C61,45 62,43 62,41 C62,35 58,28 42,28 Z M22,49 C21,49 20,50 20,51 C20,53 23,55 25,55 L59,55 C61,55 64,53 64,51 C64,50 63,49 62,49 L22,49 Z M25,59 C21,59 21,63 21,65 C21,72 29,76 42,76 C55,76 63,72 63,65 C63,63 63,59 59,59 L25,59 Z" />
@@ -102,7 +102,7 @@ if ($isLoggedIn) {
                     <a href="/Campus-Food-Ordering-System/view/customer/orders.php" class="text-sm font-semibold text-slate-600 hover:text-emerald-500 interactive-transition">Orders</a>
                     <?php endif; ?>
                 <?php else: ?>
-                    <a href="/Campus-Food-Ordering-System/" class="text-sm font-bold text-emerald-500 border-b-2 border-emerald-500 pb-1.5 interactive-transition">Home</a>
+                    <a href="/Campus-Food-Ordering-System/Public" class="text-sm font-bold text-emerald-500 border-b-2 border-emerald-500 pb-1.5 interactive-transition">Home</a>
                 <?php endif; ?>
             </nav>
 

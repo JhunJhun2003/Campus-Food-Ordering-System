@@ -19,8 +19,8 @@ error_log("=== REFUND REQUEST DEBUG ===");
 error_log("POST: " . print_r($_POST, true));
 error_log("SESSION: " . print_r($_SESSION, true));
 
-require_once __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__ . '/../../inc/refund_helpers.php';
+require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../inc/refund_helpers.php';
 
 header('Content-Type: application/json');
 

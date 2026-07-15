@@ -650,7 +650,7 @@ document.getElementById('refundForm').addEventListener('submit', function(e) {
     submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...';
     responseDiv.classList.add('hidden');
     
-    fetch('/Campus-Food-Ordering-System/api/refund/request.php', {
+    fetch('/Campus-Food-Ordering-System/Public/api/refund/request.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `order_id=${orderId}&reason=${encodeURIComponent(reason)}`

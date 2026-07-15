@@ -408,14 +408,14 @@ $transactionImage = $orderData['transaction_image'] ?? null;
         </div>
         
         <!-- Transaction Image -->
-        <?php if ($transactionImage && !$isCOD): ?>
+        <!-- <?php if ($transactionImage && !$isCOD): ?>
         <div class="transaction-image">
             <div class="divider"></div>
             <p style="font-size: 11px; color: #666; margin-bottom: 5px;">Payment Confirmation</p>
             <img src="/Campus-Food-Ordering-System/Public/<?php echo htmlspecialchars($transactionImage); ?>" 
                  alt="Transaction Image"
                  onerror="this.style.display='none'; this.parentElement.innerHTML='<p style=\'color:#999;font-size:12px;\'>No image available</p>';">
-        </div>
+        </div> -->
         <?php endif; ?>
         
         <!-- Footer -->
@@ -432,11 +432,11 @@ $transactionImage = $orderData['transaction_image'] ?? null;
         <button class="print-btn" onclick="window.print()">
             <i class="fa-solid fa-print"></i> Print Receipt
         </button>
-        <div style="text-align: center; margin-top: 10px;">
+        <!-- <div style="text-align: center; margin-top: 10px;">
             <a href="javascript:history.back()" class="back-btn">
                 <i class="fa-solid fa-arrow-left"></i> Go Back
             </a>
-        </div>
+        </div> -->
     </div>
     
     <!-- Font Awesome -->

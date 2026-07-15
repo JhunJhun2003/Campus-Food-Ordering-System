@@ -245,11 +245,11 @@ include __DIR__ . '/includes/sidebar.php';
                                     <a href="/Campus-Food-Ordering-System/Public/receipt.php?id=<?php echo $orderId; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
     <i class="fa-solid fa-print"></i>
 </a>
-                                    <?php if ($canRefund && !$hasPendingRefund): ?>
+                                    <!-- <?php if ($canRefund && !$hasPendingRefund): ?>
                                         <button class="text-emerald-600 hover:text-emerald-800 text-sm font-medium btn-refund-order" data-order-id="<?php echo $orderId; ?>" title="Request Refund">
                                             <i class="fa-solid fa-rotate-left"></i>
                                         </button>
-                                    <?php endif; ?>
+                                    <?php endif; ?> -->
                                     <div class="status-action">
                                         <select class="status-select" data-original-status-id="<?php echo $order->getStatusId(); ?>">
                                             <?php foreach ($statuses as $status): ?>
@@ -741,7 +741,7 @@ document.getElementById('refundForm').addEventListener('submit', function(e) {
     submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...';
     responseDiv.classList.add('hidden');
     
-    fetch('/Campus-Food-Ordering-System/api/refund/request.php', {
+    fetch('/Campus-Food-Ordering-System/Public/api/refund/request.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `order_id=${orderId}&reason=${encodeURIComponent(reason)}`
