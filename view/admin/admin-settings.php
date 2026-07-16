@@ -12,7 +12,9 @@ require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
-requirePermission('manage_settings');
+if (!hasPermission('manage_settings')) {
+    renderAdminPermissionDeniedPage('Access denied', 'settings');
+}
 
 // ============================================
 // 2. BUSINESS LOGIC
@@ -62,6 +64,75 @@ $controller = new AccessControlController(
 $accessControlData = $controller->index();
 $roles = $accessControlData['roles'] ?? [];
 $permissions = $accessControlData['permissions'] ?? [];
+
+// ============================================
+// ACCESS CONTROL AJAX HANDLERS
+// ============================================
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['access_control_action']) && $_GET['access_control_action'] === 'get_role_permissions') {
+    header('Content-Type: application/json');
+    $roleId = isset($_GET['role_id']) ? (int) $_GET['role_id'] : 0;
+
+    if ($roleId <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid role ID']);
+        exit;
+    }
+
+    if (!hasPermission('manage_roles') && !hasPermission('manage_settings')) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Permission denied']);
+        exit;
+    }
+
+    $roleData = null;
+    foreach ($roles as $role) {
+        if ($role['id'] === $roleId) {
+            $roleData = $role;
+            break;
+        }
+    }
+
+    if (!$roleData) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Role not found']);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'permissions' => $roleData['permissions'] ?? []
+    ]);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['access_control_action']) && $_POST['access_control_action'] === 'sync_permissions') {
+    header('Content-Type: application/json');
+    $roleId = isset($_POST['role_id']) ? (int) $_POST['role_id'] : 0;
+    $permissionIds = isset($_POST['permissions']) ? array_map('intval', $_POST['permissions']) : [];
+
+    if ($roleId <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid role ID']);
+        exit;
+    }
+
+    if (!hasPermission('manage_roles') && !hasPermission('manage_settings')) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Permission denied']);
+        exit;
+    }
+
+    try {
+        $syncRolePermissionsUseCase->execute($roleId, $permissionIds);
+        echo json_encode(['success' => true]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        exit;
+    }
+}
 
 // ============================================
 // 3. HANDLE FORM SUBMISSIONS
@@ -309,8 +380,22 @@ function managePermissions(roleId) {
     
     openModal('managePermissionsModal');
     
-    fetch(`/Campus-Food-Ordering-System/Public/access-control/get-role-permissions?role_id=${roleId}`)
-        .then(response => response.json())
+    const endpoint = `${window.location.pathname}?access_control_action=get_role_permissions&role_id=${roleId}`;
+    fetch(endpoint, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+        .then(async response => {
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return { success: false, error: text || 'Invalid response from server' };
+            }
+        })
         .then(data => {
             if (data.success) {
                 const allPermissions = <?php echo json_encode($permissions); ?>;
@@ -396,6 +481,46 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    const syncPermissionsForm = document.getElementById('syncPermissionsForm');
+    if (syncPermissionsForm) {
+        syncPermissionsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(syncPermissionsForm);
+            const container = document.getElementById('permissionsContainer');
+            container.innerHTML = '<div class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mr-2"></i> Saving permissions...</div>';
+
+            try {
+                const response = await fetch(syncPermissionsForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseError) {
+                    throw new Error(text || 'Invalid response from server');
+                }
+
+                if (data.success) {
+                    showToast('Permissions updated successfully.', 'success');
+                    closeModal('managePermissionsModal');
+                    window.location.reload();
+                } else {
+                    container.innerHTML = `<div class="text-red-500 text-center p-4">Failed to save permissions: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="text-red-500 text-center p-4">Error saving permissions. Please try again.</div>`;
+                console.error('Save permissions error:', error);
+            }
+        });
+    }
 });
 
 <?php if ($success): ?> showToast('<?php echo htmlspecialchars($success); ?>', 'success'); <?php endif; ?>

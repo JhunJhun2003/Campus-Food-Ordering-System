@@ -5,11 +5,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ✅ Simple admin check from session (no dependencies)
-$isAdmin = isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+// ✅ Simple admin-like check from session and permissions
+require_once __DIR__ . '/../../inc/Database.php';
+require_once __DIR__ . '/../../inc/access_control_helper.php';
+$isAdmin = isAdminLike();
 
 // Check if maintenance mode is actually on
-require_once __DIR__ . '/../../inc/Database.php';
 
 use Inc\Database;
 

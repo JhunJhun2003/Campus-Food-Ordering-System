@@ -148,6 +148,39 @@ function isCustomerOnly(?int $userId = null): bool
     return !isAdmin($userId) && !isStaff($userId);
 }
 
+function hasAdminPermissions(?int $userId = null): bool
+{
+    if ($userId === null) {
+        $userId = getCurrentUserId();
+    }
+
+    if ($userId === 0) {
+        return false;
+    }
+
+    return hasAnyPermission([
+        'view_dashboard',
+        'manage_users',
+        'manage_menu',
+        'manage_orders',
+        'manage_settings',
+        'view_reports',
+    ], $userId);
+}
+
+function isAdminLike(?int $userId = null): bool
+{
+    if (isAdmin($userId)) {
+        return true;
+    }
+
+    if (isStaff($userId)) {
+        return false;
+    }
+
+    return hasAdminPermissions($userId);
+}
+
 // ============================================
 // PERMISSION CHECK FUNCTIONS
 // ============================================
@@ -221,6 +254,30 @@ function hasAllPermissions(array $permissions, ?int $userId = null): bool
 // ============================================
 
 /**
+ * Render a friendly access denied page for admin views when permissions are disabled by admin.
+ */
+function renderAdminPermissionDeniedPage(string $pageTitle = 'Access Denied', string $activePage = 'dashboard', string $message = 'Permissions denied by admin. Please contact the administrator.'): void
+{
+    $currentUserName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
+    $currentUser = ['name' => $currentUserName];
+
+    include __DIR__ . '/../view/admin/includes/sidebar.php';
+    ?>
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-2xl border border-red-100 shadow-sm p-8 text-center">
+            <div class="w-16 h-16 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-lock text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-900 mb-2">Access denied</h1>
+            <p class="text-gray-600"><?php echo htmlspecialchars($message); ?></p>
+        </div>
+    </div>
+    <?php
+    echo '</main></body></html>';
+    exit();
+}
+
+/**
  * Require a specific permission
  */
 function requirePermission(string $permission, string $redirect = '/dashboard.php'): void
@@ -257,7 +314,7 @@ function requireAnyPermission(array $permissions, string $redirect = '/dashboard
  */
 function requireAdmin(string $redirect = '/dashboard.php'): void
 {
-    if (!isAdmin()) {
+    if (!isAdminLike()) {
         $_SESSION['error'] = 'Admin access required.';
         if (headers_sent()) {
             echo '<script>window.location.href="' . $redirect . '";</script>';
@@ -273,7 +330,7 @@ function requireAdmin(string $redirect = '/dashboard.php'): void
  */
 function requireStaff(string $redirect = '/dashboard.php'): void
 {
-    if (!isStaff() && !isAdmin()) {
+    if (isAdminLike() || !isStaff()) {
         $_SESSION['error'] = 'Staff access required.';
         if (headers_sent()) {
             echo '<script>window.location.href="' . $redirect . '";</script>';
@@ -305,7 +362,7 @@ function requireAuth(string $redirect = '/entrance/login.php'): void
  */
 function redirectAdminStaffFromCustomer(string $redirectUrl = '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'): void
 {
-    if (isAdmin() || isStaff()) {
+    if (isAdminLike() || isStaff()) {
         $_SESSION['error'] = 'Access denied. This page is for customers only.';
         header('Location: ' . $redirectUrl);
         exit();
@@ -375,8 +432,8 @@ function isMaintenanceMode(): bool
  */
 function checkMaintenanceRedirect(): void
 {
-    // Admin can always access
-    if (isAdmin()) {
+    // Admin and admin-like users can always access
+    if (isAdminLike()) {
         return;
     }
     

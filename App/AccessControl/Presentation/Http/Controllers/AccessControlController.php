@@ -53,8 +53,8 @@ class AccessControlController extends BaseController
         // ✅ Check if user is authenticated
         $this->requireAuthentication();
         
-        // ✅ Check permission - Admin only
-        $this->authorize('manage_roles');
+        // ✅ Check permission - allow settings managers to manage roles
+        $this->authorizeAny(['manage_roles', 'manage_settings']);
 
         try {
             $roles = $this->getAllRolesUseCase->execute();
@@ -214,13 +214,13 @@ class AccessControlController extends BaseController
         
         try {
             $this->requireAuthentication();
-            $this->authorize('manage_roles');
+            $this->authorizeAny(['manage_roles', 'manage_settings']);
 
             $roleId = isset($_GET['role_id']) ? (int) $_GET['role_id'] : 0;
             
             if ($roleId <= 0) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Invalid role ID']);
+                echo json_encode(['success' => false, 'error' => 'Invalid role ID']);
                 exit;
             }
 
@@ -246,8 +246,8 @@ class AccessControlController extends BaseController
             exit;
             
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            http_response_code($e->getCode() ?: 500);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
             exit;
         }
     }

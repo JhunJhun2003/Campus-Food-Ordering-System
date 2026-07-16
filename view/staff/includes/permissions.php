@@ -7,6 +7,7 @@
 // Fix: Correct path to vendor/autoload.php
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../inc/auth_helper.php';
+require_once __DIR__ . '/../../../inc/access_control_helper.php';
 
 use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
 use App\AccessControl\Application\Usecases\CheckPermissionUseCase;
@@ -46,8 +47,13 @@ function requireStaffAuth(): void
         header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
         exit();
     }
+
+    if (isAdminLike()) {
+        header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
+        exit();
+    }
     
-    if (!in_array($_SESSION['user_role'], ['staff', 'admin'])) {
+    if (!in_array($_SESSION['user_role'], ['staff'])) {
         header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
         exit();
     }

@@ -43,7 +43,14 @@ class AdminController extends BaseController
      */
     public function dashboard(): array
     {
-        $this->requireAdmin();
+        $this->authorizeAny([
+            'view_dashboard',
+            'manage_users',
+            'manage_menu',
+            'manage_orders',
+            'manage_settings',
+            'view_reports',
+        ]);
         
         return [
             'total_users' => $this->userRepository->getTotalUsers(),
@@ -59,7 +66,12 @@ class AdminController extends BaseController
      */
     public function reports(): array
     {
-        $this->requireAdmin();
+        $this->authorizeAny([
+            'view_reports',
+            'manage_orders',
+            'manage_settings',
+            'view_dashboard',
+        ]);
         
         return [
             'total_revenue' => $this->orderRepository->getTotalRevenue(),

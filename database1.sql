@@ -252,7 +252,10 @@ INSERT INTO permissions (name, display_name, module) VALUES
 ('manage_users', 'Manage Users', 'user'),
 ('manage_menu', 'Manage Menu', 'food'),
 ('manage_orders', 'Manage Orders', 'order'),
-('view_reports', 'View Reports', 'report');
+('view_reports', 'View Reports', 'report'),
+('manage_settings', 'Manage Settings', 'settings'),
+('manage_roles', 'Manage Roles', 'access-control'),
+('manage_permissions', 'Manage Permissions', 'access-control');
 
 -- Assign all permissions to admin
 INSERT INTO role_permissions (role_id, permission_id)

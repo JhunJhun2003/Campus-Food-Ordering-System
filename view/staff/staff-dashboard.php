@@ -16,8 +16,8 @@ require_once __DIR__ . '/../../inc/order_helpers.php';
 
 // ✅ Check maintenance mode - staff cannot access during maintenance
 checkMaintenanceRedirect();
-// ✅ Redirect admin away from staff pages
-if (isAdmin()) {
+// ✅ Redirect admin or admin-like users away from staff pages
+if (isAdminLike()) {
     $_SESSION['error'] = 'Staff pages are for staff members only.';
     header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
     exit();

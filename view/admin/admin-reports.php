@@ -11,7 +11,9 @@ require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
-requirePermission('view_reports');
+if (!hasPermission('view_reports')) {
+    renderAdminPermissionDeniedPage('Access denied', 'reports');
+}
 
 // ============================================
 // 2. BUSINESS LOGIC

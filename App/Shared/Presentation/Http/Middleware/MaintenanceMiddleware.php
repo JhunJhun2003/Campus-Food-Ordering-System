@@ -25,8 +25,8 @@ class MaintenanceMiddleware implements MiddlewareInterface
             return $next($request);
         }
 
-        // ✅ Admin can always access everything
-        if ($this->isAdmin()) {
+        // ✅ Admin or admin-like users can always access everything
+        if ($this->isAdminLike()) {
             return $next($request);
         }
 
@@ -85,6 +85,30 @@ class MaintenanceMiddleware implements MiddlewareInterface
             return false;
         }
         return $this->authService->isAdmin($userId);
+    }
+
+    /**
+     * Check if current user is admin-like (admin or has admin permissions)
+     */
+    private function isAdminLike(): bool
+    {
+        $userId = $this->authService->getCurrentUserId();
+        if ($userId === 0) {
+            return false;
+        }
+
+        if ($this->authService->isAdmin($userId)) {
+            return true;
+        }
+
+        return $this->authService->hasAnyPermission($userId, [
+            'view_dashboard',
+            'manage_users',
+            'manage_menu',
+            'manage_orders',
+            'manage_settings',
+            'view_reports',
+        ]);
     }
 
     /**

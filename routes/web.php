@@ -123,7 +123,7 @@ $router->get('/profile', function() {
 
 $router->get('/admin/dashboard', function() {
     require_once __DIR__ . '/../view/admin/admin-dashboard.php';
-})->withMiddleware(HttpKernel::admin());
+})->withMiddleware(HttpKernel::withPermission('view_dashboard'));
 
 $router->get('/admin/users', function() {
     require_once __DIR__ . '/../view/admin/admin-users.php';
@@ -147,7 +147,7 @@ $router->get('/admin/settings', function() {
 
 $router->get('/admin/profile', function() {
     require_once __DIR__ . '/../view/admin/admin-profile.php';
-})->withMiddleware(HttpKernel::admin());
+})->withMiddleware(HttpKernel::withPermission('manage_users'));
 
 // ============================================
 // STAFF ROUTES (Auth + Verified + Staff Role)
@@ -176,27 +176,27 @@ $router->get('/staff/profile', function() {
 $router->post('/access-control/create-role', function($request) {
     $controller = getAccessControlController();
     $controller->createRole();
-})->withMiddleware(HttpKernel::admin());
+});
 
 $router->post('/access-control/update-role', function($request) {
     $controller = getAccessControlController();
     $controller->updateRole();
-})->withMiddleware(HttpKernel::admin());
+});
 
 $router->post('/access-control/delete-role', function($request) {
     $controller = getAccessControlController();
     $controller->deleteRole();
-})->withMiddleware(HttpKernel::admin());
+});
 
 $router->post('/access-control/sync-permissions', function($request) {
     $controller = getAccessControlController();
     $controller->syncPermissions();
-})->withMiddleware(HttpKernel::admin());
+});
 
 $router->get('/access-control/get-role-permissions', function($request) {
     $controller = getAccessControlController();
     $controller->getRolePermissions();
-})->withMiddleware(HttpKernel::admin());
+});
 
 // ============================================
 // API ROUTES (Auth + Verified)

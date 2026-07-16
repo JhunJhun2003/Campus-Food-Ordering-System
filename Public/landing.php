@@ -1,11 +1,24 @@
 <?php
 // Check if user is already logged in, redirect to appropriate dashboard
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (isset($_SESSION['user_id'])) {
-    if ($_SESSION['user_role'] === 'admin' || $_SESSION['user_role'] === 'staff') {
+    require_once __DIR__ . '/../inc/Database.php';
+    require_once __DIR__ . '/../inc/access_control_helper.php';
+
+    if (isAdminLike()) {
         header('Location: /Campus-Food-Ordering-System/view/admin/admin-dashboard.php');
-    } else {
-        header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
+        exit();
     }
+
+    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'staff') {
+        header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+        exit();
+    }
+
+    header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
     exit();
 }
 ?>

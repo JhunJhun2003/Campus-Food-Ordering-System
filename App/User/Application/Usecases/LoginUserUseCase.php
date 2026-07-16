@@ -1,10 +1,15 @@
 <?php
+declare(strict_types=1);
+
 namespace App\User\Application\Usecases;
 
 use App\User\Domain\Repositories\UserRepositoryInterface;
 use App\User\Domain\ValueObjects\Email;
 use App\User\Application\DTOs\LoginUserRequest;
 use App\User\Application\DTOs\LoginUserResponse;
+use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
+use App\AccessControl\Application\Usecases\CheckPermissionUseCase;
+use Inc\Database;
 
 class LoginUserUseCase
 {
@@ -36,15 +41,7 @@ class LoginUserUseCase
             return new LoginUserResponse(false, 'Invalid credentials', null);
         }
 
-        // Determine redirect URL based on role
-        $roleName = strtolower($user->getRoleName());
-        
-        // Check if staff-dashboard.php exists, if not redirect to admin orders
-        $redirectUrl = match ($roleName) {
-            'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
-            'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
-            default => '/Campus-Food-Ordering-System/view/customer/dashboard.php'
-        };
+        $redirectUrl = $this->getRedirectUrl($user->getRoleName(), $user->getId()->getValue());
 
         return new LoginUserResponse(
             true,
@@ -52,5 +49,40 @@ class LoginUserUseCase
             $user,
             $redirectUrl
         );
+    }
+
+    private function getRedirectUrl(string $roleName, int $userId): string
+    {
+        $role = strtolower($roleName);
+        if ($role === 'admin') {
+            return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
+        }
+
+        if ($role === 'staff') {
+            return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
+        }
+
+        $adminPermissions = [
+            'view_dashboard',
+            'manage_users',
+            'manage_menu',
+            'manage_orders',
+            'manage_settings',
+            'view_reports',
+        ];
+
+        try {
+            $repository = new AccessControlRepository(Database::getConnection());
+            $checkPermission = new CheckPermissionUseCase($repository);
+            foreach ($adminPermissions as $permission) {
+                if ($checkPermission->execute($userId, $permission)) {
+                    return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignore and fallback to customer dashboard
+        }
+
+        return '/Campus-Food-Ordering-System/view/customer/dashboard.php';
     }
 }

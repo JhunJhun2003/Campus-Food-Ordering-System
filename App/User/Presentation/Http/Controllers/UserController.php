@@ -13,6 +13,9 @@ use App\User\Domain\Repositories\UserRepositoryInterface;
 use App\User\Domain\ValueObjects\UserId;
 use App\User\Domain\ValueObjects\Password;
 use App\Shared\Presentation\Http\Controllers\BaseController;
+use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
+use App\AccessControl\Application\Usecases\CheckPermissionUseCase;
+use Inc\Database;
 use App\User\Application\Usecases\LoginWithGoogleUseCase;
 use App\User\Application\DTOs\GoogleLoginRequest;
 use App\User\Domain\Services\GoogleAuthServiceInterface;
@@ -102,22 +105,56 @@ class UserController extends BaseController
             }
         }
 
+        $redirectUrl = $response->redirectUrl;
+        if ($redirectUrl === null && $response->success && $response->user) {
+            $redirectUrl = $this->getRedirectUrl(
+                $_SESSION['user_role'] ?? 'user',
+                $response->user->getId()->getValue()
+            );
+        }
+
         return [
             'success' => $response->success,
             'message' => $response->message,
             'user' => $response->user,
-            'redirect' => $response->redirectUrl ?? $this->getRedirectUrl($_SESSION['user_role'] ?? 'user')
+            'redirect' => $redirectUrl
         ];
     }
 
-    private function getRedirectUrl(string $role): string
+    private function getRedirectUrl(string $role, int $userId): string
     {
         $role = strtolower($role);
-        return match ($role) {
-            'admin' => '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php',
-            'staff' => '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php',
-            default => '/Campus-Food-Ordering-System/view/customer/dashboard.php'
-        };
+
+        if ($role === 'admin') {
+            return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
+        }
+
+        if ($role === 'staff') {
+            return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
+        }
+
+        $adminPermissions = [
+            'view_dashboard',
+            'manage_users',
+            'manage_menu',
+            'manage_orders',
+            'manage_settings',
+            'view_reports',
+        ];
+
+        try {
+            $repository = new AccessControlRepository(Database::getConnection());
+            $checkPermission = new CheckPermissionUseCase($repository);
+            foreach ($adminPermissions as $permission) {
+                if ($checkPermission->execute($userId, $permission)) {
+                    return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore permission check failures and fall back to default
+        }
+
+        return '/Campus-Food-Ordering-System/view/customer/dashboard.php';
     }
 
     /**

@@ -14,18 +14,15 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-if ($_SESSION['user_role'] !== 'admin') {
-    header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
-    exit();
-}
-
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
-requirePermission('view_dashboard');
+if (!hasPermission('view_dashboard')) {
+    renderAdminPermissionDeniedPage('Access denied', 'dashboard');
+}
 
 // ============================================
 // 2. BUSINESS LOGIC

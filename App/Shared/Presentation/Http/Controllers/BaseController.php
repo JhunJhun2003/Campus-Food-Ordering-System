@@ -27,11 +27,26 @@ abstract class BaseController
     }
 
     /**
-     * Check if user is admin
+     * Check if user is admin or has admin-like permissions
      */
     protected function isAdmin(): bool
     {
-        return $this->currentUserRole === 'admin';
+        if ($this->currentUserRole === 'admin') {
+            return true;
+        }
+
+        if ($this->currentUserId === null || $this->currentUserId <= 0) {
+            return false;
+        }
+
+        return $this->hasAnyPermission([
+            'view_dashboard',
+            'manage_users',
+            'manage_menu',
+            'manage_orders',
+            'manage_settings',
+            'view_reports',
+        ]);
     }
 
     /**

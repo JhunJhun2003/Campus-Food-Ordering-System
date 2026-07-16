@@ -47,13 +47,14 @@ function requireStaffAccess(): void
 }
 
 /**
- * Require admin role
+ * Require admin-like access
  */
 function requireAdminAccess(): void
 {
     requireLogin();
-    
-    if (($_SESSION['user_role'] ?? '') !== 'admin') {
+    require_once __DIR__ . '/../../../inc/access_control_helper.php';
+
+    if (!isAdminLike((int) ($_SESSION['user_id'] ?? 0))) {
         $_SESSION['error'] = 'Admin access required.';
         header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
         exit();
