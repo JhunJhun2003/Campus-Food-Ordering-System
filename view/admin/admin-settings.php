@@ -286,7 +286,7 @@ function deleteRole(roleId, roleName) {
     if (confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/Campus-Food-Ordering-System/access-control/delete-role';
+        form.action = '/Campus-Food-Ordering-System/Public/access-control/delete-role';
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'role_id';
@@ -309,7 +309,7 @@ function managePermissions(roleId) {
     
     openModal('managePermissionsModal');
     
-    fetch(`/Campus-Food-Ordering-System/access-control/get-role-permissions?role_id=${roleId}`)
+    fetch(`/Campus-Food-Ordering-System/Public/access-control/get-role-permissions?role_id=${roleId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {

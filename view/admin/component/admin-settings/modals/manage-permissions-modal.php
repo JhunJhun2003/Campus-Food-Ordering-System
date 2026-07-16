@@ -7,7 +7,7 @@
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
         </div>
-        <form method="POST" action="/Campus-Food-Ordering-System/access-control/sync-permissions">
+        <form method="POST" action="/Campus-Food-Ordering-System/Public/access-control/sync-permissions">
             <input type="hidden" name="role_id" id="perm_role_id" value="">
             <div id="permissionsContainer" class="permissions-container mb-4">
                 <div class="text-center py-8 text-slate-500">
