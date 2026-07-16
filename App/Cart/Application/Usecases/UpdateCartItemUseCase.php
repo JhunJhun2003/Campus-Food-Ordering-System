@@ -12,14 +12,14 @@ class UpdateCartItemUseCase
         $this->cartRepository = $cartRepository;
     }
 
-    public function execute(int $userId, int $foodId, int $quantity): array
+    public function execute(int $userId, int $cartItemId, int $quantity): array
     {
         if ($quantity <= 0) {
-            $this->cartRepository->removeItem($userId, $foodId);
+            $this->cartRepository->removeItem($userId, $cartItemId);
             return ['success' => true, 'message' => 'Item removed from cart'];
         }
 
-        $this->cartRepository->updateItemQuantity($userId, $foodId, $quantity);
+        $this->cartRepository->updateItemQuantity($userId, $cartItemId, $quantity);
         
         return [
             'success' => true,

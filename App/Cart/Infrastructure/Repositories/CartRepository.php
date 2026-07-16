@@ -33,11 +33,15 @@ class CartRepository implements CartRepositoryInterface
                     ci.id,
                     ci.food_id,
                     ci.quantity,
+                    ci.food_size_id,
+                    COALESCE(fs.price, fs_default.price) as price,
+                    COALESCE(fs.size_name, fs_default.size_name, 'Regular') as size_name,
                     f.name as food_name,
-                    f.price,
                     f.image
                 FROM cart_items ci
                 JOIN foods f ON ci.food_id = f.id
+                LEFT JOIN food_sizes fs ON ci.food_size_id = fs.id
+                LEFT JOIN food_sizes fs_default ON fs_default.food_id = f.id AND fs_default.is_default = 1
                 WHERE ci.cart_id = :cart_id";
         
         $stmt = $this->db->prepare($sql);
@@ -47,12 +51,14 @@ class CartRepository implements CartRepositoryInterface
         $items = [];
         foreach ($itemsData as $data) {
             $items[] = new CartItem(
-                (int) $data['id'],
-                (int) $data['food_id'],
-                $data['food_name'],
-                (float) $data['price'],
-                (int) $data['quantity'],
-                $data['image']
+                (int) $data['id'], 
+                (int) $data['food_id'], 
+                $data['food_name'], 
+                (float) ($data['price'] ?? 0), 
+                (int) $data['quantity'], 
+                $data['image'], 
+                isset($data['food_size_id']) ? (int) $data['food_size_id'] : null,
+                $data['size_name'] ?? null
             );
         }
 
@@ -85,12 +91,13 @@ class CartRepository implements CartRepositoryInterface
             $cart = $this->findByUserId($userId);
         }
 
-        $sql = "SELECT id, quantity FROM cart_items 
-                WHERE cart_id = :cart_id AND food_id = :food_id";
+        $sql = "SELECT id, quantity, food_size_id FROM cart_items 
+                WHERE cart_id = :cart_id AND food_id = :food_id AND food_size_id <=> :food_size_id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':cart_id' => $cart->getId(),
-            ':food_id' => $item->getFoodId()
+            ':food_id' => $item->getFoodId(),
+            ':food_size_id' => $item->getFoodSizeId()
         ]);
         $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -103,47 +110,48 @@ class CartRepository implements CartRepositoryInterface
                 ':id' => $existing['id']
             ]);
         } else {
-            $sql = "INSERT INTO cart_items (cart_id, food_id, quantity) 
-                    VALUES (:cart_id, :food_id, :quantity)";
+            $sql = "INSERT INTO cart_items (cart_id, food_id, quantity, food_size_id) 
+                    VALUES (:cart_id, :food_id, :quantity, :food_size_id)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 ':cart_id' => $cart->getId(),
                 ':food_id' => $item->getFoodId(),
-                ':quantity' => $item->getQuantity()
+                ':quantity' => $item->getQuantity(),
+                ':food_size_id' => $item->getFoodSizeId()
             ]);
         }
     }
 
-    public function removeItem(int $userId, int $foodId): void
+    public function removeItem(int $userId, int $cartItemId): void
     {
         $cart = $this->findByUserId($userId);
         if (!$cart) return;
 
-        $sql = "DELETE FROM cart_items WHERE cart_id = :cart_id AND food_id = :food_id";
+        $sql = "DELETE FROM cart_items WHERE cart_id = :cart_id AND id = :item_id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':cart_id' => $cart->getId(),
-            ':food_id' => $foodId
+            ':item_id' => $cartItemId
         ]);
     }
 
-    public function updateItemQuantity(int $userId, int $foodId, int $quantity): void
+    public function updateItemQuantity(int $userId, int $cartItemId, int $quantity): void
     {
         $cart = $this->findByUserId($userId);
         if (!$cart) return;
 
         if ($quantity <= 0) {
-            $this->removeItem($userId, $foodId);
+            $this->removeItem($userId, $cartItemId);
             return;
         }
 
         $sql = "UPDATE cart_items SET quantity = :quantity 
-                WHERE cart_id = :cart_id AND food_id = :food_id";
+                WHERE cart_id = :cart_id AND id = :item_id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':quantity' => $quantity,
             ':cart_id' => $cart->getId(),
-            ':food_id' => $foodId
+            ':item_id' => $cartItemId
         ]);
     }
 

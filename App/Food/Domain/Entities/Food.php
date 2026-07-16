@@ -10,12 +10,15 @@ class Food
     private int $statusId;
     private string $name;
     private string $description;
-    private float $price;
-    private int $stock;
+    private float $price; // Kept for backward compatibility (default size price)
+    private int $stock; // Kept for backward compatibility (total stock across all sizes)
     private ?string $image;
     private int $preparationTime;
     private DateTime $createdAt;
     private ?DateTime $updatedAt;
+    
+    /** @var FoodSize[] */
+    private array $sizes = [];
 
     public function __construct(
         ?int $id,
@@ -39,6 +42,7 @@ class Food
         $this->preparationTime = $preparationTime;
         $this->createdAt = new DateTime();
         $this->updatedAt = null;
+        $this->sizes = [];
     }
 
     // ============================================
@@ -56,6 +60,46 @@ class Food
     public function getPreparationTime(): int { return $this->preparationTime; }
     public function getCreatedAt(): DateTime { return $this->createdAt; }
     public function getUpdatedAt(): ?DateTime { return $this->updatedAt; }
+    
+    // ============================================
+    // SIZE METHODS
+    // ============================================
+    
+    public function getSizes(): array { return $this->sizes; }
+    
+    public function setSizes(array $sizes): void { $this->sizes = $sizes; }
+    
+    public function addSize(FoodSize $size): void { $this->sizes[] = $size; }
+    
+    public function getDefaultSize(): ?FoodSize
+    {
+        foreach ($this->sizes as $size) {
+            if ($size->isDefault()) {
+                return $size;
+            }
+        }
+        return $this->sizes[0] ?? null;
+    }
+    
+    public function getSizeById(int $sizeId): ?FoodSize
+    {
+        foreach ($this->sizes as $size) {
+            if ($size->getId() === $sizeId) {
+                return $size;
+            }
+        }
+        return null;
+    }
+    
+    public function hasSizes(): bool
+    {
+        return !empty($this->sizes);
+    }
+    
+    public function hasMultipleSizes(): bool
+    {
+        return count($this->sizes) > 1;
+    }
 
     // ============================================
     // SETTERS
@@ -71,7 +115,6 @@ class Food
     public function setImage(?string $image): void { $this->image = $image; }
     public function setPreparationTime(int $preparationTime): void { $this->preparationTime = $preparationTime; }
     
-    // ✅ Add these methods
     public function setCreatedAt(DateTime $createdAt): void 
     { 
         $this->createdAt = $createdAt; 
@@ -106,6 +149,55 @@ class Food
     { 
         $this->stock += $quantity; 
     }
+    
+    /**
+     * Get total stock across all sizes
+     */
+    public function getTotalStock(): int
+    {
+        if (empty($this->sizes)) {
+            return $this->stock;
+        }
+        
+        $total = 0;
+        foreach ($this->sizes as $size) {
+            $total += $size->getStock();
+        }
+        return $total;
+    }
+    
+    /**
+     * Get the lowest price among all sizes
+     */
+    public function getLowestPrice(): float
+    {
+        if (empty($this->sizes)) {
+            return $this->price;
+        }
+        
+        $prices = array_map(fn($size) => $size->getPrice(), $this->sizes);
+        return min($prices);
+    }
+    
+    /**
+     * Get price range display (e.g., "$10.00 - $15.00")
+     */
+    public function getPriceRange(): string
+    {
+        if (empty($this->sizes) || count($this->sizes) === 1) {
+            return '$' . number_format($this->price, 2);
+        }
+        
+        $prices = array_map(fn($size) => $size->getPrice(), $this->sizes);
+        $min = min($prices);
+        $max = max($prices);
+        
+        if ($min === $max) {
+            return '$' . number_format($min, 2);
+        }
+        
+        return '$' . number_format($min, 2) . ' - $' . number_format($max, 2);
+    }
 
     // ============================================
     // CONVERSION
@@ -123,6 +215,10 @@ class Food
             'stock' => $this->stock,
             'image' => $this->image,
             'preparation_time' => $this->preparationTime,
+            'has_sizes' => $this->hasSizes(),
+            'has_multiple_sizes' => $this->hasMultipleSizes(),
+            'price_range' => $this->getPriceRange(),
+            'sizes' => array_map(fn($size) => $size->toArray(), $this->sizes),
             'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $this->updatedAt ? $this->updatedAt->format('Y-m-d H:i:s') : null
         ];

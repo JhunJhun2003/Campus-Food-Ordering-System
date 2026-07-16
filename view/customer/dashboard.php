@@ -72,7 +72,8 @@ foreach ($foods as $food) {
         'category' => $categoryName ?: 'Uncategorized',
         'emoji' => $emojiMap[$food->getCategoryId()] ?? '🍽️',
         'stock' => $food->getStock(),
-        'image' => $imagePath
+        'image' => $imagePath,
+        'sizes' => array_map(fn($size) => $size->toArray(), $food->getSizes())
     ];
 }
 

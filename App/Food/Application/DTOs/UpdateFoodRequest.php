@@ -64,14 +64,6 @@ class UpdateFoodRequest
             $errors['name'] = 'Food name is required.';
         }
 
-        if ($this->price <= 0) {
-            $errors['price'] = 'Price must be greater than 0.';
-        }
-
-        if ($this->stock < 0) {
-            $errors['stock'] = 'Stock cannot be negative.';
-        }
-
         return $errors;
     }
 

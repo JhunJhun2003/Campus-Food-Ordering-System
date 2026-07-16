@@ -75,12 +75,30 @@ class UpdateOrderStatusUseCase
     private function restoreStock(int $orderId): void
     {
         $db = Database::getConnection();
-        $stmt = $db->prepare("
-            UPDATE foods f
-            JOIN order_items oi ON f.id = oi.food_id
-            SET f.stock = f.stock + oi.quantity
-            WHERE oi.order_id = :order_id
-        ");
+        $stmt = $db->prepare("SELECT oi.food_id, oi.quantity, oi.food_size_id FROM order_items oi WHERE oi.order_id = :order_id");
         $stmt->execute([':order_id' => $orderId]);
+        $items = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        foreach ($items as $item) {
+            if (!empty($item['food_size_id'])) {
+                $sizeStmt = $db->prepare("UPDATE food_sizes SET stock = stock + :quantity WHERE id = :size_id");
+                $sizeStmt->execute([
+                    ':quantity' => (int) $item['quantity'],
+                    ':size_id' => (int) $item['food_size_id']
+                ]);
+            } else {
+                $sizeStmt = $db->prepare("SELECT id FROM food_sizes WHERE food_id = :food_id AND is_default = 1 LIMIT 1");
+                $sizeStmt->execute([':food_id' => (int) $item['food_id']]);
+                $size = $sizeStmt->fetch(\PDO::FETCH_ASSOC);
+
+                if ($size) {
+                    $restoreStmt = $db->prepare("UPDATE food_sizes SET stock = stock + :quantity WHERE id = :size_id");
+                    $restoreStmt->execute([
+                        ':quantity' => (int) $item['quantity'],
+                        ':size_id' => (int) $size['id']
+                    ]);
+                }
+            }
+        }
     }
 }

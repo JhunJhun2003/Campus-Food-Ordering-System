@@ -12,6 +12,12 @@ use App\Food\Domain\Repositories\FoodRepositoryInterface;
 use App\Food\Domain\Repositories\CategoryRepositoryInterface;
 use App\Food\Application\DTOs\CreateFoodRequest;
 use App\Food\Application\DTOs\UpdateFoodRequest;
+use App\Food\Application\DTOs\CreateFoodSizeRequest;
+use App\Food\Application\DTOs\UpdateFoodSizeRequest;
+use App\Food\Application\Usecases\CreateFoodSizeUseCase;
+use App\Food\Application\Usecases\UpdateFoodSizeUseCase;
+use App\Food\Application\Usecases\DeleteFoodSizeUseCase;
+use App\Food\Domain\Entities\FoodSize;
 use App\Shared\Presentation\Http\Controllers\BaseController;
 
 class FoodController extends BaseController
@@ -171,6 +177,11 @@ class FoodController extends BaseController
             );
             
             $message = $this->create($request);
+
+            if (($message['success'] ?? false) && !empty($message['id'])) {
+                $this->persistFoodSizes((int) $message['id'], $_POST['size_name'] ?? [], $_POST['size_price'] ?? [], $_POST['size_stock'] ?? [], $_POST['default_size'] ?? null);
+            }
+
             return ['message' => $message];
         }
 
@@ -199,6 +210,11 @@ class FoodController extends BaseController
             );
             
             $message = $this->update($request);
+
+            if (($message['success'] ?? false)) {
+                $this->persistFoodSizes($foodId, $_POST['size_name'] ?? [], $_POST['size_price'] ?? [], $_POST['size_stock'] ?? [], $_POST['default_size'] ?? null);
+            }
+
             return ['message' => $message];
         }
 
@@ -232,5 +248,121 @@ class FoodController extends BaseController
             'message' => $message,
             'editFood' => $editFood
         ];
+    }
+
+        /**
+     * Get sizes for a food item
+     */
+    public function getSizes(int $foodId): array
+    {
+        return $this->foodRepository->getSizes($foodId);
+    }
+
+    /**
+     * Create a new food size
+     */
+    public function createSize(CreateFoodSizeRequest $request): array
+    {
+        $this->authorize('manage_menu');
+        $useCase = new CreateFoodSizeUseCase($this->foodRepository);
+        return $useCase->execute($request);
+    }
+
+    /**
+     * Update a food size
+     */
+    public function updateSize(UpdateFoodSizeRequest $request): array
+    {
+        $this->authorize('manage_menu');
+        $useCase = new UpdateFoodSizeUseCase($this->foodRepository);
+        return $useCase->execute($request);
+    }
+
+    /**
+     * Delete a food size
+     */
+    public function deleteSize(int $sizeId): array
+    {
+        $this->authorize('manage_menu');
+        $useCase = new DeleteFoodSizeUseCase($this->foodRepository);
+        return $useCase->execute($sizeId);
+    }
+
+    /**
+     * Handle add size form submission
+     */
+    public function handleAddSize(): array
+    {
+        $this->authorize('manage_menu');
+        
+        $foodId = (int) ($_POST['food_id'] ?? 0);
+        $sizeName = trim($_POST['size_name'] ?? '');
+        $price = (float) ($_POST['price'] ?? 0);
+        $stock = (int) ($_POST['stock'] ?? 0);
+        $isDefault = isset($_POST['is_default']) ? true : false;
+
+        $request = new CreateFoodSizeRequest($foodId, $sizeName, $price, $stock, $isDefault);
+        return $this->createSize($request);
+    }
+
+    private function persistFoodSizes(int $foodId, array $sizeNames, array $sizePrices, array $sizeStocks, ?string $defaultSize = null): void
+    {
+        $names = array_values(array_filter(array_map('trim', $sizeNames)));
+        $prices = array_values(array_map('floatval', $sizePrices));
+        $stocks = array_values(array_map('intval', $sizeStocks));
+
+        if (empty($names)) {
+            return;
+        }
+
+        $existingSizes = $this->foodRepository->getSizes($foodId);
+        $existingIds = [];
+
+        foreach ($existingSizes as $size) {
+            $existingIds[$size->getId()] = true;
+        }
+
+        $sizeCount = min(count($names), count($prices), count($stocks));
+        $defaultId = null;
+
+        if ($defaultSize !== null) {
+            $defaultId = (int) $defaultSize;
+        }
+
+        $currentSizeIds = [];
+
+        for ($i = 0; $i < $sizeCount; $i++) {
+            $name = $names[$i];
+            if ($name === '') {
+                continue;
+            }
+
+            $price = $prices[$i] ?? 0.0;
+            $stock = $stocks[$i] ?? 0;
+            $isDefault = ($defaultId !== null) ? ($defaultId === ($i + 1)) : ($i === 0);
+
+            if ($i < count($existingSizes)) {
+                $existingSize = $existingSizes[$i] ?? null;
+                if ($existingSize) {
+                    $this->foodRepository->updateSize($existingSize->getId(), [
+                        'size_name' => $name,
+                        'price' => $price,
+                        'stock' => $stock,
+                        'is_default' => $isDefault,
+                    ]);
+                    $currentSizeIds[] = $existingSize->getId();
+                }
+            } else {
+                $newSize = new \App\Food\Domain\Entities\FoodSize(null, $foodId, $name, $price, $stock, $isDefault);
+                $newSizeId = $this->foodRepository->createSize($newSize);
+                $currentSizeIds[] = $newSizeId;
+            }
+        }
+
+        foreach ($existingSizes as $existingSize) {
+            if (!in_array($existingSize->getId(), $currentSizeIds, true)) {
+                $this->foodRepository->deleteSize($existingSize->getId());
+            }
+        }
     }
 }

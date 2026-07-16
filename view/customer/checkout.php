@@ -397,12 +397,16 @@ include __DIR__ . '/includes/header.php';
                 <?php foreach ($items as $item): ?>
                     <div class="flex justify-between items-center text-sm py-2">
                         <div class="flex items-center space-x-3">
-                            <span class="text-xl p-1.5 bg-slate-50 rounded">
-                                <?php 
+                            <?php if (!empty($item['image'])): ?>
+                                <img src="/Campus-Food-Ordering-System/Public/uploads/foods/<?php echo rawurlencode($item['image']); ?>" 
+                                     alt="<?php echo htmlspecialchars($item['food_name']); ?>" 
+                                     class="w-10 h-10 rounded-lg object-cover border border-slate-100">
+                            <?php else: ?>
+                                <span class="text-xl p-1.5 bg-slate-50 rounded select-none"><?php 
                                     $emojiMap = [1 => '🍔', 2 => '🍕', 3 => '🥤', 4 => '🍰', 5 => '🍚'];
                                     echo $emojiMap[$item['food_id']] ?? '🍽️';
-                                ?>
-                            </span>
+                                ?></span>
+                            <?php endif; ?>
                             <div>
                                 <p class="font-bold text-slate-800"><?php echo htmlspecialchars($item['food_name']); ?></p>
                                 <p class="text-[10px] text-slate-400">Qty: <?php echo $item['quantity']; ?></p>

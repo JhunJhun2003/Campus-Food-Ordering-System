@@ -40,14 +40,14 @@ class CartController extends BaseController
     /**
      * Add item to cart - Users can only add to their own cart
      */
-    public function add(int $userId, int $foodId, int $quantity = 1): array
+    public function add(int $userId, int $foodId, int $quantity = 1, ?int $foodSizeId = null): array
     {
         $this->requireAuthentication();
         $this->authorizeResource($userId);
         $this->authorize('add_to_cart');
         
         $useCase = new AddToCartUseCase($this->cartRepository, $this->foodRepository);
-        $result = $useCase->execute($userId, $foodId, $quantity);
+        $result = $useCase->executeWithSize($userId, $foodId, $foodSizeId, $quantity);
         
         if ($result['success']) {
             $result['item_count'] = $this->cartRepository->getItemCount($userId);
@@ -59,13 +59,13 @@ class CartController extends BaseController
     /**
      * Update cart item quantity - Users can only update their own cart
      */
-    public function update(int $userId, int $foodId, int $quantity): array
+    public function update(int $userId, int $cartItemId, int $quantity): array
     {
         $this->requireAuthentication();
         $this->authorizeResource($userId);
         
         $useCase = new UpdateCartItemUseCase($this->cartRepository);
-        $result = $useCase->execute($userId, $foodId, $quantity);
+        $result = $useCase->execute($userId, $cartItemId, $quantity);
         
         if ($result['success']) {
             $result['item_count'] = $this->cartRepository->getItemCount($userId);
@@ -77,13 +77,13 @@ class CartController extends BaseController
     /**
      * Remove item from cart - Users can only remove from their own cart
      */
-    public function remove(int $userId, int $foodId): array
+    public function remove(int $userId, int $cartItemId): array
     {
         $this->requireAuthentication();
         $this->authorizeResource($userId);
         
         $useCase = new RemoveFromCartUseCase($this->cartRepository);
-        $result = $useCase->execute($userId, $foodId);
+        $result = $useCase->execute($userId, $cartItemId);
         
         if ($result['success']) {
             $result['item_count'] = $this->cartRepository->getItemCount($userId);

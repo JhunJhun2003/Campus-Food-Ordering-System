@@ -68,7 +68,7 @@ interface OrderRepositoryInterface
     /**
      * Add item to order
      */
-    public function addItem(int $orderId, int $foodId, int $quantity, float $unitPrice): void;
+    public function addItem(int $orderId, int $foodId, int $quantity, float $unitPrice, ?int $foodSizeId = null): void;
 
     /**
      * Save multiple order items

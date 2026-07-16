@@ -113,9 +113,11 @@ CREATE TABLE IF NOT EXISTS cart_items (
     food_id INT NOT NULL,
     quantity INT DEFAULT 1,
     unit_price DECIMAL(10,2),
+    food_size_id INT DEFAULT NULL,
     FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
     FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_cart_food (cart_id, food_id)
+    FOREIGN KEY (food_size_id) REFERENCES food_sizes(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_cart_food (cart_id, food_id, food_size_id)
 );
 
 -- ============================================
@@ -153,8 +155,10 @@ CREATE TABLE IF NOT EXISTS order_items (
     quantity INT,
     unit_price DECIMAL(10,2),
     subtotal DECIMAL(10,2),
+    food_size_id INT DEFAULT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE
+    FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE CASCADE,
+    FOREIGN KEY (food_size_id) REFERENCES food_sizes(id) ON DELETE SET NULL
 );
 
 -- ============================================
@@ -252,10 +256,7 @@ INSERT INTO permissions (name, display_name, module) VALUES
 ('manage_users', 'Manage Users', 'user'),
 ('manage_menu', 'Manage Menu', 'food'),
 ('manage_orders', 'Manage Orders', 'order'),
-('view_reports', 'View Reports', 'report'),
-('manage_settings', 'Manage Settings', 'settings'),
-('manage_roles', 'Manage Roles', 'access-control'),
-('manage_permissions', 'Manage Permissions', 'access-control');
+('view_reports', 'View Reports', 'report');
 
 -- Assign all permissions to admin
 INSERT INTO role_permissions (role_id, permission_id)
@@ -348,3 +349,107 @@ UNION ALL
 SELECT 'payment_statuses', COUNT(*) FROM payment_statuses
 UNION ALL
 SELECT 'settings', COUNT(*) FROM settings;
+
+-- Create refund_statuses table
+CREATE TABLE IF NOT EXISTS refund_statuses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    status_name VARCHAR(50) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert refund statuses
+INSERT INTO refund_statuses (status_name) VALUES 
+('pending'),
+('approved'),
+('rejected'),
+('completed');
+
+
+-- Create refunds table
+CREATE TABLE IF NOT EXISTS refunds (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    payment_id INT NOT NULL,
+    requested_by INT NOT NULL,
+    approved_by INT NULL,
+    reason TEXT NOT NULL,
+    refund_status_id INT NOT NULL,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE,
+    FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Add payment_status_id if not exists
+-- 1 = pending, 2 = paid, 3 = refund_pending, 4 = refunded, 5 = failed
+ALTER TABLE payments 
+ADD COLUMN payment_status_id INT DEFAULT 1 AFTER payment_method_id;
+
+-- Update existing payments
+UPDATE payments SET payment_status_id = 2 WHERE payment_status_id = 2;
+
+INSERT INTO order_statuses (status_name) VALUES ('refund_requested');
+
+-- Create food_sizes table
+CREATE TABLE `food_sizes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `food_id` int NOT NULL,
+  `size_name` varchar(50) NOT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `stock` int DEFAULT '0',
+  `is_default` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `food_id` (`food_id`),
+  CONSTRAINT `food_sizes_ibfk_1` FOREIGN KEY (`food_id`) REFERENCES `foods` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Insert default sizes for existing foods
+-- For each food, create a default size 'Standard' with the existing price
+INSERT INTO food_sizes (food_id, size_name, price, stock, is_default)
+SELECT id, 'Standard', price, stock, 1 FROM foods;
+
+-- Add food_size_id to cart_items
+ALTER TABLE `cart_items` 
+ADD COLUMN `food_size_id` int NULL AFTER `food_id`,
+ADD KEY `food_size_id` (`food_size_id`),
+ADD CONSTRAINT `cart_items_ibfk_3` FOREIGN KEY (`food_size_id`) REFERENCES `food_sizes` (`id`) ON DELETE CASCADE;
+
+-- Add food_size_id to order_items
+ALTER TABLE `order_items` 
+ADD COLUMN `food_size_id` int NULL AFTER `food_id`,
+ADD KEY `food_size_id` (`food_size_id`),
+ADD CONSTRAINT `order_items_ibfk_3` FOREIGN KEY (`food_size_id`) REFERENCES `food_sizes` (`id`) ON DELETE CASCADE;
+
+-- Migrate existing data: link cart_items to default sizes
+UPDATE cart_items ci
+JOIN foods f ON ci.food_id = f.id
+JOIN food_sizes fs ON fs.food_id = f.id AND fs.is_default = 1
+SET ci.food_size_id = fs.id
+WHERE ci.food_size_id IS NULL;
+
+-- Migrate existing data: link order_items to default sizes
+UPDATE order_items oi
+JOIN foods f ON oi.food_id = f.id
+JOIN food_sizes fs ON fs.food_id = f.id AND fs.is_default = 1
+SET oi.food_size_id = fs.id
+WHERE oi.food_size_id IS NULL;
+
+-- Make food_size_id NOT NULL after migration
+ALTER TABLE `cart_items` 
+MODIFY COLUMN `food_size_id` int NOT NULL;
+
+ALTER TABLE `order_items` 
+MODIFY COLUMN `food_size_id` int NOT NULL;
+
+-- Remove unit_price from cart_items (price comes from food_sizes)
+ALTER TABLE `cart_items` 
+DROP COLUMN `unit_price`;	
+
+ALTER TABLE foods DROP COLUMN price;
+ALTER TABLE foods DROP COLUMN stock;

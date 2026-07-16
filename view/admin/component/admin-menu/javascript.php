@@ -79,6 +79,21 @@ function previewImage(event, previewId) {
     reader.readAsDataURL(file);
 }
 
+function addSizeRow(containerId, mode = 'add') {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const rowCount = container.querySelectorAll('div.flex.items-center.gap-2').length + 1;
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    row.innerHTML = `
+        <input type="text" name="size_name[]" placeholder="e.g. Large" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+        <input type="number" name="size_price[]" placeholder="0.00" step="0.01" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+        <input type="number" name="size_stock[]" placeholder="0" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+    `;
+    container.appendChild(row);
+}
+
 // ============================================
 // DRAG AND DROP SUPPORT
 // ============================================

@@ -12,9 +12,9 @@ class RemoveFromCartUseCase
         $this->cartRepository = $cartRepository;
     }
 
-    public function execute(int $userId, int $foodId): array
+    public function execute(int $userId, int $cartItemId): array
     {
-        $this->cartRepository->removeItem($userId, $foodId);
+        $this->cartRepository->removeItem($userId, $cartItemId);
         
         return [
             'success' => true,

@@ -2,18 +2,19 @@
 <div class="overflow-x-auto">
     <table class="w-full border-collapse text-left">
         <thead>
-            <tr class="bg-gray-50 text-gray-600 text-xs font-semibold uppercase tracking-wider">
+            <tr class="bg-gray-50/50 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 <th class="py-3 px-6">Item</th>
                 <th class="py-3 px-6">Category</th>
-                <th class="py-3 px-6">Price</th>
-                <th class="py-3 px-6">Stock</th>
+                <th class="py-3 px-6">Status</th>
+                <th class="py-3 px-6">Preparing Time</th>
+                <th class="py-3 px-6">Details</th>
                 <th class="py-3 px-6 text-center">Actions</th>
             </tr>
         </thead>
         <tbody id="menuTableBody" class="divide-y divide-gray-100 text-sm text-gray-700">
             <?php if (empty($foods)): ?>
                 <tr>
-                    <td colspan="5" class="py-12 text-center text-gray-400">
+                    <td colspan="6" class="py-12 text-center text-gray-400">
                         <i class="fa-regular fa-utensils text-4xl block mb-3"></i>
                         <p class="text-sm font-medium">No food items found</p>
                     </td>
@@ -79,17 +80,24 @@
                                 echo htmlspecialchars($categoryName ?: 'Uncategorized');
                             ?>
                         </td>
-                        <td class="py-4 px-6 font-medium text-gray-900">$<?php echo number_format($food->getPrice(), 2); ?></td>
                         <td class="py-4 px-6">
-                            <?php if ($food->getStock() > 0): ?>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                    <?php echo $food->getStock(); ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    Out of Stock
-                                </span>
-                            <?php endif; ?>
+                            <?php 
+                                $status = match($food->getStatusId()) {
+                                    1 => ['name' => 'Active', 'class' => 'bg-emerald-100 text-emerald-800'],
+                                    2 => ['name' => 'Inactive', 'class' => 'bg-gray-100 text-gray-800'],
+                                    3 => ['name' => 'Out of Stock', 'class' => 'bg-red-100 text-red-800'],
+                                    default => ['name' => 'Unknown', 'class' => 'bg-gray-100 text-gray-800']
+                                };
+                            ?>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $status['class']; ?>">
+                                <?php echo $status['name']; ?>
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-gray-600">
+                            <?php echo $food->getPreparationTime(); ?> mins
+                        </td>
+                        <td class="py-4 px-6 text-gray-600 max-w-xs truncate">
+                            <?php echo htmlspecialchars($food->getDescription()); ?>
                         </td>
                         <td class="py-4 px-6">
                             <div class="flex items-center justify-center space-x-3">

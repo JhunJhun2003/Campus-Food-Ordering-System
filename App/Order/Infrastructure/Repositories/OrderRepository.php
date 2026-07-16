@@ -256,9 +256,11 @@ public function findByIdWithDetails(int $id): ?array
         $sql = "SELECT 
                     oi.*,
                     f.name as food_name,
-                    f.image
+                    f.image,
+                    fs.size_name as size_name
                 FROM order_items oi
                 JOIN foods f ON oi.food_id = f.id
+                LEFT JOIN food_sizes fs ON oi.food_size_id = fs.id
                 WHERE oi.order_id = :order_id";
         
         $stmt = $this->db->prepare($sql);
@@ -266,12 +268,12 @@ public function findByIdWithDetails(int $id): ?array
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function addItem(int $orderId, int $foodId, int $quantity, float $unitPrice): void
+    public function addItem(int $orderId, int $foodId, int $quantity, float $unitPrice, ?int $foodSizeId = null): void
     {
         $subtotal = $unitPrice * $quantity;
         
-        $sql = "INSERT INTO order_items (order_id, food_id, quantity, unit_price, subtotal) 
-                VALUES (:order_id, :food_id, :quantity, :unit_price, :subtotal)";
+        $sql = "INSERT INTO order_items (order_id, food_id, quantity, unit_price, subtotal, food_size_id) 
+                VALUES (:order_id, :food_id, :quantity, :unit_price, :subtotal, :food_size_id)";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -279,7 +281,8 @@ public function findByIdWithDetails(int $id): ?array
             ':food_id' => $foodId,
             ':quantity' => $quantity,
             ':unit_price' => $unitPrice,
-            ':subtotal' => $subtotal
+            ':subtotal' => $subtotal,
+            ':food_size_id' => $foodSizeId
         ]);
     }
 
@@ -289,8 +292,8 @@ public function findByIdWithDetails(int $id): ?array
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':order_id' => $orderId]);
 
-        $sql = "INSERT INTO order_items (order_id, food_id, quantity, unit_price, subtotal) 
-                VALUES (:order_id, :food_id, :quantity, :unit_price, :subtotal)";
+        $sql = "INSERT INTO order_items (order_id, food_id, quantity, unit_price, subtotal, food_size_id) 
+                VALUES (:order_id, :food_id, :quantity, :unit_price, :subtotal, :food_size_id)";
         $stmt = $this->db->prepare($sql);
 
         foreach ($items as $item) {
@@ -299,7 +302,8 @@ public function findByIdWithDetails(int $id): ?array
                 ':food_id' => $item['food_id'],
                 ':quantity' => $item['quantity'],
                 ':unit_price' => $item['unit_price'],
-                ':subtotal' => $item['quantity'] * $item['unit_price']
+                ':subtotal' => $item['quantity'] * $item['unit_price'],
+                ':food_size_id' => $item['food_size_id'] ?? null
             ]);
         }
     }

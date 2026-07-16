@@ -37,20 +37,35 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Price ($) <span class="text-red-500">*</span></label>
-                    <input type="number" name="price" value="<?php echo $editFood['price']; ?>" step="0.01" min="0" required class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Stock Quantity</label>
-                    <input type="number" name="stock" value="<?php echo $editFood['stock']; ?>" min="0" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-                </div>
-                <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Prep Time (mins)</label>
                     <input type="number" name="preparation_time" value="<?php echo $editFood['preparation_time'] ?? 15; ?>" min="0" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
                 </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Sizes</label>
+                <div class="space-y-2" id="edit-size-list">
+                    <?php
+                    $sizes = [];
+                    if (!empty($editFood['id'])) {
+                        $foodSizes = $foodController->getSizes((int) $editFood['id']);
+                        $sizes = $foodSizes;
+                    }
+                    if (empty($sizes)):
+                        $sizes = [new \App\Food\Domain\Entities\FoodSize(null, (int) $editFood['id'], 'Default', (float) $editFood['price'], (int) $editFood['stock'], true)];
+                    endif;
+                    foreach ($sizes as $index => $size):
+                    ?>
+                        <div class="flex items-center gap-2">
+                            <input type="text" name="size_name[]" value="<?php echo htmlspecialchars($size->getSizeName()); ?>" placeholder="e.g. Small" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                            <input type="number" name="size_price[]" value="<?php echo number_format($size->getPrice(), 2, '.', ''); ?>" placeholder="0.00" step="0.01" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                            <input type="number" name="size_stock[]" value="<?php echo $size->getStock(); ?>" placeholder="0" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <button type="button" onclick="addSizeRow('edit-size-list', 'edit')" class="mt-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                    <i class="fa-solid fa-plus mr-1"></i>Add another size
+                </button>
             </div>
             
             <div class="mb-4">

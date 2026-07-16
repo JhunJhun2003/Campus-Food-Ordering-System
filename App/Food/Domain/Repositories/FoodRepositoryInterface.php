@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Food\Domain\Repositories;
 
 use App\Food\Domain\Entities\Food;
+use App\Food\Domain\Entities\FoodSize;
 
 interface FoodRepositoryInterface
 {
@@ -54,4 +55,13 @@ public function restoreStockWithLock(int $foodId, int $quantity): bool;
      * Get active food count
      */
     public function countActive(): int;  // ✅ ADD THIS (optional)
+
+    // Size methods
+    public function getSizes(int $foodId): array;
+    public function findSizeById(int $sizeId): ?FoodSize;
+    public function createSize(FoodSize $size): int;
+    public function updateSize(int $sizeId, array $data): bool;
+    public function deleteSize(int $sizeId): bool;
+    public function reduceSizeStock(int $sizeId, int $quantity): bool;
+    public function restoreSizeStock(int $sizeId, int $quantity): bool;
 }

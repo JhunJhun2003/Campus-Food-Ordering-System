@@ -50,18 +50,40 @@ class CreateOrderUseCase
             foreach ($items as $item) {
                 $foodId = $item['food_id'];
                 $quantity = $item['quantity'];
-                $currentStock = $this->foodRepository->getStock($foodId);
+                $foodSizeId = isset($item['food_size_id']) ? (int) $item['food_size_id'] : null;
                 
-                if ($currentStock < $quantity) {
-                    $food = $this->foodRepository->findById($foodId); //I added the locking (for update)
-                    $foodName = $food ? $food->getName() : "Item #$foodId";
-                    throw new \Exception("Not enough stock for '$foodName'. Available: $currentStock");
+                if ($foodSizeId !== null) {
+                    $size = $this->foodRepository->findSizeById($foodSizeId);
+                    if (!$size) {
+                        $food = $this->foodRepository->findById($foodId);
+                        $foodName = $food ? $food->getName() : "Item #$foodId";
+                        throw new \Exception("Selected size for '$foodName' is not available.");
+                    }
+                    if ($size->getStock() < $quantity) {
+                        throw new \Exception("Not enough stock for '{$size->getSizeName()}'. Available: {$size->getStock()}");
+                    }
+                } else {
+                    $currentStock = $this->foodRepository->getStock($foodId);
+                    if ($currentStock < $quantity) {
+                        $food = $this->foodRepository->findById($foodId);
+                        $foodName = $food ? $food->getName() : "Item #$foodId";
+                        throw new \Exception("Not enough stock for '$foodName'. Available: $currentStock");
+                    }
                 }
             }
 
             // 3. REDUCE STOCK
             foreach ($items as $item) {
-                $this->foodRepository->reduceStock($item['food_id'], $item['quantity']);
+                $foodSizeId = isset($item['food_size_id']) ? (int) $item['food_size_id'] : null;
+                if ($foodSizeId !== null) {
+                    if (!$this->foodRepository->reduceSizeStock($foodSizeId, $item['quantity'])) {
+                        throw new \Exception('Unable to reserve stock for selected size.');
+                    }
+                } else {
+                    if (!$this->foodRepository->reduceStock($item['food_id'], $item['quantity'])) {
+                        throw new \Exception('Unable to reserve stock for selected item.');
+                    }
+                }
             }
 
             // 4. Create order (status_id = 1 means 'pending')
@@ -88,7 +110,8 @@ class CreateOrderUseCase
                     $orderId,
                     $item['food_id'],
                     $item['quantity'],
-                    $item['price']
+                    $item['price'],
+                    $item['food_size_id'] ?? null
                 );
             }
 

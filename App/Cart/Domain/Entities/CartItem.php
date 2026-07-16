@@ -9,6 +9,8 @@ class CartItem
     private float $price;
     private int $quantity;
     private ?string $image;
+    private ?int $foodSizeId;
+    private ?string $sizeName;
 
     public function __construct(
         ?int $id,
@@ -16,7 +18,9 @@ class CartItem
         string $foodName,
         float $price,
         int $quantity = 1,
-        ?string $image = null
+        ?string $image = null,
+        ?int $foodSizeId = null,
+        ?string $sizeName = null
     ) {
         $this->id = $id;
         $this->foodId = $foodId;
@@ -24,6 +28,8 @@ class CartItem
         $this->price = $price;
         $this->quantity = $quantity;
         $this->image = $image;
+        $this->foodSizeId = $foodSizeId;
+        $this->sizeName = $sizeName;
     }
 
     public function getId(): ?int { return $this->id; }
@@ -32,6 +38,8 @@ class CartItem
     public function getPrice(): float { return $this->price; }
     public function getQuantity(): int { return $this->quantity; }
     public function getImage(): ?string { return $this->image; }
+    public function getFoodSizeId(): ?int { return $this->foodSizeId; }
+    public function getSizeName(): ?string { return $this->sizeName; }
     public function getSubtotal(): float { return $this->price * $this->quantity; }
 
     public function increaseQuantity(int $amount = 1): void
@@ -53,7 +61,9 @@ class CartItem
             'price' => $this->price,
             'quantity' => $this->quantity,
             'subtotal' => $this->getSubtotal(),
-            'image' => $this->image
+            'image' => $this->image,
+            'food_size_id' => $this->foodSizeId,
+            'size_name' => $this->sizeName
         ];
     }
 }

@@ -42,6 +42,7 @@ $userController = getUserController();
 // Get POST data
 $foodId = (int) ($_POST['food_id'] ?? 0);
 $quantity = (int) ($_POST['quantity'] ?? 1);
+$foodSizeId = isset($_POST['food_size_id']) && $_POST['food_size_id'] !== '' ? (int) $_POST['food_size_id'] : null;
 
 if ($foodId <= 0) {
     echo json_encode(['success' => false, 'message' => 'Invalid food item.']);
@@ -64,7 +65,7 @@ if ($userId <= 0) {
 try {
     // ✅ Use helper for cart controller
     $cartController = getCartController();
-    $result = $cartController->add($userId, $foodId, $quantity);
+    $result = $cartController->add($userId, $foodId, $quantity, $foodSizeId);
     
     if ($result['success']) {
         echo json_encode([

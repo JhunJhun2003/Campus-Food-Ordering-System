@@ -46,6 +46,7 @@ $cartController = getCartController();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $action = $_POST['action'] ?? '';
+    $cartItemId = (int) ($_POST['cart_item_id'] ?? 0);
     $foodId = (int) ($_POST['food_id'] ?? 0);
     $quantity = (int) ($_POST['quantity'] ?? 1);
     
@@ -55,10 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $response = $cartController->add($userId, $foodId, $quantity); 
             break;
         case 'update': 
-            $response = $cartController->update($userId, $foodId, $quantity); 
+            $response = $cartController->update($userId, $cartItemId, $quantity); 
             break;
         case 'remove': 
-            $response = $cartController->remove($userId, $foodId); 
+            $response = $cartController->remove($userId, $cartItemId); 
             break;
         case 'clear': 
             $response = $cartController->clear($userId); 
@@ -94,10 +95,11 @@ include __DIR__ . '/includes/header.php';
 
     <!-- Desktop Table Headers -->
     <div class="hidden md:grid grid-cols-12 bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6 text-sm font-semibold text-slate-500 tracking-wide">
-        <div class="col-span-5 pl-4">Item</div>
+        <div class="col-span-4 pl-4">Item</div>
+        <div class="col-span-2 text-center">Size</div>
         <div class="col-span-2 text-center">Price</div>
         <div class="col-span-2 text-center">Quantity</div>
-        <div class="col-span-2 text-center">Total</div>
+        <div class="col-span-1 text-center">Total</div>
         <div class="col-span-1 text-center">Action</div>
     </div>
 
@@ -114,15 +116,25 @@ include __DIR__ . '/includes/header.php';
             </div>
         <?php else: ?>
             <?php foreach ($items as $item): ?>
-                <div id="cart-item-row-<?php echo $item['food_id']; ?>" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-white border border-slate-100 rounded-2xl p-4 md:py-6 md:px-4 shadow-sm hover:shadow-md/50 interactive-transition">
-                    <div class="col-span-1 md:col-span-5 flex items-center">
+                <div id="cart-item-row-<?php echo $item['id']; ?>" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-white border border-slate-100 rounded-2xl p-4 md:py-6 md:px-4 shadow-sm hover:shadow-md/50 interactive-transition">
+                    <div class="col-span-1 md:col-span-4 flex items-center">
                         <div class="w-full max-w-[280px] sm:max-w-full flex items-center space-x-4 border border-slate-100 rounded-xl p-3 bg-white shadow-sm/50">
-                            <span class="text-3xl p-2 bg-slate-50 rounded-lg select-none"><?php 
-                                $emojiMap = [1 => '🍔', 2 => '🍕', 3 => '🥤', 4 => '🍰', 5 => '🍚'];
-                                echo $emojiMap[$item['food_id']] ?? '🍽️';
-                            ?></span>
+                            <?php if (!empty($item['image'])): ?>
+                                <img src="/Campus-Food-Ordering-System/Public/uploads/foods/<?php echo rawurlencode($item['image']); ?>" 
+                                     alt="<?php echo htmlspecialchars($item['food_name']); ?>" 
+                                     class="w-12 h-12 rounded-lg object-cover border border-slate-100">
+                            <?php else: ?>
+                                <span class="text-3xl p-2 bg-slate-50 rounded-lg select-none"><?php 
+                                    $emojiMap = [1 => '🍔', 2 => '🍕', 3 => '🥤', 4 => '🍰', 5 => '🍚'];
+                                    echo $emojiMap[$item['food_id']] ?? '🍽️';
+                                ?></span>
+                            <?php endif; ?>
                             <span class="font-bold text-slate-900 text-base"><?php echo htmlspecialchars($item['food_name']); ?></span>
                         </div>
+                    </div>
+                    <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
+                        <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Size</span>
+                        <span class="font-medium text-slate-600 text-sm"><?php echo htmlspecialchars($item['size_name'] ?? 'Regular'); ?></span>
                     </div>
                     <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
                         <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Price</span>
@@ -131,21 +143,21 @@ include __DIR__ . '/includes/header.php';
                     <div class="col-span-1 md:col-span-2 flex md:justify-center items-center justify-between px-2">
                         <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Quantity</span>
                         <div class="flex items-center space-x-3.5 bg-slate-50/50 border border-slate-200/80 rounded-xl px-3.5 py-1.5 shadow-inner">
-                            <button onclick="updateCartItem(<?php echo $item['food_id']; ?>, 1)" class="text-slate-400 hover:text-emerald-500 interactive-transition text-xs p-1 focus:outline-none">
+                            <button onclick="updateCartItem(<?php echo $item['id']; ?>, 1)" class="text-slate-400 hover:text-emerald-500 interactive-transition text-xs p-1 focus:outline-none">
                                 <i class="fa-solid fa-circle-plus text-base sm:text-lg"></i>
                             </button>
                             <span class="font-black text-slate-800 text-sm select-none w-6 text-center" id="qty-<?php echo $item['food_id']; ?>"><?php echo $item['quantity']; ?></span>
-                            <button onclick="updateCartItem(<?php echo $item['food_id']; ?>, -1)" class="text-slate-400 hover:text-rose-500 interactive-transition text-xs p-1 focus:outline-none">
+                            <button onclick="updateCartItem(<?php echo $item['id']; ?>, -1)" class="text-slate-400 hover:text-rose-500 interactive-transition text-xs p-1 focus:outline-none">
                                 <i class="fa-solid fa-circle-minus text-base sm:text-lg"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
+                    <div class="col-span-1 md:col-span-1 text-left md:text-center flex md:block items-center justify-between px-2">
                         <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Total</span>
                         <span class="font-black text-slate-900 text-base" id="item-total-<?php echo $item['food_id']; ?>">$ <?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
                     </div>
                     <div class="col-span-1 md:col-span-1 flex md:justify-center items-center justify-end px-2">
-                        <button onclick="removeCartItem(<?php echo $item['food_id']; ?>)" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-3 rounded-xl interactive-transition focus:outline-none" title="Remove Item">
+                        <button onclick="removeCartItem(<?php echo $item['id']; ?>)" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-3 rounded-xl interactive-transition focus:outline-none" title="Remove Item">
                             <i class="fa-solid fa-trash-can text-lg"></i>
                         </button>
                     </div>
@@ -217,39 +229,49 @@ function renderCartUI() {
     let rowsHtml = '';
     let currentSubtotal = 0;
 
+    const emojiMap = {1: '🍔', 2: '🍕', 3: '🥤', 4: '🍰', 5: '🍚'};
     cartItems.forEach(item => {
         const itemTotal = item.price * item.quantity;
         currentSubtotal += itemTotal;
+        const emoji = emojiMap[item.food_id] || '🍽️';
+        const imageMarkup = item.image 
+            ? `<img src="/Campus-Food-Ordering-System/Public/uploads/foods/${encodeURIComponent(item.image)}" alt="${item.food_name}" class="w-12 h-12 rounded-lg object-cover border border-slate-100" onerror="this.outerHTML='<span class=\"text-3xl p-2 bg-slate-50 rounded-lg select-none\">${emoji}</span>'">`
+            : `<span class="text-3xl p-2 bg-slate-50 rounded-lg select-none">${emoji}</span>`;
+            
         rowsHtml += `
-            <div id="cart-item-row-${item.food_id}" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-white border border-slate-100 rounded-2xl p-4 md:py-6 md:px-4 shadow-sm hover:shadow-md/50 interactive-transition">
-                <div class="col-span-1 md:col-span-5 flex items-center">
+            <div id="cart-item-row-${item.id}" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-white border border-slate-100 rounded-2xl p-4 md:py-6 md:px-4 shadow-sm hover:shadow-md/50 interactive-transition">
+                <div class="col-span-1 md:col-span-4 flex items-center">
                     <div class="w-full max-w-[280px] sm:max-w-full flex items-center space-x-4 border border-slate-100 rounded-xl p-3 bg-white shadow-sm/50">
-                        <span class="text-3xl p-2 bg-slate-50 rounded-lg select-none">${item.emoji || '🍽️'}</span>
+                        ${imageMarkup}
                         <span class="font-bold text-slate-900 text-base">${item.food_name}</span>
                     </div>
                 </div>
                 <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
+                    <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Size</span>
+                    <span class="font-medium text-slate-600 text-sm">${item.size_name || 'Regular'}</span>
+                </div>
+                <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
                     <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Price</span>
-                    <span class="font-bold text-slate-800 text-base">$ ${item.price}</span>
+                    <span class="font-bold text-slate-800 text-base">$ ${Number(item.price).toFixed(2)}</span>
                 </div>
                 <div class="col-span-1 md:col-span-2 flex md:justify-center items-center justify-between px-2">
                     <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Quantity</span>
                     <div class="flex items-center space-x-3.5 bg-slate-50/50 border border-slate-200/80 rounded-xl px-3.5 py-1.5 shadow-inner">
-                        <button onclick="updateCartItem(${item.food_id}, 1)" class="text-slate-400 hover:text-emerald-500 interactive-transition text-xs p-1 focus:outline-none">
+                        <button onclick="updateCartItem(${item.id}, 1)" class="text-slate-400 hover:text-emerald-500 interactive-transition text-xs p-1 focus:outline-none">
                             <i class="fa-solid fa-circle-plus text-base sm:text-lg"></i>
                         </button>
                         <span class="font-black text-slate-800 text-sm select-none w-6 text-center">${item.quantity}</span>
-                        <button onclick="updateCartItem(${item.food_id}, -1)" class="text-slate-400 hover:text-rose-500 interactive-transition text-xs p-1 focus:outline-none">
+                        <button onclick="updateCartItem(${item.id}, -1)" class="text-slate-400 hover:text-rose-500 interactive-transition text-xs p-1 focus:outline-none">
                             <i class="fa-solid fa-circle-minus text-base sm:text-lg"></i>
                         </button>
                     </div>
                 </div>
-                <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
+                <div class="col-span-1 md:col-span-1 text-left md:text-center flex md:block items-center justify-between px-2">
                     <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Total</span>
-                    <span class="font-black text-slate-900 text-base">$ ${itemTotal}</span>
+                    <span class="font-black text-slate-900 text-base">$ ${Number(itemTotal).toFixed(2)}</span>
                 </div>
                 <div class="col-span-1 md:col-span-1 flex md:justify-center items-center justify-end px-2">
-                    <button onclick="removeCartItem(${item.food_id})" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-3 rounded-xl interactive-transition focus:outline-none" title="Remove Item">
+                    <button onclick="removeCartItem(${item.id})" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-3 rounded-xl interactive-transition focus:outline-none" title="Remove Item">
                         <i class="fa-solid fa-trash-can text-lg"></i>
                     </button>
                 </div>
@@ -273,15 +295,15 @@ function renderCartUI() {
     }
 }
 
-function updateCartItem(foodId, change) {
-    const item = cartItems.find(i => i.food_id === foodId);
+function updateCartItem(cartItemId, change) {
+    const item = cartItems.find(i => i.id === cartItemId);
     if (item) {
         const newQuantity = Math.max(1, item.quantity + change);
         if (newQuantity !== item.quantity) {
             fetch('cart.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=update&food_id=${foodId}&quantity=${newQuantity}`
+                body: `action=update&cart_item_id=${cartItemId}&quantity=${newQuantity}`
             })
             .then(response => response.json())
             .then(data => {
@@ -295,20 +317,20 @@ function updateCartItem(foodId, change) {
     }
 }
 
-function removeCartItem(foodId) {
-    const targetRow = document.getElementById(`cart-item-row-${foodId}`);
+function removeCartItem(cartItemId) {
+    const targetRow = document.getElementById(`cart-item-row-${cartItemId}`);
     if (targetRow) {
         targetRow.classList.add('fade-out-item');
         setTimeout(() => {
             fetch('cart.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=remove&food_id=${foodId}`
+                body: `action=remove&cart_item_id=${cartItemId}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    cartItems = cartItems.filter(i => i.food_id !== foodId);
+                    cartItems = cartItems.filter(i => i.id !== cartItemId);
                     renderCartUI();
                     showToast('Item removed from cart');
                 }
