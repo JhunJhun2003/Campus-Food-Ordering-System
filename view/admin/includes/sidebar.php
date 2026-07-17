@@ -7,6 +7,7 @@
  */
 
 $activePage = $activePage ?? 'dashboard';
+$currentUser = $currentUser ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -46,7 +47,7 @@ $activePage = $activePage ?? 'dashboard';
                     </span>
                 </div>
                 <span class="text-xl font-black tracking-wider text-black">FOODIE</span>
-                <span class="text-xs text-gray-400 font-medium mt-1">Admin Panel</span>
+                <span class="text-xs text-gray-400 font-medium mt-1"><p class="text-xs text-gray-400"><?php echo htmlspecialchars($currentUser['role'] ?? ' '); ?></p></span>
             </div>
 
             <!-- Navigation -->
@@ -95,7 +96,7 @@ $activePage = $activePage ?? 'dashboard';
                     </div>
                     <div class="flex-1">
                         <p class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($currentUser['name'] ?? 'Admin'); ?></p>
-                        <p class="text-xs text-gray-400">Administrator</p>
+                        <p class="text-xs text-gray-400"><?php echo htmlspecialchars($currentUser['role'] ?? ' '); ?></p>
                     </div>
                 </div>
             </a>

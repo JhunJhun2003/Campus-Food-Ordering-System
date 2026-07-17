@@ -62,6 +62,10 @@ class LoginUserUseCase
             return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
         }
 
+        if (!in_array($role, ['user', 'customer', 'admin', 'staff'], true)) {
+            return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
+        }
+
         $adminPermissions = [
             'view_dashboard',
             'manage_users',

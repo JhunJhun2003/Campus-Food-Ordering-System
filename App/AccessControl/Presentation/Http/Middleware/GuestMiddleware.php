@@ -30,10 +30,11 @@ class GuestMiddleware extends BaseMiddleware
             $redirectMap = [
                 'admin' => '/view/admin/admin-dashboard.php',
                 'staff' => '/view/staff/staff-dashboard.php',
+                'customer' => '/view/customer/dashboard.php',
                 'user' => '/view/customer/dashboard.php'
             ];
             
-            $this->redirect($redirectMap[$role] ?? $this->redirectUrl);
+            $this->redirect($redirectMap[$role] ?? '/view/admin/admin-dashboard.php');
         }
 
         return $next($request);

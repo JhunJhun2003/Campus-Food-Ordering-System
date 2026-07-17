@@ -123,7 +123,7 @@ $router->get('/profile', function() {
 
 $router->get('/admin/dashboard', function() {
     require_once __DIR__ . '/../view/admin/admin-dashboard.php';
-})->withMiddleware(HttpKernel::withPermission('view_dashboard'));
+})->withMiddleware(HttpKernel::customer());
 
 $router->get('/admin/users', function() {
     require_once __DIR__ . '/../view/admin/admin-users.php';
