@@ -179,7 +179,7 @@ class FoodController extends BaseController
             $message = $this->create($request);
 
             if (($message['success'] ?? false) && !empty($message['id'])) {
-                $this->persistFoodSizes((int) $message['id'], $_POST['size_name'] ?? [], $_POST['size_price'] ?? [], $_POST['size_stock'] ?? [], $_POST['default_size'] ?? null);
+                $this->persistFoodSizes((int) $message['id'], $_POST['size_name'] ?? [], $_POST['size_price'] ?? [], $_POST['size_stock'] ?? [], $_POST['default_size'] ?? null, $_POST['size_id'] ?? [], []);
             }
 
             return ['message' => $message];
@@ -212,7 +212,7 @@ class FoodController extends BaseController
             $message = $this->update($request);
 
             if (($message['success'] ?? false)) {
-                $this->persistFoodSizes($foodId, $_POST['size_name'] ?? [], $_POST['size_price'] ?? [], $_POST['size_stock'] ?? [], $_POST['default_size'] ?? null);
+                $this->persistFoodSizes($foodId, $_POST['size_name'] ?? [], $_POST['size_price'] ?? [], $_POST['size_stock'] ?? [], $_POST['default_size'] ?? null, $_POST['size_id'] ?? [], $_POST['deleted_size_ids'] ?? []);
             }
 
             return ['message' => $message];
@@ -305,31 +305,25 @@ class FoodController extends BaseController
         return $this->createSize($request);
     }
 
-    private function persistFoodSizes(int $foodId, array $sizeNames, array $sizePrices, array $sizeStocks, ?string $defaultSize = null): void
+    private function persistFoodSizes(int $foodId, array $sizeNames, array $sizePrices, array $sizeStocks, ?string $defaultSize = null, array $sizeIds = [], array $deletedSizeIds = []): void
     {
         $names = array_values(array_filter(array_map('trim', $sizeNames)));
         $prices = array_values(array_map('floatval', $sizePrices));
         $stocks = array_values(array_map('intval', $sizeStocks));
+        $postedSizeIds = array_values(array_map('intval', $sizeIds));
 
         if (empty($names)) {
             return;
         }
 
         $existingSizes = $this->foodRepository->getSizes($foodId);
-        $existingIds = [];
-
-        foreach ($existingSizes as $size) {
-            $existingIds[$size->getId()] = true;
-        }
-
+        $currentSizeIds = [];
         $sizeCount = min(count($names), count($prices), count($stocks));
         $defaultId = null;
 
         if ($defaultSize !== null) {
             $defaultId = (int) $defaultSize;
         }
-
-        $currentSizeIds = [];
 
         for ($i = 0; $i < $sizeCount; $i++) {
             $name = $names[$i];
@@ -340,18 +334,16 @@ class FoodController extends BaseController
             $price = $prices[$i] ?? 0.0;
             $stock = $stocks[$i] ?? 0;
             $isDefault = ($defaultId !== null) ? ($defaultId === ($i + 1)) : ($i === 0);
+            $sizeId = $postedSizeIds[$i] ?? 0;
 
-            if ($i < count($existingSizes)) {
-                $existingSize = $existingSizes[$i] ?? null;
-                if ($existingSize) {
-                    $this->foodRepository->updateSize($existingSize->getId(), [
-                        'size_name' => $name,
-                        'price' => $price,
-                        'stock' => $stock,
-                        'is_default' => $isDefault,
-                    ]);
-                    $currentSizeIds[] = $existingSize->getId();
-                }
+            if ($sizeId > 0) {
+                $this->foodRepository->updateSize($sizeId, [
+                    'size_name' => $name,
+                    'price' => $price,
+                    'stock' => $stock,
+                    'is_default' => $isDefault,
+                ]);
+                $currentSizeIds[] = $sizeId;
             } else {
                 $newSize = new \App\Food\Domain\Entities\FoodSize(null, $foodId, $name, $price, $stock, $isDefault);
                 $newSizeId = $this->foodRepository->createSize($newSize);
@@ -359,9 +351,17 @@ class FoodController extends BaseController
             }
         }
 
+        $deletedIds = array_values(array_filter(array_map('intval', $deletedSizeIds)));
+        foreach ($deletedIds as $deletedId) {
+            if ($deletedId > 0) {
+                $this->foodRepository->deleteSize($deletedId);
+            }
+        }
+
         foreach ($existingSizes as $existingSize) {
-            if (!in_array($existingSize->getId(), $currentSizeIds, true)) {
-                $this->foodRepository->deleteSize($existingSize->getId());
+            $existingId = $existingSize->getId();
+            if (!in_array($existingId, $currentSizeIds, true) && !in_array($existingId, $deletedIds, true)) {
+                $this->foodRepository->deleteSize($existingId);
             }
         }
     }

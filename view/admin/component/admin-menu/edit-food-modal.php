@@ -56,13 +56,18 @@
                     endif;
                     foreach ($sizes as $index => $size):
                     ?>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 size-row">
+                            <input type="hidden" name="size_id[]" value="<?php echo (int) $size->getId(); ?>">
                             <input type="text" name="size_name[]" value="<?php echo htmlspecialchars($size->getSizeName()); ?>" placeholder="e.g. Small" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm">
                             <input type="number" name="size_price[]" value="<?php echo number_format($size->getPrice(), 2, '.', ''); ?>" placeholder="0.00" step="0.01" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
                             <input type="number" name="size_stock[]" value="<?php echo $size->getStock(); ?>" placeholder="0" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                            <button type="button" onclick="removeSizeRow(this, 'edit-size-list', <?php echo (int) $size->getId(); ?>, 'edit-deleted-size-ids')" class="size-delete-btn rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors" title="Remove size">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
                     <?php endforeach; ?>
                 </div>
+                <div id="edit-deleted-size-ids" class="hidden"></div>
                 <button type="button" onclick="addSizeRow('edit-size-list', 'edit')" class="mt-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium">
                     <i class="fa-solid fa-plus mr-1"></i>Add another size
                 </button>

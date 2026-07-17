@@ -19,3 +19,17 @@
         .menu-card-anim {
             animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        .food-image-shell {
+            transition: transform 0.25s ease;
+        }
+        .menu-card-anim:hover .food-image-shell {
+            transform: scale(1.03);
+        }
+        .size-option-btn {
+            min-width: 68px;
+        }
+        .size-option-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        

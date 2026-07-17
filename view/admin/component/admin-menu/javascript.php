@@ -83,15 +83,60 @@ function addSizeRow(containerId, mode = 'add') {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const rowCount = container.querySelectorAll('div.flex.items-center.gap-2').length + 1;
     const row = document.createElement('div');
-    row.className = 'flex items-center gap-2';
+    row.className = 'flex items-center gap-2 size-row';
     row.innerHTML = `
+        <input type="hidden" name="size_id[]" value="">
         <input type="text" name="size_name[]" placeholder="e.g. Large" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm">
         <input type="number" name="size_price[]" placeholder="0.00" step="0.01" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
         <input type="number" name="size_stock[]" placeholder="0" min="0" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm">
+        <button type="button" onclick="removeSizeRow(this, '${containerId}', null, '${containerId === 'edit-size-list' ? 'edit-deleted-size-ids' : ''}')" class="size-delete-btn rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors" title="Remove size">
+            <i class="fa-solid fa-trash"></i>
+        </button>
     `;
     container.appendChild(row);
+    updateSizeRowButtons(containerId);
+}
+
+function removeSizeRow(button, containerId, sizeId = null, deletedContainerId = null) {
+    const container = document.getElementById(containerId);
+    const row = button.closest('.size-row');
+    if (!container || !row) return;
+
+    const sizeRows = container.querySelectorAll('.size-row');
+    if (sizeRows.length <= 1) {
+        showToast('At least one size is required.', 'error');
+        return;
+    }
+
+    if (sizeId && deletedContainerId) {
+        const deletedContainer = document.getElementById(deletedContainerId);
+        if (deletedContainer) {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'deleted_size_ids[]';
+            hiddenInput.value = sizeId;
+            deletedContainer.appendChild(hiddenInput);
+        }
+    }
+
+    row.remove();
+    updateSizeRowButtons(containerId);
+}
+
+function updateSizeRowButtons(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const rows = container.querySelectorAll('.size-row');
+    rows.forEach(row => {
+        const button = row.querySelector('.size-delete-btn');
+        if (!button) return;
+
+        const isLastRow = rows.length <= 1;
+        button.disabled = isLastRow;
+        button.className = `size-delete-btn rounded-lg p-2 transition-colors ${isLastRow ? 'border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed' : 'border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700'}`;
+    });
 }
 
 // ============================================
