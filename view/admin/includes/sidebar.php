@@ -8,6 +8,10 @@
 
 $activePage = $activePage ?? 'dashboard';
 $currentUser = $currentUser ?? [];
+
+if (!function_exists('getNotificationController')) {
+    require_once __DIR__ . '/../../../inc/notification_helpers.php';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -400,34 +400,46 @@ public function findByIdWithDetails(int $id): ?array
 
     public function getMonthlyRevenue(int $months = 6): array
     {
+        $year = (int)date('Y');
+        $month = (int)date('m');
+        $daysInMonth = (int)date('t');
+        
+        $chartData = [];
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            $chartData[$dateStr] = [
+                'month' => sprintf('%02d', $day),
+                'revenue' => 0.0,
+                'orders' => 0
+            ];
+        }
+
         $sql = "SELECT 
-                    DATE_FORMAT(order_date, '%Y-%m') as month,
+                    DATE_FORMAT(order_date, '%Y-%m-%d') as day_str,
                     SUM(total_amount) as revenue,
                     COUNT(*) as order_count
                 FROM orders 
                 WHERE status_id = 5
-                GROUP BY DATE_FORMAT(order_date, '%Y-%m')
-                ORDER BY month DESC
-                LIMIT :months";
+                  AND MONTH(order_date) = :month
+                  AND YEAR(order_date) = :year
+                GROUP BY DATE_FORMAT(order_date, '%Y-%m-%d')";
         
         $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':months', $months, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute([
+            ':month' => $month,
+            ':year' => $year
+        ]);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        $chartData = [];
-        
-        foreach (array_reverse($results) as $row) {
-            $monthNum = (int) substr($row['month'], 5);
-            $chartData[] = [
-                'month' => $monthNames[$monthNum - 1] ?? $row['month'],
-                'revenue' => (float) $row['revenue'],
-                'orders' => (int) $row['order_count']
-            ];
+        foreach ($results as $row) {
+            $dayStr = $row['day_str'];
+            if (isset($chartData[$dayStr])) {
+                $chartData[$dayStr]['revenue'] = (float) $row['revenue'];
+                $chartData[$dayStr]['orders'] = (int) $row['order_count'];
+            }
         }
         
-        return $chartData;
+        return array_values($chartData);
     }
 
     public function getOrderStats(): array

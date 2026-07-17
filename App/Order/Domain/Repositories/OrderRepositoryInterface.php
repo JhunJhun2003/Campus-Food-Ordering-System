@@ -120,7 +120,7 @@ interface OrderRepositoryInterface
     public function getTotalRevenue(): float;
 
     /**
-     * Get monthly revenue for chart (last N months)
+     * Get daily revenue for chart (from 1st day to end of current month)
      */
     public function getMonthlyRevenue(int $months = 6): array;
 

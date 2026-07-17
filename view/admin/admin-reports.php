@@ -131,7 +131,7 @@ include __DIR__ . '/includes/sidebar.php';
     <div class="flex items-center justify-between">
         <div>
             <h2 class="text-lg font-bold text-slate-900">Sales Overview</h2>
-            <p class="text-xs text-slate-400">Monthly revenue trends</p>
+            <p class="text-xs text-slate-400">Daily revenue trends (Current Month)</p>
         </div>
         <span class="inline-flex items-center space-x-1.5 px-3 py-1 bg-indigo-50/50 rounded-full text-xs font-semibold text-indigo-600">
             <span class="h-2 w-2 bg-indigo-600 rounded-full"></span>
