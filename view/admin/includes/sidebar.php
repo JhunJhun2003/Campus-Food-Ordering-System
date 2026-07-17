@@ -76,6 +76,10 @@ $currentUser = $currentUser ?? [];
                     <i class="fa-solid fa-chart-simple text-lg w-6 text-center"></i>
                     <span>Reports</span>
                 </a>
+                <a href="admin-notifications.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 <?php echo $activePage === 'notifications' ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'; ?> rounded-lg font-medium transition-colors">
+                    <i class="fa-regular fa-bell text-lg w-6 text-center"></i>
+                    <span>Notifications</span>
+                </a>
                 <a href="admin-settings.php" class="sidebar-link flex items-center space-x-4 px-4 py-3 <?php echo $activePage === 'settings' ? 'active bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'; ?> rounded-lg font-medium transition-colors">
                     <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
                     <span>Settings</span>
@@ -108,4 +112,8 @@ $currentUser = $currentUser ?? [];
     </aside>
 
     <!-- ===== MAIN CONTENT START ===== -->
-    <main class="flex-1 p-8 overflow-y-auto">
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex items-center justify-end px-8 py-4 border-b border-gray-100 bg-white flex-shrink-0 relative z-30">
+            <?php getNotificationController()->widget(); ?>
+        </div>
+        <div class="flex-1 p-8 overflow-y-auto">

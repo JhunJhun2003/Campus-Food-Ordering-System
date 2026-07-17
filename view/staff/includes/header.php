@@ -11,6 +11,8 @@
 
 // No need for require_once here as it's already loaded in the main file
 
+require_once __DIR__ . '/../../../inc/notification_helpers.php';
+
 $pageTitle = $pageTitle ?? 'Staff Panel - Foodie';
 $activePage = $activePage ?? 'dashboard';
 $permissions = $permissions ?? [];

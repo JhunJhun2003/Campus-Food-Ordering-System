@@ -6,6 +6,7 @@
     <p class="mt-1 text-[10px] text-slate-300">Version 1.0.0</p>
 </div>
 
+        </div>
 </main>
 </body>
 </html>

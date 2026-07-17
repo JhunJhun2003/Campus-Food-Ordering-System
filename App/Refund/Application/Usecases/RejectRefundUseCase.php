@@ -7,6 +7,7 @@ use App\Refund\Domain\Repositories\RefundRepositoryInterface;
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Payment\Domain\Repositories\PaymentRepositoryInterface;
 use App\Refund\Application\DTOs\RejectRefundRequest;
+use App\Notification\Application\Services\NotificationDispatcher;
 use Inc\Database;
 
 class RejectRefundUseCase
@@ -50,6 +51,8 @@ class RejectRefundUseCase
             // 4. Start transaction
             $db->beginTransaction();
 
+            $order = $this->orderRepository->findById($refund->getOrderId());
+
             // 5. Reject refund
             $refund->reject($request->adminId, $request->notes);
             $this->refundRepository->save($refund);
@@ -61,6 +64,10 @@ class RejectRefundUseCase
             $this->orderRepository->updateStatus($refund->getOrderId(), 2);
 
             $db->commit();
+
+            if ($order) {
+                NotificationDispatcher::refundStatus($order->getUserId(), $request->refundId, 'rejected');
+            }
 
             return [
                 'success' => true,

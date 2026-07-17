@@ -2,6 +2,8 @@
 
 use App\User\Presentation\Http\Controllers\AdminControllerFactory;
 
+require_once __DIR__ . '/notification_helpers.php';
+
 /**
  * Get Admin Controller with all dependencies injected
  */

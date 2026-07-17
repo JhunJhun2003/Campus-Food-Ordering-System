@@ -26,6 +26,7 @@ require_once BASE_PATH . '/inc/order_helpers.php';
 require_once BASE_PATH . '/inc/admin_helpers.php';
 require_once BASE_PATH . '/inc/user_helpers.php';
 require_once BASE_PATH . '/inc/access_control_helper.php';
+require_once BASE_PATH . '/inc/notification_helpers.php';
 
 // Load routes
 $router = require BASE_PATH . '/routes/web.php';

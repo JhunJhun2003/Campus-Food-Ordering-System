@@ -50,9 +50,6 @@ include __DIR__ . '/includes/sidebar.php';
     </div>
     <div class="flex items-center space-x-3">
         <span class="text-sm text-gray-400"><?php echo date('l, F j, Y'); ?></span>
-        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-            <i class="fa-regular fa-bell text-lg"></i>
-        </div>
     </div>
 </div>
 

@@ -8,6 +8,7 @@ use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Payment\Domain\Repositories\PaymentRepositoryInterface;
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
 use App\Refund\Application\DTOs\ApproveRefundRequest;
+use App\Notification\Application\Services\NotificationDispatcher;
 use Inc\Database;
 
 class ApproveRefundUseCase
@@ -84,6 +85,8 @@ class ApproveRefundUseCase
             }
 
             $db->commit();
+
+            NotificationDispatcher::refundStatus($order->getUserId(), $request->refundId, 'approved');
 
             return [
                 'success' => true,

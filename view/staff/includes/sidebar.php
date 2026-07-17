@@ -51,6 +51,12 @@ $navItems = [
         'icon' => 'fa-user',
         'label' => 'Profile',
         'permission' => $permissions['updateProfile'] ?? false
+    ],
+    'notifications' => [
+        'url' => 'staff-notifications.php',
+        'icon' => 'fa-bell',
+        'label' => 'Notifications',
+        'permission' => true
     ]
 ];
 ?>
@@ -77,6 +83,10 @@ $navItems = [
             </div>
             <span class="text-xl font-black tracking-wider text-slate-950">FOODIE</span>
             <span class="text-xs text-gray-400 font-medium mt-1">Staff Panel</span>
+        </div>
+
+        <div class="px-6 mb-4 flex justify-center">
+            <?php getNotificationController()->widget(); ?>
         </div>
 
         <!-- Navigation -->

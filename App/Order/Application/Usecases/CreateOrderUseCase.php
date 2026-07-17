@@ -5,6 +5,7 @@ use App\Order\Domain\Entities\Order;
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Cart\Domain\Repositories\CartRepositoryInterface;
 use App\Food\Domain\Repositories\FoodRepositoryInterface;
+use App\Notification\Application\Services\NotificationDispatcher;
 use Inc\Database;
 
 class CreateOrderUseCase
@@ -121,6 +122,8 @@ class CreateOrderUseCase
             // ✅ All operations succeeded, commit transaction
             $db->commit();
 
+            NotificationDispatcher::orderStatus($userId, $orderId, 1);
+            
             return [
                 'success' => true,
                 'order_id' => $orderId,

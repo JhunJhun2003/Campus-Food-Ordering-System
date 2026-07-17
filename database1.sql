@@ -453,3 +453,20 @@ DROP COLUMN `unit_price`;
 
 ALTER TABLE foods DROP COLUMN price;
 ALTER TABLE foods DROP COLUMN stock;
+
+-- Add missing columns to notifications table
+ALTER TABLE `notifications` 
+ADD COLUMN `type` VARCHAR(50) NOT NULL DEFAULT 'system' AFTER `message`,
+ADD COLUMN `reference_type` VARCHAR(50) NULL AFTER `type`,
+ADD COLUMN `reference_id` INT NULL AFTER `reference_type`,
+ADD COLUMN `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`;
+
+-- Add indexes for better performance
+ALTER TABLE `notifications` 
+ADD INDEX `idx_user_id` (`user_id`),
+ADD INDEX `idx_is_read` (`is_read`),
+ADD INDEX `idx_type` (`type`),
+ADD INDEX `idx_created_at` (`created_at`);
+
+-- Update existing notifications with default type
+UPDATE `notifications` SET `type` = 'system' WHERE `type` = '';

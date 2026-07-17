@@ -8,6 +8,7 @@ use App\Refund\Domain\Repositories\RefundRepositoryInterface;
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
 use App\Payment\Domain\Repositories\PaymentRepositoryInterface;
 use App\Refund\Application\DTOs\RequestRefundRequest;
+use App\Notification\Application\Services\NotificationDispatcher;
 use Inc\Database;
 
 class RequestRefundUseCase
@@ -101,6 +102,8 @@ class RequestRefundUseCase
             $this->paymentRepository->updateStatus($payment['id'], 3);
 
             $db->commit();
+
+            NotificationDispatcher::refundStatus($request->userId, $refundId, 'requested');
 
             return [
                 'success' => true,

@@ -24,7 +24,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../inc/auth_helper.php';
-require_once __DIR__ . '/../../../inc/order_helpers.php';  // ✅ Add this
+require_once __DIR__ . '/../../../inc/order_helpers.php';
+require_once __DIR__ . '/../../../inc/notification_helpers.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 
@@ -122,6 +123,10 @@ $canUpdateProfile = userHasPermission('update_profile');
                         <?php echo $itemCount; ?>
                     </span>
                 </a>
+                <?php endif; ?>
+
+                <?php if ($isLoggedIn): ?>
+                    <?php getNotificationController()->widget(); ?>
                 <?php endif; ?>
                 
                 <?php if ($canUpdateProfile): ?>

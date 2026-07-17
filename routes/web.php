@@ -7,6 +7,7 @@ require_once __DIR__ . '/../inc/admin_helpers.php';
 require_once __DIR__ . '/../inc/user_helpers.php';
 require_once __DIR__ . '/../inc/refund_helpers.php';
 require_once __DIR__ . '/../inc/access_control_helper.php';  // ✅ Add this if not already in order_helpers.php
+require_once __DIR__ . '/../inc/notification_helpers.php';
 
 use App\Kernel\HttpKernel;
 use App\Router\Router;
@@ -327,6 +328,47 @@ $router->get('/google-callback', function() {
 });
 
 // ============================================
+// NOTIFICATION ROUTES
+// ============================================
+
+$notificationController = getNotificationController();
+
+$router->get('/api/notifications', function($request) use ($notificationController) {
+    header('Content-Type: application/json');
+    echo json_encode($notificationController->getNotifications());
+    exit();
+})->withMiddleware(HttpKernel::customer());
+
+$router->get('/api/notifications/unread-count', function($request) use ($notificationController) {
+    header('Content-Type: application/json');
+    echo json_encode($notificationController->getUnreadCount());
+    exit();
+})->withMiddleware(HttpKernel::customer());
+
+$router->post('/api/notifications/mark-read', function($request) use ($notificationController) {
+    header('Content-Type: application/json');
+    echo json_encode($notificationController->markAsRead());
+    exit();
+})->withMiddleware(HttpKernel::customer());
+
+$router->post('/api/notifications/mark-all-read', function($request) use ($notificationController) {
+    header('Content-Type: application/json');
+    echo json_encode($notificationController->markAllAsRead());
+    exit();
+})->withMiddleware(HttpKernel::customer());
+
+$router->post('/api/notifications/delete', function($request) use ($notificationController) {
+    header('Content-Type: application/json');
+    echo json_encode($notificationController->delete());
+    exit();
+})->withMiddleware(HttpKernel::customer());
+
+$router->get('/notifications', function() {
+    require_once __DIR__ . '/../view/notifications/index.php';
+    exit();
+})->withMiddleware(HttpKernel::customer());
+
+// ============================================
 // 404 NOT FOUND
 // ============================================
 
@@ -352,5 +394,6 @@ $router->get('/debug-routes', function() use ($router) {
     echo '</pre>';
     exit;
 });
+
 // Return the router
 return $router;

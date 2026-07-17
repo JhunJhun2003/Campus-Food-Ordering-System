@@ -2,6 +2,7 @@
 namespace App\Order\Application\Usecases;
 
 use App\Order\Domain\Repositories\OrderRepositoryInterface;
+use App\Notification\Application\Services\NotificationDispatcher;
 use Inc\Database;
 
 class UpdateOrderStatusUseCase
@@ -45,6 +46,8 @@ class UpdateOrderStatusUseCase
             
             // ✅ All operations succeeded
             $db->commit();
+
+            NotificationDispatcher::orderStatus($order->getUserId(), $orderId, $statusId);
             
             return [
                 'success' => true,
