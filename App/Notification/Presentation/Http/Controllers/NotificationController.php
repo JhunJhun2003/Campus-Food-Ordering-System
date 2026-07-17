@@ -149,7 +149,7 @@ class NotificationController extends BaseController
         $result = $this->getUserNotificationsUseCase->execute($request);
         $notifications = $result['success'] ? $result['data'] : [];
 
-        $notificationsPageUrl = '/Campus-Food-Ordering-System/notifications';
+        $notificationsPageUrl = '/Campus-Food-Ordering-System/view/notifications/index.php';
         if ($this->isAdmin()) {
             $notificationsPageUrl = '/Campus-Food-Ordering-System/view/admin/admin-notifications.php';
         } elseif ($this->isStaff()) {

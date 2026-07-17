@@ -64,7 +64,7 @@ class CartController extends BaseController
         $this->requireAuthentication();
         $this->authorizeResource($userId);
         
-        $useCase = new UpdateCartItemUseCase($this->cartRepository);
+        $useCase = new UpdateCartItemUseCase($this->cartRepository, $this->foodRepository);
         $result = $useCase->execute($userId, $cartItemId, $quantity);
         
         if ($result['success']) {

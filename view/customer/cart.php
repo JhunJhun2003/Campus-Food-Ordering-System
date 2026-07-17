@@ -311,7 +311,14 @@ function updateCartItem(cartItemId, change) {
                     item.quantity = newQuantity;
                     renderCartUI();
                     showToast(`Updated quantity to ${newQuantity}`);
+                } else {
+                    showToast(data.message || 'Failed to update quantity');
+                    renderCartUI();
                 }
+            })
+            .catch(err => {
+                showToast('An error occurred. Please try again.');
+                renderCartUI();
             });
         }
     }

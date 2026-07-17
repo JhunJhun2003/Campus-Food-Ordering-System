@@ -3,17 +3,17 @@ namespace App\Cart\Application\Usecases;
 
 use App\Cart\Domain\Entities\CartItem;
 use App\Cart\Domain\Repositories\CartRepositoryInterface;
-use App\Food\Infrastructure\Repositories\FoodRepository;
+use App\Food\Domain\Repositories\FoodRepositoryInterface;
 use App\Food\Domain\Entities\FoodSize;
 
 class AddToCartUseCase
 {
     private CartRepositoryInterface $cartRepository;
-    private FoodRepository $foodRepository;
+    private FoodRepositoryInterface $foodRepository;
 
     public function __construct(
         CartRepositoryInterface $cartRepository,
-        FoodRepository $foodRepository
+        FoodRepositoryInterface $foodRepository
     ) {
         $this->cartRepository = $cartRepository;
         $this->foodRepository = $foodRepository;
@@ -59,9 +59,31 @@ class AddToCartUseCase
             }
         }
 
+        // Get existing quantity of this item/size in the cart
+        $existingQuantity = 0;
+        $cart = $this->cartRepository->findByUserId($userId);
+        if ($cart) {
+            foreach ($cart->getItems() as $item) {
+                if ($item->getFoodId() === $foodId && $item->getFoodSizeId() === $size->getId()) {
+                    $existingQuantity = $item->getQuantity();
+                    break;
+                }
+            }
+        }
+
         // Check stock for the specific size
-        if ($size->getStock() < $quantity) {
-            return ['success' => false, 'message' => 'Not enough stock available for ' . $size->getSizeName() . ' size'];
+        if ($size->getStock() < ($existingQuantity + $quantity)) {
+            $availableToAdd = max(0, $size->getStock() - $existingQuantity);
+            if ($existingQuantity > 0) {
+                return [
+                    'success' => false,
+                    'message' => 'Cannot add more. You have ' . $existingQuantity . ' in your cart, and only ' . $size->getStock() . ' is available in stock. (Max ' . $availableToAdd . ' more can be added)'
+                ];
+            }
+            return [
+                'success' => false,
+                'message' => 'Not enough stock available. Only ' . $size->getStock() . ' is available.'
+            ];
         }
 
         // Create cart item with size
