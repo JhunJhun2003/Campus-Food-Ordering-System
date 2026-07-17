@@ -6,7 +6,7 @@ require_once __DIR__ . '/../inc/order_helpers.php';
 require_once __DIR__ . '/../inc/admin_helpers.php';
 require_once __DIR__ . '/../inc/user_helpers.php';
 require_once __DIR__ . '/../inc/refund_helpers.php';
-require_once __DIR__ . '/../inc/access_control_helper.php';  // ✅ Add this if not already in order_helpers.php
+require_once __DIR__ . '/../inc/access_control_helper.php';  
 require_once __DIR__ . '/../inc/notification_helpers.php';
 
 use App\Kernel\HttpKernel;
@@ -379,21 +379,21 @@ $router->get('/{any}', function($any) {
     echo '<a href="/Campus-Food-Ordering-System/">Go Home</a>';
 });
 
-$router->get('/debug-routes', function() use ($router) {
-    echo '<h1>All Registered Routes</h1>';
-    echo '<pre>';
-    foreach ($router->getRoutes() as $route) {
-        echo $route->getMethod() . ' - ' . $route->getPath() . "\n";
-    }
-    echo '</pre>';
-    echo '<h2>Request Info</h2>';
-    echo '<pre>';
-    echo 'REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
-    echo 'SCRIPT_NAME: ' . ($_SERVER['SCRIPT_NAME'] ?? 'N/A') . "\n";
-    echo 'PHP_SELF: ' . ($_SERVER['PHP_SELF'] ?? 'N/A') . "\n";
-    echo '</pre>';
-    exit;
-});
+// $router->get('/debug-routes', function() use ($router) {
+//     echo '<h1>All Registered Routes</h1>';
+//     echo '<pre>';
+//     foreach ($router->getRoutes() as $route) {
+//         echo $route->getMethod() . ' - ' . $route->getPath() . "\n";
+//     }
+//     echo '</pre>';
+//     echo '<h2>Request Info</h2>';
+//     echo '<pre>';
+//     echo 'REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
+//     echo 'SCRIPT_NAME: ' . ($_SERVER['SCRIPT_NAME'] ?? 'N/A') . "\n";
+//     echo 'PHP_SELF: ' . ($_SERVER['PHP_SELF'] ?? 'N/A') . "\n";
+//     echo '</pre>';
+//     exit;
+// });
 
 // Return the router
 return $router;
