@@ -79,7 +79,7 @@ class FoodRepository implements FoodRepositoryInterface
                 FROM foods f
                 LEFT JOIN food_statuses fs ON f.status_id = fs.id
                 LEFT JOIN categories c ON f.category_id = c.id
-                ORDER BY f.created_at DESC";
+                ORDER BY RAND()";
         $stmt = $this->db->query($sql);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         

@@ -2,15 +2,114 @@
 // DASHBOARD - MENU FUNCTIONALITY
 // ============================================
 
+let currentPage = 1;
+
 /**
- * Render menu grid with filtered items
+ * Determine dynamic page size to show exactly 3 rows based on screen width/columns
  */
+function getPageSize() {
+    const width = window.innerWidth;
+    if (width >= 1280) return 12; // 4 columns * 3 rows
+    if (width >= 1024) return 9;  // 3 columns * 3 rows
+    if (width >= 640) return 6;   // 2 columns * 3 rows
+    return 3;                     // 1 column * 3 rows
+}
+
 /**
- * Render menu grid with filtered items
+ * Render pagination controls dynamically
  */
-/**
- * Render menu grid with filtered items
- */
+function renderPagination(totalItems, itemsPerPage, totalPages, startIndex, endIndex) {
+    const container = document.getElementById('pagination-container');
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+
+    // Update info text
+    const startEl = document.getElementById('pagination-start');
+    const endEl = document.getElementById('pagination-end');
+    const totalEl = document.getElementById('pagination-total');
+    if (startEl) startEl.textContent = startIndex + 1;
+    if (endEl) endEl.textContent = endIndex;
+    if (totalEl) totalEl.textContent = totalItems;
+
+    // Render buttons
+    const buttonsContainer = document.getElementById('pagination-buttons');
+    if (buttonsContainer) {
+        buttonsContainer.innerHTML = '';
+
+        // Previous Button
+        const prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.className = `flex items-center justify-center p-2 rounded-lg border text-sm font-semibold transition-all duration-200 ${currentPage === 1 ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`;
+        prevBtn.innerHTML = `
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        `;
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderMenuGrid();
+                const grid = document.getElementById('menu-grid-container');
+                if (grid) window.scrollTo({ top: grid.offsetTop - 100, behavior: 'smooth' });
+            }
+        });
+        buttonsContainer.appendChild(prevBtn);
+
+        // Page Number Buttons
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.type = 'button';
+            pageBtn.textContent = i;
+            pageBtn.className = `min-w-[36px] h-9 px-3 rounded-lg border text-sm font-semibold transition-all duration-200 ${currentPage === i ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`;
+            pageBtn.addEventListener('click', () => {
+                if (currentPage !== i) {
+                    currentPage = i;
+                    renderMenuGrid();
+                    const grid = document.getElementById('menu-grid-container');
+                    if (grid) window.scrollTo({ top: grid.offsetTop - 100, behavior: 'smooth' });
+                }
+            });
+            buttonsContainer.appendChild(pageBtn);
+        }
+
+        // Next Button
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.className = `flex items-center justify-center p-2 rounded-lg border text-sm font-semibold transition-all duration-200 ${currentPage === totalPages ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'}`;
+        nextBtn.innerHTML = `
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        `;
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderMenuGrid();
+                const grid = document.getElementById('menu-grid-container');
+                if (grid) window.scrollTo({ top: grid.offsetTop - 100, behavior: 'smooth' });
+            }
+        });
+        buttonsContainer.appendChild(nextBtn);
+    }
+}
+
+// Handle window resize to adjust pagination layout/items per page
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        renderMenuGrid();
+    }, 150);
+});
+
 /**
  * Render menu grid with filtered items
  */
@@ -25,16 +124,34 @@ function renderMenuGrid() {
         return matchesCategory && matchesSearch;
     });
 
-    if (filteredItems.length === 0) {
+    const itemsPerPage = getPageSize();
+    const totalItems = filteredItems.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    // Keep currentPage within valid bounds
+    if (currentPage > totalPages) {
+        currentPage = Math.max(1, totalPages);
+    }
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+    const itemsToRender = filteredItems.slice(startIndex, endIndex);
+
+    if (itemsToRender.length === 0) {
         emptyState.classList.remove('hidden');
         container.classList.add('hidden');
+        const pagContainer = document.getElementById('pagination-container');
+        if (pagContainer) pagContainer.classList.add('hidden');
         return;
     }
 
     emptyState.classList.add('hidden');
     container.classList.remove('hidden');
 
-    filteredItems.forEach(item => {
+    renderPagination(totalItems, itemsPerPage, totalPages, startIndex, endIndex);
+
+    itemsToRender.forEach(item => {
         const sizes = Array.isArray(item.sizes) ? item.sizes.filter(s => s && s.size_name && s.price) : [];
         
         // Remove duplicates
@@ -377,6 +494,7 @@ function renderMenuGrid() {
  */
 function filterCategory(category) {
     activeCategory = category;
+    currentPage = 1;
     document.querySelectorAll('.flex.items-center.gap-3 button').forEach(btn => {
         btn.className = 'px-6 py-2.5 rounded-lg text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 interactive-transition';
     });
@@ -392,6 +510,7 @@ function filterCategory(category) {
  */
 function handleSearch() {
     searchQuery = document.getElementById('menu-search-input').value;
+    currentPage = 1;
     renderMenuGrid();
 }
 

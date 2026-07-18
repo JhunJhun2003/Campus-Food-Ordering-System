@@ -98,6 +98,8 @@ include __DIR__ . '/includes/header.php';
     
     <?php include __DIR__ . '/component/dashboard/menu-grid.php'; ?>
     
+    <?php include __DIR__ . '/component/dashboard/pagination.php'; ?>
+    
     <?php include __DIR__ . '/component/dashboard/empty-state.php'; ?>
 
 </main>
