@@ -34,22 +34,41 @@ class AccessControlRepository implements AccessControlRepositoryInterface
         ]);
     }
 
+    // public function deleteRole(int $roleId): bool
+    // {
+    //     // var_dump($roleId); // Debugging line to check the value of $roleId
+    //     // die(); // Stop execution to inspect the output
+    //     $this->db->beginTransaction();
+    //     try {
+    //         $stmt = $this->db->prepare("DELETE FROM role_permissions WHERE role_id = :role_id");
+    //         $stmt->execute([':role_id' => $roleId]);
+            
+    //         $stmt = $this->db->prepare("DELETE FROM roles WHERE id = :id");
+    //         $stmt->execute([':id' => $roleId]);
+            
+    //         $this->db->commit();
+    //         return true;
+    //     } catch (\Exception $e) {
+    //         $this->db->rollBack();
+    //         throw $e;
+    //     }
+    // }
+
     public function deleteRole(int $roleId): bool
     {
-        $this->db->beginTransaction();
-        try {
+        
             $stmt = $this->db->prepare("DELETE FROM role_permissions WHERE role_id = :role_id");
+            $stmt->execute([':role_id' => $roleId]);
+            
+            $stmt = $this->db->prepare("DELETE FROM users WHERE role_id = :role_id");
             $stmt->execute([':role_id' => $roleId]);
             
             $stmt = $this->db->prepare("DELETE FROM roles WHERE id = :id");
             $stmt->execute([':id' => $roleId]);
             
-            $this->db->commit();
             return true;
-        } catch (\Exception $e) {
-            $this->db->rollBack();
-            throw $e;
-        }
+       
+            
     }
 
     public function getRoleById(int $roleId): ?Role

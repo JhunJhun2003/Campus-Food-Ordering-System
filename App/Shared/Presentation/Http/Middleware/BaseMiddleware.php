@@ -61,7 +61,7 @@ abstract class BaseMiddleware implements MiddlewareInterface
      */
     protected function hasPermission(string $permission): bool
     {
-        return userHasPermission($permission);
+        return \hasPermission($permission);
     }
 
     /**

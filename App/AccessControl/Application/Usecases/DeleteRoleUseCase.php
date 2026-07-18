@@ -15,6 +15,10 @@ class DeleteRoleUseCase
 
     public function execute(int $roleId): bool
     {
+
+
+    // var_dump($roleId); // Debugging line to check the value of $roleId  
+    // die(); // Stop execution to inspect the output
         $db = Database::getConnection();
         
         try {

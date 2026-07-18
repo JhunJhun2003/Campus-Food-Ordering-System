@@ -177,27 +177,28 @@ $router->get('/staff/profile', function() {
 $router->post('/access-control/create-role', function($request) {
     $controller = getAccessControlController();
     $controller->createRole();
-});
+})->withMiddleware(HttpKernel::withPermission('manage_settings'));
 
 $router->post('/access-control/update-role', function($request) {
     $controller = getAccessControlController();
     $controller->updateRole();
-});
+})->withMiddleware(HttpKernel::withPermission('manage_settings'));
 
 $router->post('/access-control/delete-role', function($request) {
     $controller = getAccessControlController();
     $controller->deleteRole();
-});
+    exit();
+})->withMiddleware(HttpKernel::withPermission('manage_settings'));
 
 $router->post('/access-control/sync-permissions', function($request) {
     $controller = getAccessControlController();
     $controller->syncPermissions();
-});
+})->withMiddleware(HttpKernel::withPermission('manage_settings'));
 
 $router->get('/access-control/get-role-permissions', function($request) {
     $controller = getAccessControlController();
     $controller->getRolePermissions();
-});
+})->withMiddleware(HttpKernel::withPermission('manage_settings'));
 
 // ============================================
 // API ROUTES (Auth + Verified)

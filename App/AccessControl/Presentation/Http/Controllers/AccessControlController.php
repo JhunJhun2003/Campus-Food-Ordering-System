@@ -88,7 +88,7 @@ class AccessControlController extends BaseController
     public function createRole()
     {
         $this->requireAuthentication();
-        $this->authorize('manage_roles');
+        $this->authorizeAny(['manage_roles', 'manage_settings']);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim($_POST['name'] ?? '');
@@ -112,7 +112,7 @@ class AccessControlController extends BaseController
     public function updateRole()
     {
         $this->requireAuthentication();
-        $this->authorize('manage_roles');
+        $this->authorizeAny(['manage_roles', 'manage_settings']);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $roleId = (int) ($_POST['role_id'] ?? 0);
@@ -137,7 +137,7 @@ class AccessControlController extends BaseController
     public function deleteRole()
     {
         $this->requireAuthentication();
-        $this->authorize('manage_roles');
+        $this->authorizeAny(['manage_roles', 'manage_settings']);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $roleId = (int) ($_POST['role_id'] ?? 0);
@@ -186,7 +186,7 @@ class AccessControlController extends BaseController
     public function syncPermissions()
     {
         $this->requireAuthentication();
-        $this->authorize('manage_roles');
+        $this->authorizeAny(['manage_roles', 'manage_settings']);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $roleId = (int) ($_POST['role_id'] ?? 0);
