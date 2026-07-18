@@ -46,7 +46,8 @@ try {
 
 // ✅ Get ALL orders for the user
 $orders = $orderController->getUserOrders($userId);
-
+    // var_dump($orders); // Debugging line to check the structure of $orders
+    // die(); // Stop execution to inspect the output
 // ✅ Get statuses from order_statuses table
 $statuses = $orderController->getStatuses();
 
@@ -267,7 +268,7 @@ include __DIR__ . '/includes/header.php';
                             <div>
                                 <h4 class="text-base font-extrabold text-slate-900">Order #<?php echo sprintf('%06d', (int) $orderId); ?></h4>
                                 <p class="text-xs text-slate-400 mt-0.5"><?php echo $order['total_items'] ?? 0; ?> items</p>
-                                <p class="text-xs text-slate-500 mt-0.5 item-name-text"><?php echo htmlspecialchars($order['item_names'] ?? ''); ?></p>
+                                <!-- <p class="text-xs text-slate-500 mt-0.5 item-name-text"><?php echo htmlspecialchars($order['item_names'] ?? ''); ?></p> -->
                                 <button onclick="toggleDetails('details-<?php echo $orderId; ?>')" class="text-xs font-bold text-emerald-500 hover:text-emerald-600 mt-2 flex items-center gap-1 focus:outline-none">
                                     <span>View details</span>
                                     <i class="fa-solid fa-chevron-down text-[10px]" id="icon-details-<?php echo $orderId; ?>"></i>
@@ -305,7 +306,7 @@ include __DIR__ . '/includes/header.php';
                                 foreach ($orderItems as $item): 
                                 ?>
                                     <div class="flex justify-between items-center text-xs text-slate-600">
-                                        <span><?php echo htmlspecialchars($item['food_name']); ?> (Qty <?php echo $item['quantity']; ?>)</span>
+                                        <span><?php echo htmlspecialchars($item['food_name']); ?> (Qty <?php echo $item['quantity']; ?>)(Size <?php echo $item['size_name']; ?>)</span>
                                         <span class="font-bold text-slate-800">$<?php echo number_format((float) $item['subtotal'], 2); ?></span>
                                     </div>
                                 <?php endforeach; ?>

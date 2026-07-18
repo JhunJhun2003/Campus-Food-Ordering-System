@@ -42,17 +42,17 @@
                 
                 <!-- Notification Email -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Notification Email</label>
+                    <!-- <label class="block text-sm font-medium text-slate-700 mb-1">Notification Email</label>
                     <input type="email" name="setting_notification_email" 
                            value="<?php echo htmlspecialchars($settings['notification_email'] ?? 'orders@foodie.com'); ?>" 
                            class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-                    <p class="text-xs text-slate-400 mt-2">Email address for system notifications</p>
+                    <p class="text-xs text-slate-400 mt-2">Email address for system notifications</p> -->
                     
                     <!-- Preview of maintenance message -->
-                    <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <!-- <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p class="text-xs font-medium text-yellow-800">Maintenance Message Preview:</p>
                         <p class="text-xs text-yellow-700 mt-1">"The system is currently under maintenance. Login and registration are temporarily unavailable. Please try again later."</p>
-                    </div>
+                    </div> -->
                 </div>
             </div>
             
