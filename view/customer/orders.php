@@ -10,7 +10,7 @@ require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/user_helpers.php'; 
 require_once __DIR__ . '/../../inc/access_control_helper.php';
-
+require_once __DIR__ . '/../../inc/settings_helper.php';
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
 // ============================================
@@ -279,7 +279,7 @@ include __DIR__ . '/includes/header.php';
                         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                             <div class="text-left md:text-right pr-4">
                                 <span class="text-xs text-slate-400 block font-semibold uppercase tracking-wider">Total</span>
-                                <span class="text-xl font-extrabold text-slate-900">$<?php echo number_format((float) ($order['total_amount'] ?? 0), 2); ?></span>
+                                <span class="text-xl font-extrabold text-slate-900"><?php echo app_format_price((float) ($order['total_amount'] ?? 0)); ?></span>
                             </div>
                             <?php if ($isReady || $isPreparing): ?>
                                 <button onclick="openLiveTracking('#<?php echo sprintf('%06d', (int) $orderId); ?>', <?php echo $isReady ? 2 : 1; ?>)" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-5 py-3 rounded-xl text-xs shadow-md shadow-emerald-500/15 hover:shadow-emerald-500/30 transition-all flex items-center justify-center space-x-2">

@@ -65,10 +65,8 @@ class AccessControlRepository implements AccessControlRepositoryInterface
             
             $stmt = $this->db->prepare("DELETE FROM roles WHERE id = :id");
             $stmt->execute([':id' => $roleId]);
-            
-            return true;
-       
-            
+          
+            return true;           
     }
 
     public function getRoleById(int $roleId): ?Role

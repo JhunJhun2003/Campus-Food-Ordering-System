@@ -26,6 +26,7 @@ require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../inc/auth_helper.php';
 require_once __DIR__ . '/../../../inc/order_helpers.php';
 require_once __DIR__ . '/../../../inc/notification_helpers.php';
+require_once __DIR__ . '/../../../inc/settings_helper.php';
 
 use App\User\Presentation\Http\Controllers\UserController;
 
@@ -39,7 +40,6 @@ if ($isLoggedIn) {
     $userId = $currentUser['id'] ?? null;
     if ($userId) {
         try {
-            // ✅ Use helper function - NO 'new' keyword!
             $cartController = getCartController();
             $itemCount = $cartController->getItemCount($userId);
         } catch (\Exception $e) {
@@ -52,6 +52,9 @@ $canViewMenu = !$isLoggedIn || userHasPermission('view_menu');
 $canAddToCart = userHasPermission('add_to_cart');
 $canViewOrders = userHasPermission('view_orders');
 $canUpdateProfile = userHasPermission('update_profile');
+
+// Get currency symbol from settings
+$currencySymbol = app_currency_symbol();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -65,6 +68,20 @@ $canUpdateProfile = userHasPermission('update_profile');
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo htmlspecialchars($cssHref); ?>">
+    
+    <script>
+        // Global app settings for JavaScript
+        window.AppSettings = {
+            currencySymbol: '<?php echo $currencySymbol; ?>',
+            siteName: '<?php echo app_site_name(); ?>',
+            timezone: '<?php echo app_timezone(); ?>'
+        };
+        
+        // Helper function for formatting prices in JavaScript
+        function formatPrice(price) {
+            return window.AppSettings.currencySymbol + parseFloat(price).toFixed(2);
+        }
+    </script>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
@@ -75,22 +92,17 @@ $canUpdateProfile = userHasPermission('update_profile');
             <!-- Brand Logo -->
             <a href="/Campus-Food-Ordering-System/" class="flex items-center space-x-3 group">
                 <div class="relative flex items-center justify-center text-slate-950">
-                     <!-- <svg viewBox="0 0 100 100" class="w-11 h-11 fill-current text-slate-950 group-hover:scale-105 interactive-transition">
-                        <path d="M42,28 C26,28 22,35 22,41 C22,43 23,45 25,45 L59,45 C61,45 62,43 62,41 C62,35 58,28 42,28 Z M22,49 C21,49 20,50 20,51 C20,53 23,55 25,55 L59,55 C61,55 64,53 64,51 C64,50 63,49 62,49 L22,49 Z M25,59 C21,59 21,63 21,65 C21,72 29,76 42,76 C55,76 63,72 63,65 C63,63 63,59 59,59 L25,59 Z" />
-                        <path d="M68,20 L80,20 C81,20 82,21 82,22 L76,72 C76,73 75,74 74,74 L64,74 C63,74 62,73 62,72 L65,48 L68,20 Z" />
-                        <line x1="74" y1="20" x2="63" y2="8" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
-                    </svg> --> 
-                <script
-  src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.14/dist/dotlottie-wc.js"
-  type="module"
-></script>
+                    <script
+                      src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.14/dist/dotlottie-wc.js"
+                      type="module"
+                    ></script>
 
-<dotlottie-wc
-  src="https://lottie.host/ea75b4fe-1d6d-4e5e-97eb-df01f2e490df/FTXFOlVlea.lottie"
-  style="width: 30px;height: 55px"
-  autoplay
-  loop
-></dotlottie-wc>
+                    <dotlottie-wc
+                      src="https://lottie.host/ea75b4fe-1d6d-4e5e-97eb-df01f2e490df/FTXFOlVlea.lottie"
+                      style="width: 30px;height: 55px"
+                      autoplay
+                      loop
+                    ></dotlottie-wc>
                 </div>
                 <span class="text-2xl font-black tracking-wider text-slate-950">FOODIE</span>
             </a>

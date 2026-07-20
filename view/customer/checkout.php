@@ -167,6 +167,8 @@ $activePage = 'checkout';
 $customCss = 'css/checkout.css';
 
 include __DIR__ . '/includes/header.php';
+
+$currencySymbol = app_currency_symbol();
 ?>
 
 <!-- REST OF YOUR HTML CONTENT -->
@@ -412,14 +414,14 @@ include __DIR__ . '/includes/header.php';
                                 <p class="text-[10px] text-slate-400">Qty: <?php echo $item['quantity']; ?></p>
                             </div>
                         </div>
-                        <span class="font-bold text-slate-900">$ <?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
+                        <span class="font-bold text-slate-900"><?php echo htmlspecialchars($currencySymbol); ?> <?php echo number_format((float) ($item['price'] * $item['quantity']), 2); ?></span>
                     </div>
                 <?php endforeach; ?>
             </div>
 
             <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl">
                 <span class="text-sm font-bold">Total Bill amount due</span>
-                <span class="text-xl font-extrabold">$ <?php echo number_format($total, 2); ?></span>
+                <span class="text-xl font-extrabold"><?php echo htmlspecialchars($currencySymbol); ?> <?php echo number_format((float) $total, 2); ?></span>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-3 pt-4">

@@ -17,6 +17,7 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../inc/order_helpers.php';
 require_once __DIR__ . '/../inc/admin_helpers.php';
+require_once __DIR__ . '/../inc/settings_helper.php';
 
 // ============================================
 // 2. BUSINESS LOGIC
@@ -395,7 +396,7 @@ $transactionImage = $orderData['transaction_image'] ?? null;
                 <tr>
                     <td class="item-name"><?php echo htmlspecialchars($item['food_name']); ?></td>
                     <td class="item-qty"><?php echo $item['quantity']; ?></td>
-                    <td class="item-price">$<?php echo number_format((float)$item['subtotal'], 2); ?></td>
+                        <td class="item-price"><?php echo app_format_price((float)$item['subtotal']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -404,7 +405,7 @@ $transactionImage = $orderData['transaction_image'] ?? null;
         <!-- Total -->
         <div class="row total">
             <span>TOTAL</span>
-            <span class="amount">$<?php echo number_format($order->getTotalAmount(), 2); ?></span>
+            <span class="amount"><?php echo app_format_price($order->getTotalAmount()); ?></span>
         </div>
         
         <!-- Transaction Image -->

@@ -18,6 +18,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
+require_once __DIR__ . '/../../inc/settings_helper.php';
 
 requireLogin();
 if (!hasPermission('view_dashboard')) {
@@ -151,7 +152,7 @@ include __DIR__ . '/includes/sidebar.php';
                         <tr class="hover:bg-gray-50/50 transition-colors">
                             <td class="px-6 py-4 font-medium text-gray-900">#<?php echo $order['id']; ?></td>
                             <td class="px-6 py-4 text-gray-600"><?php echo htmlspecialchars($order['customer_name']); ?></td>
-                            <td class="px-6 py-4 font-medium text-gray-900">$<?php echo number_format((float)$order['total_amount'], 2); ?></td>
+                            <td class="px-6 py-4 font-medium text-gray-900"><?php echo app_format_price((float)$order['total_amount']); ?></td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                     <?php 
@@ -215,6 +216,10 @@ include __DIR__ . '/includes/sidebar.php';
 </div>
 
 <script>
+// Currency settings from server
+const currencySymbol = '<?php echo addslashes(app_currency_symbol()); ?>';
+const currencyDecimalPlaces = <?php echo (int) app_setting('currency_decimal_places', 2); ?>;
+
 document.querySelectorAll('.btn-view-order-details').forEach(btn => {
     btn.addEventListener('click', function(e) {
         e.preventDefault();
@@ -285,7 +290,7 @@ function renderOrderDetails(order) {
             itemsHtml += `
                 <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
                     <span>${item.food_name} (Qty: ${item.quantity})</span>
-                    <span class="font-medium">$${parseFloat(item.subtotal).toFixed(2)}</span>
+                    <span class="font-medium">${currencySymbol}${parseFloat(item.subtotal).toFixed(currencyDecimalPlaces)}</span>
                 </div>
             `;
         });
@@ -372,7 +377,7 @@ function renderOrderDetails(order) {
 
             <div class="border-t border-slate-100 pt-3 flex justify-between font-bold text-slate-900">
                 <span>Total Amount</span>
-                <span class="text-emerald-600">$${parseFloat(order.total_amount).toFixed(2)}</span>
+                <span class="text-emerald-600">${currencySymbol}${parseFloat(order.total_amount).toFixed(currencyDecimalPlaces)}</span>
             </div>
         </div>
     `;

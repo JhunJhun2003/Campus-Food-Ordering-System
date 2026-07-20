@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/user_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
+require_once __DIR__ . '/../../inc/settings_helper.php';
 
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
@@ -138,7 +139,7 @@ include __DIR__ . '/includes/header.php';
                     </div>
                     <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
                         <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Price</span>
-                        <span class="font-bold text-slate-800 text-base">$ <?php echo number_format($item['price'], 2); ?></span>
+                        <span class="font-bold text-slate-800 text-base"><?php echo app_format_price((float)$item['price']); ?></span>
                     </div>
                     <div class="col-span-1 md:col-span-2 flex md:justify-center items-center justify-between px-2">
                         <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Quantity</span>
@@ -154,7 +155,7 @@ include __DIR__ . '/includes/header.php';
                     </div>
                     <div class="col-span-1 md:col-span-1 text-left md:text-center flex md:block items-center justify-between px-2">
                         <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Total</span>
-                        <span class="font-black text-slate-900 text-base" id="item-total-<?php echo $item['food_id']; ?>">$ <?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
+                        <span class="font-black text-slate-900 text-base" id="item-total-<?php echo $item['food_id']; ?>"><?php echo app_format_price((float)($item['price'] * $item['quantity'])); ?></span>
                     </div>
                     <div class="col-span-1 md:col-span-1 flex md:justify-center items-center justify-end px-2">
                         <button onclick="removeCartItem(<?php echo $item['id']; ?>)" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-3 rounded-xl interactive-transition focus:outline-none" title="Remove Item">
@@ -170,7 +171,7 @@ include __DIR__ . '/includes/header.php';
     <div class="border-t border-slate-100 pt-6 mt-8 flex flex-col items-end px-4 sm:px-6">
         <div class="flex items-center space-x-12 mb-8">
             <span class="text-base font-bold text-slate-600">Subtotal</span>
-            <span id="cart-subtotal-price" class="text-2xl font-black text-slate-950">$ <?php echo number_format($total, 2); ?></span>
+            <span id="cart-subtotal-price" class="text-2xl font-black text-slate-950"><?php echo app_format_price((float)$total); ?></span>
         </div>
     </div>
 
@@ -193,6 +194,15 @@ let cartItems = <?php echo json_encode($items); ?>;
 let cartTotal = <?php echo $total; ?>;
 let cartItemCount = <?php echo $itemCount; ?>;
 
+// Currency settings from server
+const currencySymbol = '<?php echo addslashes(app_currency_symbol()); ?>';
+const currencyDecimalPlaces = <?php echo (int) app_setting('currency_decimal_places', 2); ?>;
+
+function formatCartPrice(price) {
+    const parsedPrice = Number(price);
+    return `${currencySymbol}${Number.isFinite(parsedPrice) ? parsedPrice.toFixed(currencyDecimalPlaces) : (0).toFixed(currencyDecimalPlaces)}`;
+}
+
 function renderCartUI() {
     const wrapper = document.getElementById('cart-items-wrapper');
     const totalHeader = document.getElementById('cart-items-count-header');
@@ -209,7 +219,7 @@ function renderCartUI() {
             </div>
         `;
         totalHeader.innerText = "0 items";
-        subtotalLabel.innerText = "$ 0";
+        subtotalLabel.innerText = formatCartPrice(0);
         if (badgeCount) {
             badgeCount.innerText = "0";
             badgeCount.classList.add('hidden');
@@ -252,7 +262,7 @@ function renderCartUI() {
                 </div>
                 <div class="col-span-1 md:col-span-2 text-left md:text-center flex md:block items-center justify-between px-2">
                     <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Price</span>
-                    <span class="font-bold text-slate-800 text-base">$ ${Number(item.price).toFixed(2)}</span>
+                    <span class="font-bold text-slate-800 text-base">${formatCartPrice(item.price)}</span>
                 </div>
                 <div class="col-span-1 md:col-span-2 flex md:justify-center items-center justify-between px-2">
                     <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Quantity</span>
@@ -268,7 +278,7 @@ function renderCartUI() {
                 </div>
                 <div class="col-span-1 md:col-span-1 text-left md:text-center flex md:block items-center justify-between px-2">
                     <span class="md:hidden text-xs font-bold text-slate-400 uppercase tracking-wider">Total</span>
-                    <span class="font-black text-slate-900 text-base">$ ${Number(itemTotal).toFixed(2)}</span>
+                    <span class="font-black text-slate-900 text-base">${formatCartPrice(itemTotal)}</span>
                 </div>
                 <div class="col-span-1 md:col-span-1 flex md:justify-center items-center justify-end px-2">
                     <button onclick="removeCartItem(${item.id})" class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-3 rounded-xl interactive-transition focus:outline-none" title="Remove Item">
@@ -284,7 +294,7 @@ function renderCartUI() {
     if (badgeCount) {
         badgeCount.innerText = cartItems.length;
     }
-    subtotalLabel.innerText = `$ ${currentSubtotal}`;
+    subtotalLabel.innerText = formatCartPrice(currentSubtotal);
     cartTotal = currentSubtotal;
 
     const checkoutBtn = document.querySelector('a[href="checkout.php"]');

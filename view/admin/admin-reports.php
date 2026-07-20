@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
+require_once __DIR__ . '/../../inc/settings_helper.php';
 
 requireLogin();
 if (!hasPermission('view_reports')) {
@@ -93,7 +94,7 @@ include __DIR__ . '/includes/sidebar.php';
             </div>
         </div>
         <div class="flex items-baseline space-x-2">
-            <span class="text-3xl font-extrabold text-slate-900">$<?php echo number_format($totalRevenue, 2); ?></span>
+            <span class="text-3xl font-extrabold text-slate-900"><?php echo app_format_price($totalRevenue); ?></span>
         </div>
     </div>
 
@@ -135,7 +136,7 @@ include __DIR__ . '/includes/sidebar.php';
         </div>
         <span class="inline-flex items-center space-x-1.5 px-3 py-1 bg-indigo-50/50 rounded-full text-xs font-semibold text-indigo-600">
             <span class="h-2 w-2 bg-indigo-600 rounded-full"></span>
-            <span>Revenue ($)</span>
+            <span>Revenue</span>
         </span>
     </div>
 
@@ -167,10 +168,10 @@ include __DIR__ . '/includes/sidebar.php';
                 <line x1="50" y1="210" x2="950" y2="210" stroke="#CBD5E1" stroke-width="1.5" />
 
                 <!-- Y-Axis Labels -->
-                <text x="25" y="34" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle">$<?php echo number_format($maxRevenue, 0); ?></text>
-                <text x="25" y="84" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle">$<?php echo number_format($maxRevenue * 0.66, 0); ?></text>
-                <text x="25" y="134" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle">$<?php echo number_format($maxRevenue * 0.33, 0); ?></text>
-                <text x="25" y="184" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle">$0</text>
+                <text x="25" y="34" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle"><?php echo app_format_price($maxRevenue); ?></text>
+                <text x="25" y="84" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle"><?php echo app_format_price($maxRevenue * 0.66); ?></text>
+                <text x="25" y="134" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle"><?php echo app_format_price($maxRevenue * 0.33); ?></text>
+                <text x="25" y="184" class="fill-slate-400 font-semibold text-[11px]" text-anchor="middle"><?php echo app_format_price(0); ?></text>
 
                 <?php
                 $count = count($monthlyRevenue);
@@ -205,7 +206,7 @@ include __DIR__ . '/includes/sidebar.php';
                     <text x="<?php echo $p['x']; ?>" y="232" class="fill-slate-500 font-bold text-xs" text-anchor="middle"><?php echo $p['month']; ?></text>
                     <?php if ($p['revenue'] > ($maxRevenue * 0.7)): ?>
                         <rect x="<?php echo $p['x'] - 25; ?>" y="<?php echo $p['y'] - 30; ?>" width="50" height="20" rx="4" class="fill-slate-900 shadow-sm" />
-                        <text x="<?php echo $p['x']; ?>" y="<?php echo $p['y'] - 16; ?>" class="fill-white font-bold text-[10px]" text-anchor="middle">$<?php echo number_format($p['revenue'], 0); ?></text>
+                        <text x="<?php echo $p['x']; ?>" y="<?php echo $p['y'] - 16; ?>" class="fill-white font-bold text-[10px]" text-anchor="middle"><?php echo app_format_price($p['revenue']); ?></text>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </svg>

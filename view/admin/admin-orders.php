@@ -19,6 +19,7 @@ require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
+require_once __DIR__ . '/../../inc/settings_helper.php';
 
 requireLogin();
 if (!hasPermission('manage_orders')) {
@@ -207,7 +208,7 @@ include __DIR__ . '/includes/sidebar.php';
                             <td class="py-4 px-6 font-medium text-gray-900">#<?php echo $orderId; ?></td>
                             <td class="py-4 px-6 text-gray-600"><?php echo htmlspecialchars($order->getCustomerName() ?? 'Unknown'); ?></td>
                             <td class="py-4 px-6 text-gray-600"><?php echo htmlspecialchars($order->getCustomerPhone() ?? 'N/A'); ?></td>
-                            <td class="py-4 px-6 font-medium text-gray-900">$<?php echo number_format($order->getTotalAmount(), 2); ?></td>
+                            <td class="py-4 px-6 font-medium text-gray-900"><?php echo app_format_price($order->getTotalAmount()); ?></td>
                             <td class="py-4 px-6">
                                 <?php
                                     $statusName = '';
@@ -351,6 +352,10 @@ include __DIR__ . '/includes/sidebar.php';
 <div id="toast" class="toast fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg transform translate-y-24 opacity-0 transition-all duration-300 z-50 max-w-md"></div>
 
 <script>
+// Currency settings from server
+const currencySymbol = '<?php echo addslashes(app_currency_symbol()); ?>';
+const currencyDecimalPlaces = <?php echo (int) app_setting('currency_decimal_places', 2); ?>;
+
 // ============================================
 // SEARCH
 // ============================================
@@ -507,7 +512,7 @@ function renderOrderDetails(order) {
             itemsHtml += `
                 <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
                     <span>${item.food_name} (Qty: ${item.quantity})</span>
-                    <span class="font-medium">$${parseFloat(item.subtotal).toFixed(2)}</span>
+                    <span class="font-medium">${currencySymbol}${parseFloat(item.subtotal).toFixed(currencyDecimalPlaces)}</span>
                 </div>
             `;
         });
@@ -653,7 +658,7 @@ function renderOrderDetails(order) {
             
             <div class="border-t border-slate-100 pt-3 flex justify-between font-bold text-slate-900">
                 <span>Total Amount</span>
-                <span class="text-emerald-600">$${parseFloat(order.total_amount).toFixed(2)}</span>
+                <span class="text-emerald-600">${currencySymbol}${parseFloat(order.total_amount).toFixed(currencyDecimalPlaces)}</span>
             </div>
             
             <div class="text-xs text-slate-400 text-right border-t border-slate-100 pt-3">

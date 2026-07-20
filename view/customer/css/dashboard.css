@@ -26,7 +26,7 @@
             transform: scale(1.03);
         }
         .size-option-btn {
-            min-width: 68px;
+            max-width: 68px;
         }
         .size-option-btn:hover {
             transform: translateY(-1px);

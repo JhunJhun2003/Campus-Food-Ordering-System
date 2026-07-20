@@ -4,6 +4,17 @@
 
 let currentPage = 1;
 
+function getDashboardCurrencySymbol() {
+    return window.AppSettings && window.AppSettings.currencySymbol
+        ? window.AppSettings.currencySymbol
+        : '$';
+}
+
+function formatDashboardPrice(price) {
+    const parsedPrice = Number(price);
+    return `${getDashboardCurrencySymbol()}${Number.isFinite(parsedPrice) ? parsedPrice.toFixed(2) : '0.00'}`;
+}
+
 /**
  * Determine dynamic page size to show exactly 3 rows based on screen width/columns
  */
@@ -226,7 +237,7 @@ function renderMenuGrid() {
                 <div class="mt-5 flex items-baseline justify-between border-t border-gray-100 pt-3.5">
                     <div>
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Price</span>
-                        <span class="text-xl font-black text-gray-900 price-display">$${Number(initialPrice).toFixed(2)}</span>
+                        <span class="text-xl font-black text-gray-900 price-display">${formatDashboardPrice(initialPrice)}</span>
                     </div>
                     <div class="text-right">
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Available</span>
@@ -268,7 +279,7 @@ function renderMenuGrid() {
             }
 
             // Update UI State
-            if (priceDisplay) priceDisplay.textContent = `$${Number(price).toFixed(2)}`;
+            if (priceDisplay) priceDisplay.textContent = formatDashboardPrice(price);
             if (stockDisplay) {
                 const parsedStock = parseInt(stock, 10);
                 stockDisplay.textContent = `${parsedStock || 0} left`;
