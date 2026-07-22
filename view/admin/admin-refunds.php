@@ -145,7 +145,7 @@ include __DIR__ . '/includes/sidebar.php';
                             </td>
                             <td class="py-4 px-6 text-center">
                                 <div class="flex items-center justify-center space-x-2">
-                                    <a href="/Campus-Food-Ordering-System/order/receipt?id=<?php echo $refund['order_id']; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
+                                    <a href="/Campus-Food-Ordering-System/Public/order/receipt?id=<?php echo $refund['order_id']; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
                                         <i class="fa-solid fa-print"></i>
                                     </a>
                                     <?php if ((int)$refund['refund_status_id'] === 1): ?>
@@ -177,7 +177,7 @@ include __DIR__ . '/includes/sidebar.php';
             <p><strong>Refund ID:</strong> #<span id="modalRefundId"></span></p>
             <p><strong>Order ID:</strong> #<span id="modalOrderId"></span></p>
             <p><strong>Customer:</strong> <span id="modalCustomer"></span></p>
-            <p><strong>Total Amount:</strong> $<span id="modalAmount"></span></p>
+            <p><strong>Total Amount:</strong> <span id="modalAmount"></span></p>
         </div>
         
         <form method="POST" class="space-y-4">

@@ -8,6 +8,8 @@ use Dompdf\Options;
 use App\Order\Infrastructure\Repositories\OrderRepository;
 use App\Refund\Infrastructure\Repositories\RefundRepository;
 
+require_once __DIR__ . '/../../../../inc/settings_helper.php';
+
 class ReceiptPdfService
 {
     private OrderRepository $orderRepository;
@@ -37,7 +39,8 @@ class ReceiptPdfService
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
-        $options->set('defaultFont', 'Helvetica');
+        // Use DejaVu Sans (bundled with dompdf) to ensure wide Unicode support for currency symbols
+        $options->set('defaultFont', 'DejaVu Sans');
         
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
@@ -69,20 +72,20 @@ class ReceiptPdfService
         foreach ($order['items'] as $item) {
             $name = htmlspecialchars($item['food_name']);
             $qty = (int) $item['quantity'];
-            $price = number_format((float) $item['unit_price'], 2);
-            $subtotal = number_format((float) $item['subtotal'], 2);
+            $priceFormatted = app_format_price((float) $item['unit_price']);
+            $subtotalFormatted = app_format_price((float) $item['subtotal']);
             
             $itemsHtml .= "
                 <tr>
                     <td class='desc'>{$name}</td>
                     <td class='qty'>{$qty}</td>
-                    <td class='unit'>\${$price}</td>
-                    <td class='total'>\${$subtotal}</td>
+                    <td class='unit'>{$priceFormatted}</td>
+                    <td class='total'>{$subtotalFormatted}</td>
                 </tr>
             ";
         }
         
-        $totalAmount = number_format((float) $order['total_amount'], 2);
+        $totalAmountFormatted = app_format_price((float) $order['total_amount']);
 
         // Refund info section (if refund is requested or completed)
         $refundSectionHtml = '';
@@ -137,7 +140,7 @@ class ReceiptPdfService
             <title>Receipt #{$order['id']}</title>
             <style>
                 body {
-                    font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+                    font-family: 'DejaVu Sans', 'Helvetica Neue', 'Helvetica', Arial, sans-serif;
                     color: #333;
                     line-height: 1.4;
                     margin: 0;
@@ -299,7 +302,7 @@ class ReceiptPdfService
                 <table class='summary-table'>
                     <tr class='total-row'>
                         <td>Amount Paid:</td>
-                        <td style='text-align: right;'>\${$totalAmount}</td>
+                        <td style='text-align: right;'>{$totalAmountFormatted}</td>
                     </tr>
                 </table>
 
