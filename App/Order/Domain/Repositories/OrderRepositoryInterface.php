@@ -120,6 +120,31 @@ interface OrderRepositoryInterface
     public function getTotalRevenue(): float;
 
     /**
+     * Get total revenue between a date range
+     */
+    public function getRevenueBetween(string $startDate, string $endDate): float;
+
+    /**
+     * Get total order count between a date range
+     */
+    public function getOrdersBetween(string $startDate, string $endDate): int;
+
+    /**
+     * Get completed order count between a date range
+     */
+    public function getCompletedOrdersBetween(string $startDate, string $endDate): int;
+
+    /**
+     * Get pending order count between a date range
+     */
+    public function getPendingOrdersBetween(string $startDate, string $endDate): int;
+
+    /**
+     * Get daily revenue between a date range
+     */
+    public function getDailyRevenueBetween(string $startDate, string $endDate): array;
+
+    /**
      * Get daily revenue for chart (from 1st day to end of current month)
      */
     public function getMonthlyRevenue(int $months = 6): array;

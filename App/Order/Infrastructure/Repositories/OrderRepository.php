@@ -398,6 +398,88 @@ public function findByIdWithDetails(int $id): ?array
         return (float) ($result['total'] ?? 0);
     }
 
+    public function getRevenueBetween(string $startDate, string $endDate): float
+    {
+        $sql = "SELECT COALESCE(SUM(total_amount), 0) as total
+                FROM orders
+                WHERE status_id IN (
+                    SELECT id FROM order_statuses WHERE status_name IN ('completed', 'ready')
+                )
+                  AND DATE(order_date) BETWEEN :start AND :end";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (float) ($row['total'] ?? 0);
+    }
+
+    public function getOrdersBetween(string $startDate, string $endDate): int
+    {
+        $sql = "SELECT COUNT(*) as cnt FROM orders WHERE DATE(order_date) BETWEEN :start AND :end";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($row['cnt'] ?? 0);
+    }
+
+    public function getCompletedOrdersBetween(string $startDate, string $endDate): int
+    {
+        $sql = "SELECT COUNT(*) as cnt FROM orders WHERE status_id = 5 AND DATE(order_date) BETWEEN :start AND :end";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($row['cnt'] ?? 0);
+    }
+
+    public function getPendingOrdersBetween(string $startDate, string $endDate): int
+    {
+        $sql = "SELECT COUNT(*) as cnt FROM orders WHERE status_id = 1 AND DATE(order_date) BETWEEN :start AND :end";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($row['cnt'] ?? 0);
+    }
+
+    public function getDailyRevenueBetween(string $startDate, string $endDate): array
+    {
+        // Build an array of dates between start and end
+        $start = new DateTime($startDate);
+        $end = new DateTime($endDate);
+        $interval = new \DateInterval('P1D');
+        $period = new \DatePeriod($start, $interval, (clone $end)->modify('+1 day'));
+
+        $chartData = [];
+        foreach ($period as $dt) {
+            $key = $dt->format('Y-m-d');
+            $chartData[$key] = [
+                'date' => $key,
+                'revenue' => 0.0,
+                'orders' => 0
+            ];
+        }
+
+        $sql = "SELECT DATE_FORMAT(order_date, '%Y-%m-%d') as day_str, SUM(total_amount) as revenue, COUNT(*) as order_count
+                FROM orders
+                WHERE status_id = 5
+                  AND DATE(order_date) BETWEEN :start AND :end
+                GROUP BY DATE_FORMAT(order_date, '%Y-%m-%d')
+                ORDER BY day_str";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':start' => $startDate, ':end' => $endDate]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($results as $row) {
+            $day = $row['day_str'];
+            if (isset($chartData[$day])) {
+                $chartData[$day]['revenue'] = (float) $row['revenue'];
+                $chartData[$day]['orders'] = (int) $row['order_count'];
+            }
+        }
+
+        return array_values($chartData);
+    }
+
     public function getMonthlyRevenue(int $months = 6): array
     {
         $year = (int)date('Y');

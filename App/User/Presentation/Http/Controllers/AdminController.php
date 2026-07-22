@@ -64,24 +64,175 @@ class AdminController extends BaseController
     /**
      * Reports - Admin only
      */
-    public function reports(): array
-    {
-        $this->authorizeAny([
-            'view_reports',
-            'manage_orders',
-            'manage_settings',
-            'view_dashboard',
-        ]);
-        
-        return [
-            'total_revenue' => $this->orderRepository->getTotalRevenue(),
-            'total_orders' => $this->orderRepository->getTotalOrders(),
-            'completed_orders' => $this->orderRepository->getCompletedOrders(),
-            'pending_orders' => $this->orderRepository->getPendingOrders(),
-            'monthly_revenue' => $this->orderRepository->getMonthlyRevenue(6),
-            'order_stats' => $this->orderRepository->getOrderStats(),
-        ];
+public function reports(array $filters = []): array
+{
+    $this->authorizeAny([
+        'view_reports',
+        'manage_orders',
+        'manage_settings',
+        'view_dashboard',
+    ]);
+
+    // Get filters from the passed array or fallback to $_GET
+    $start = $filters['start'] ?? $_GET['start'] ?? null;
+    $end = $filters['end'] ?? $_GET['end'] ?? null;
+    $period = $filters['period'] ?? $_GET['period'] ?? 'last30';
+    $group = $filters['group'] ?? $_GET['group'] ?? 'day';
+    $month = $filters['month'] ?? $_GET['month'] ?? null;
+    $year = $filters['year'] ?? $_GET['year'] ?? null;
+
+    // Calculate date range if not provided
+    if (!$start || !$end) {
+        switch ($period) {
+            case 'this_month':
+                $start = (new \DateTime('first day of this month'))->format('Y-m-d');
+                $end = (new \DateTime('last day of this month'))->format('Y-m-d');
+                break;
+            case 'this_year':
+                $start = (new \DateTime('first day of January ' . date('Y')))->format('Y-m-d');
+                $end = (new \DateTime('last day of December ' . date('Y')))->format('Y-m-d');
+                break;
+            case 'month_year':
+                if ($month && $year) {
+                    $start = (new \DateTime(sprintf('%s-%s-01', $year, $month)))->format('Y-m-d');
+                    $end = (new \DateTime(sprintf('%s-%s-t', $year, $month)))->format('Y-m-d');
+                }
+                break;
+            case 'custom':
+                if ($start && $end) {
+                    // already set
+                }
+                break;
+            case 'last30':
+            default:
+                $end = (new \DateTime())->format('Y-m-d');
+                $start = (new \DateTime())->modify('-29 days')->format('Y-m-d');
+                break;
+        }
     }
+
+    // If we have a date range, get filtered data
+    if ($start && $end) {
+        // Get filtered data
+        $totalRevenue = $this->orderRepository->getRevenueBetween($start, $end);
+        $totalOrders = $this->orderRepository->getOrdersBetween($start, $end);
+        $completedOrders = $this->orderRepository->getCompletedOrdersBetween($start, $end);
+        $pendingOrders = $this->orderRepository->getPendingOrdersBetween($start, $end);
+        
+        $daily = $this->orderRepository->getDailyRevenueBetween($start, $end);
+        
+        // Group the data based on the group parameter
+        $chartData = $this->groupChartData($daily, $group);
+        
+    } else {
+        // No date range - use all data
+        $totalRevenue = $this->orderRepository->getTotalRevenue();
+        $totalOrders = $this->orderRepository->getTotalOrders();
+        $completedOrders = $this->orderRepository->getCompletedOrders();
+        $pendingOrders = $this->orderRepository->getPendingOrders();
+        $chartData = $this->orderRepository->getMonthlyRevenue(6);
+    }
+
+    return [
+        'total_revenue' => $totalRevenue,
+        'total_orders' => $totalOrders,
+        'completed_orders' => $completedOrders,
+        'pending_orders' => $pendingOrders,
+        'monthly_revenue' => $chartData,
+        'order_stats' => $this->orderRepository->getOrderStats(),
+    ];
+}
+
+/**
+ * Group chart data based on the group parameter
+ */
+private function groupChartData(array $daily, string $group): array
+{
+    if (empty($daily)) {
+        return [];
+    }
+
+    switch ($group) {
+        case 'month':
+            $agg = [];
+            foreach ($daily as $d) {
+                $key = substr($d['date'], 0, 7); // YYYY-MM
+                if (!isset($agg[$key])) {
+                    $agg[$key] = [
+                        'month' => date('M Y', strtotime($key . '-01')),
+                        'revenue' => 0.0,
+                        'orders' => 0,
+                    ];
+                }
+                $agg[$key]['revenue'] += $d['revenue'];
+                $agg[$key]['orders'] += $d['orders'];
+            }
+            return array_values($agg);
+
+        case 'year':
+            // Group by month within the year
+            $agg = [];
+            $monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            // Determine which year to show
+            $year = date('Y');
+            // Try to get year from the data
+            if (!empty($daily)) {
+                $firstDate = $daily[0]['date'] ?? '';
+                if ($firstDate) {
+                    $year = date('Y', strtotime($firstDate));
+                }
+            }
+            
+            // Initialize all months with 0
+            for ($m = 1; $m <= 12; $m++) {
+                $monthKey = sprintf('%04d-%02d', $year, $m);
+                $agg[$monthKey] = [
+                    'month' => $monthNames[$m - 1],
+                    'revenue' => 0.0,
+                    'orders' => 0,
+                ];
+            }
+            
+            // Fill with actual data
+            foreach ($daily as $d) {
+                $monthKey = substr($d['date'], 0, 7); // YYYY-MM
+                if (isset($agg[$monthKey])) {
+                    $agg[$monthKey]['revenue'] += $d['revenue'];
+                    $agg[$monthKey]['orders'] += $d['orders'];
+                }
+            }
+            
+            return array_values($agg);
+
+        case 'week':
+            $agg = [];
+            foreach ($daily as $d) {
+                $timestamp = strtotime($d['date']);
+                $weekKey = date('o-W', $timestamp);
+                if (!isset($agg[$weekKey])) {
+                    $agg[$weekKey] = [
+                        'month' => 'W' . date('W', $timestamp) . ' ' . date('o', $timestamp),
+                        'revenue' => 0.0,
+                        'orders' => 0,
+                    ];
+                }
+                $agg[$weekKey]['revenue'] += $d['revenue'];
+                $agg[$weekKey]['orders'] += $d['orders'];
+            }
+            return array_values($agg);
+
+        case 'day':
+        default:
+            return array_map(function ($d) {
+                return [
+                    'month' => date('d M', strtotime($d['date'])),
+                    'revenue' => $d['revenue'],
+                    'orders' => $d['orders'],
+                ];
+            }, $daily);
+    }
+}
 
     // ============================================
     // SETTINGS METHODS - Admin only
