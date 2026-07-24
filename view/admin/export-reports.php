@@ -11,6 +11,13 @@ require_once __DIR__ . '/../../inc/admin_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 
 requireLogin();
+
+if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+    http_response_code(403);
+    echo 'Access denied';
+    exit();
+}
+
 if (!hasPermission('view_reports')) {
     http_response_code(403);
     echo 'Access denied';

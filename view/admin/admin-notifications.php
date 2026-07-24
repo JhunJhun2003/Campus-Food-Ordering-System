@@ -10,6 +10,22 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'customer') {
+    $_SESSION['error'] = 'Access denied. Admin role required.';
+    header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
+    exit();
+}else if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'staff') {
+    $_SESSION['error'] = 'Access denied. Admin role required.';
+    header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+    exit();
+}else if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'admin') {
+    // User is an admin, allow access
+} else {
+    $_SESSION['error'] = 'Access denied. Admin role required.';
+    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+    exit();
+}
+
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../entrance/includes/permissions.php';
 require_once __DIR__ . '/../../inc/admin_helpers.php';

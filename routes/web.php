@@ -124,31 +124,31 @@ $router->get('/profile', function() {
 
 $router->get('/admin/dashboard', function() {
     require_once __DIR__ . '/../view/admin/admin-dashboard.php';
-})->withMiddleware(HttpKernel::customer());
+})->withMiddleware(HttpKernel::admin());
 
 $router->get('/admin/users', function() {
     require_once __DIR__ . '/../view/admin/admin-users.php';
-})->withMiddleware(HttpKernel::withPermission('manage_users'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->get('/admin/menu', function() {
     require_once __DIR__ . '/../view/admin/admin-menu.php';
-})->withMiddleware(HttpKernel::withPermission('manage_menu'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->get('/admin/orders', function() {
     require_once __DIR__ . '/../view/admin/admin-orders.php';
-})->withMiddleware(HttpKernel::withPermission('manage_orders'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->get('/admin/reports', function() {
     require_once __DIR__ . '/../view/admin/admin-reports.php';
-})->withMiddleware(HttpKernel::withPermission('view_reports'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->get('/admin/settings', function() {
     require_once __DIR__ . '/../view/admin/admin-settings.php';
-})->withMiddleware(HttpKernel::withPermission('manage_settings'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->get('/admin/profile', function() {
     require_once __DIR__ . '/../view/admin/admin-profile.php';
-})->withMiddleware(HttpKernel::withPermission('manage_users'));
+})->withMiddleware(HttpKernel::admin());
 
 // ============================================
 // STAFF ROUTES (Auth + Verified + Staff Role)
@@ -177,28 +177,28 @@ $router->get('/staff/profile', function() {
 $router->post('/access-control/create-role', function($request) {
     $controller = getAccessControlController();
     $controller->createRole();
-})->withMiddleware(HttpKernel::withPermission('manage_settings'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->post('/access-control/update-role', function($request) {
     $controller = getAccessControlController();
     $controller->updateRole();
-})->withMiddleware(HttpKernel::withPermission('manage_settings'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->post('/access-control/delete-role', function($request) {
     $controller = getAccessControlController();
     $controller->deleteRole();
     exit();
-})->withMiddleware(HttpKernel::withPermission('manage_settings'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->post('/access-control/sync-permissions', function($request) {
     $controller = getAccessControlController();
     $controller->syncPermissions();
-})->withMiddleware(HttpKernel::withPermission('manage_settings'));
+})->withMiddleware(HttpKernel::admin());
 
 $router->get('/access-control/get-role-permissions', function($request) {
     $controller = getAccessControlController();
     $controller->getRolePermissions();
-})->withMiddleware(HttpKernel::withPermission('manage_settings'));
+})->withMiddleware(HttpKernel::admin());
 
 // ============================================
 // API ROUTES (Auth + Verified)

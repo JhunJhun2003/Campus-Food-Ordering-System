@@ -12,6 +12,22 @@ require_once __DIR__ . '/../../inc/access_control_helper.php';
 require_once __DIR__ . '/../../inc/settings_helper.php';
 
 requireLogin();
+
+if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'customer') {
+    $_SESSION['error'] = 'Access denied. Admin role required.';
+    header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
+    exit();
+}else if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'staff') {
+    $_SESSION['error'] = 'Access denied. Admin role required.';
+    header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+    exit();
+}else if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'admin') {
+    // User is an admin, allow access
+} else {
+    $_SESSION['error'] = 'Access denied. Admin role required.';
+    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
+    exit();
+}
 if (!hasPermission('view_reports')) {
     renderAdminPermissionDeniedPage('Access denied', 'reports');
 }
