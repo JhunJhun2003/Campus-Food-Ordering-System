@@ -51,12 +51,24 @@ class GoogleAuthService implements GoogleAuthServiceInterface
         $client = new Client();
         $client->setClientId($this->config['client_id']);
         $client->setClientSecret($this->config['client_secret']);
-        $client->setRedirectUri($this->config['redirect_uri']);
+        $client->setRedirectUri($this->resolveRedirectUri());
         $client->addScope($this->config['scopes']);
         $client->setAccessType('offline');
         $client->setPrompt('consent');
 
         return $client;
+    }
+
+    private function resolveRedirectUri(): string
+    {
+        if (!empty($this->config['redirect_uri'])) {
+            return $this->config['redirect_uri'];
+        }
+
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+        return $scheme . '://' . $host . '/Campus-Food-Ordering-System/Public/google-callback.php';
     }
 
     public function getClient(): Client
@@ -92,8 +104,33 @@ class GoogleAuthService implements GoogleAuthServiceInterface
             ];
 
         } catch (\Exception $e) {
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+
+            $message = $this->formatAuthError($e->getMessage());
+            $_SESSION['google_auth_error'] = $message;
             error_log('Google Auth Error: ' . $e->getMessage());
             return null;
         }
+    }
+
+    private function formatAuthError(string $message): string
+    {
+        $normalized = trim($message);
+
+        if (str_contains($normalized, 'cURL error 28') || str_contains($normalized, 'Failed to connect') || str_contains($normalized, 'Could not connect')) {
+            return 'The server could not reach Google OAuth. Please verify outbound HTTPS access to oauth2.googleapis.com:443, and check any firewall, proxy, or VPN settings.';
+        }
+
+        if (str_contains($normalized, 'redirect_uri_mismatch')) {
+            return 'Google rejected the redirect URI. Make sure the authorized redirect URI in Google Cloud Console exactly matches your app callback URL.';
+        }
+
+        if (str_contains($normalized, 'invalid_client') || str_contains($normalized, 'invalid_grant')) {
+            return 'Google rejected the client credentials or authorization code. Please verify your Google Client ID/Secret and callback configuration.';
+        }
+
+        return $normalized;
     }
 }

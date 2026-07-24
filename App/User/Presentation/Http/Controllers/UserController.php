@@ -66,7 +66,8 @@ class UserController extends BaseController
             $_POST['name'] ?? '',
             $_POST['email'] ?? '',
             $_POST['password'] ?? '',
-            $_POST['phone'] ?? ''
+            $_POST['phone'] ?? '',
+            $_POST['g-recaptcha-response'] ?? null 
         );
 
         $response = $this->registerUserUseCase->execute($request);
@@ -75,7 +76,8 @@ class UserController extends BaseController
             'success' => $response->success,
             'message' => $response->message,
             'user' => $response->user,
-            'errors' => $response->errors ?? null
+            'errors' => $response->errors ?? null,
+            
         ];
     }
 
@@ -87,7 +89,8 @@ class UserController extends BaseController
         $request = new LoginUserRequest(
             $_POST['email'] ?? '',
             $_POST['password'] ?? '',
-            isset($_POST['remember'])
+            isset($_POST['remember']),
+             $_POST['g-recaptcha-response'] ?? null
         );
 
         $response = $this->loginUserUseCase->execute($request);
@@ -286,7 +289,13 @@ class UserController extends BaseController
             $_SESSION['success'] = $response->message;
             header('Location: ' . $response->redirectUrl);
         } else {
-            $_SESSION['error'] = $response->message;
+            $errorMessage = $response->message;
+            if (!empty($_SESSION['google_auth_error'])) {
+                $errorMessage .= ' Details: ' . $_SESSION['google_auth_error'];
+                unset($_SESSION['google_auth_error']);
+            }
+
+            $_SESSION['error'] = $errorMessage;
             header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
         }
         exit();

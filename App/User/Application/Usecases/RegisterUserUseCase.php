@@ -8,15 +8,20 @@ use App\User\Domain\ValueObjects\Email;
 use App\User\Domain\ValueObjects\Password;
 use App\User\Application\DTOs\RegisterUserRequest;
 use App\User\Application\DTOs\RegisterUserResponse;
+use App\Security\Infrastructure\Services\GoogleRecaptchaService;
 use Inc\Database;
 
 class RegisterUserUseCase
 {
     private UserRepositoryInterface $userRepository;
+    private GoogleRecaptchaService $recaptchaService;
 
-    public function __construct(UserRepositoryInterface $userRepository)
-    {
+    public function __construct(
+        UserRepositoryInterface $userRepository,
+        GoogleRecaptchaService $recaptchaService
+    ) {
         $this->userRepository = $userRepository;
+        $this->recaptchaService = $recaptchaService;
     }
 
     public function execute(RegisterUserRequest $request): RegisterUserResponse
@@ -24,8 +29,19 @@ class RegisterUserUseCase
         $db = Database::getConnection();
         
         try {
-            // ✅ Start transaction - User creation and related operations
             $db->beginTransaction();
+            
+            // ✅ Verify reCAPTCHA FIRST
+            if ($this->recaptchaService->isEnabled()) {
+                if (!$this->recaptchaService->verify($request->captchaToken)) {
+                    return new RegisterUserResponse(
+                        false, 
+                        'Please complete the reCAPTCHA verification.', 
+                        null,
+                        ['captcha' => 'reCAPTCHA verification failed.']
+                    );
+                }
+            }
             
             $errors = [];
             $email = null;
@@ -64,7 +80,7 @@ class RegisterUserUseCase
             // Get role_id from repository
             $roleId = $this->userRepository->getRoleId('user');
 
-            // Create user (not verified yet)
+            // Create user
             $user = new User(
                 new UserId(null),
                 $roleId,
@@ -73,18 +89,14 @@ class RegisterUserUseCase
                 $email,
                 $password,
                 $request->phone,
-                null, // address
-                false, // isVerified
-                null // emailVerifiedAt
+                null,
+                false,
+                null
             );
 
-            // Save user and get the ID
+            // Save user
             $userId = $this->userRepository->save($user);
 
-            // ✅ Generate and save verification code (if applicable)
-            // $this->userRepository->setVerificationCode($userId, $this->generateVerificationCode(), 10);
-
-            // Create a new User object with the ID
             $userWithId = new User(
                 new UserId($userId),
                 $roleId,
@@ -98,7 +110,6 @@ class RegisterUserUseCase
                 null
             );
 
-            // ✅ All operations succeeded
             $db->commit();
 
             return new RegisterUserResponse(
@@ -108,7 +119,6 @@ class RegisterUserUseCase
             );
             
         } catch (\Exception $e) {
-            // ✅ Rollback on any error
             $db->rollBack();
             
             return new RegisterUserResponse(

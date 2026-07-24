@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/../../inc/user_helpers.php';
+require_once __DIR__ . '/../../inc/recaptcha_helper.php'; 
 
 use App\User\Presentation\Http\Controllers\UserController;
 
@@ -175,7 +176,13 @@ include __DIR__ . '/includes/header.php';
                             </div>
                         </div>
                     </div>
-
+<!-- reCAPTCHA -->
+<div class="form-group">
+    <?php if (is_recaptcha_enabled()): ?>
+        <?php echo render_recaptcha_widget(); ?>
+        <div id="captcha-error" class="text-red-500 text-xs mt-1 hidden">Please complete the reCAPTCHA verification.</div>
+    <?php endif; ?>
+</div>
                     <!-- Submit Button -->
                     <button id="submit-btn" type="submit" name="login" value="1" class="btn-submit">Login</button>
                 </form>

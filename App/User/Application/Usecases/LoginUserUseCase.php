@@ -9,15 +9,20 @@ use App\User\Application\DTOs\LoginUserRequest;
 use App\User\Application\DTOs\LoginUserResponse;
 use App\AccessControl\Infrastructure\Repositories\AccessControlRepository;
 use App\AccessControl\Application\Usecases\CheckPermissionUseCase;
+use App\Security\Infrastructure\Services\GoogleRecaptchaService;
 use Inc\Database;
 
 class LoginUserUseCase
 {
     private UserRepositoryInterface $userRepository;
+    private GoogleRecaptchaService $recaptchaService;
 
-    public function __construct(UserRepositoryInterface $userRepository)
-    {
+    public function __construct(
+        UserRepositoryInterface $userRepository,
+        GoogleRecaptchaService $recaptchaService
+    ) {
         $this->userRepository = $userRepository;
+        $this->recaptchaService = $recaptchaService;
     }
 
     public function execute(LoginUserRequest $request): LoginUserResponse
@@ -27,6 +32,17 @@ class LoginUserUseCase
             return new LoginUserResponse(false, 'Invalid email format', null);
         }
 
+        // ✅ Verify reCAPTCHA FIRST
+        if ($this->recaptchaService->isEnabled()) {
+            if (!$this->recaptchaService->verify($request->captchaToken)) {
+                return new LoginUserResponse(
+                    false, 
+                    'Please complete the reCAPTCHA verification.', 
+                    null
+                );
+            }
+        }
+
         // Find user by email
         $email = new Email($request->email);
         $user = $this->userRepository->findByEmail($email);
@@ -34,7 +50,6 @@ class LoginUserUseCase
         if (!$user) {
             return new LoginUserResponse(false, 'Invalid credentials', null);
         }
-
 
         // Verify password
         if (!$user->getPassword()->verify($request->password)) {

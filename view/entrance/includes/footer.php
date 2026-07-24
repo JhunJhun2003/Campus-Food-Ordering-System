@@ -52,6 +52,118 @@
         function showNotification(message, isSuccess = true) {
             showToast(message, isSuccess);
         }
+  // ============================================
+// reCAPTCHA Validation - IMPROVED
+// ============================================
+
+/**
+ * Validate reCAPTCHA response
+ * @returns {boolean} True if valid, false otherwise
+ */
+function validateCaptcha() {
+    // Check if grecaptcha is available
+    if (typeof grecaptcha === 'undefined') {
+        console.warn('reCAPTCHA not loaded');
+        return true; // Skip validation if not loaded (optional)
+    }
+    
+    try {
+        const response = grecaptcha.getResponse();
+        const errorEl = document.getElementById('captcha-error');
+        
+        if (!response || response.length === 0) {
+            // Show error
+            if (errorEl) {
+                errorEl.classList.remove('hidden');
+                errorEl.textContent = 'Please complete the reCAPTCHA verification.';
+            }
+            // Highlight the captcha widget
+            const captchaWidget = document.querySelector('.g-recaptcha');
+            if (captchaWidget) {
+                captchaWidget.style.border = '2px solid #ef4444';
+                captchaWidget.style.borderRadius = '4px';
+                captchaWidget.style.padding = '2px';
+            }
+            return false;
+        }
+        
+        // Valid - hide error
+        if (errorEl) {
+            errorEl.classList.add('hidden');
+        }
+        // Remove highlight
+        const captchaWidget = document.querySelector('.g-recaptcha');
+        if (captchaWidget) {
+            captchaWidget.style.border = 'none';
+            captchaWidget.style.padding = '0';
+        }
+        return true;
+        
+    } catch (error) {
+        console.error('reCAPTCHA validation error:', error);
+        return false;
+    }
+}
+
+/**
+ * Reset reCAPTCHA (useful after form submission errors)
+ */
+function resetCaptcha() {
+    if (typeof grecaptcha !== 'undefined') {
+        try {
+            grecaptcha.reset();
+            const errorEl = document.getElementById('captcha-error');
+            if (errorEl) {
+                errorEl.classList.add('hidden');
+            }
+            const captchaWidget = document.querySelector('.g-recaptcha');
+            if (captchaWidget) {
+                captchaWidget.style.border = 'none';
+                captchaWidget.style.padding = '0';
+            }
+        } catch (error) {
+            console.error('Error resetting reCAPTCHA:', error);
+        }
+    }
+}
+
+// ============================================
+// Attach validation to ALL forms on the page
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all forms on the page
+    const forms = document.querySelectorAll('form');
+    
+    forms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            // Check if this form has a reCAPTCHA widget
+            const hasCaptcha = form.querySelector('.g-recaptcha');
+            
+            if (hasCaptcha && typeof grecaptcha !== 'undefined') {
+                if (!validateCaptcha()) {
+                    e.preventDefault();
+                    // Scroll to captcha error
+                    const errorEl = document.getElementById('captcha-error');
+                    if (errorEl) {
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+            }
+            return true;
+        });
+    });
+});
+
+// ============================================
+// Reset captcha when switching login/register tabs
+// ============================================
+
+// If you have a switchTab function, add this:
+function resetCaptchaOnTabSwitch() {
+    resetCaptcha();
+}
     </script>
 </body>
 </html>

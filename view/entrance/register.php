@@ -8,7 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/../../inc/user_helpers.php';  // ✅ Add this
-
+require_once __DIR__ . '/../../inc/recaptcha_helper.php'; 
 use App\User\Presentation\Http\Controllers\UserController;
 use App\User\Application\Usecases\SendVerificationUseCase;
 use App\User\Infrastructure\Repositories\EmailVerificationRepository;
@@ -149,7 +149,13 @@ include __DIR__ . '/includes/header.php';
                             <input name="phone" type="tel" placeholder="Enter phone number" class="form-input">
                         </div>
                     </div>
-
+<!-- reCAPTCHA -->
+<div class="form-group">
+    <?php if (is_recaptcha_enabled()): ?>
+        <?php echo render_recaptcha_widget(); ?>
+        <div id="captcha-error" class="text-red-500 text-xs mt-1 hidden">Please complete the reCAPTCHA verification.</div>
+    <?php endif; ?>
+</div>
                     <button type="submit" name="register" class="btn-submit">Create Account</button>
                 </form>
 
