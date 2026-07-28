@@ -151,7 +151,7 @@ include __DIR__ . '/includes/header.php';
                     <div class="form-group password-field">
                         <div class="flex justify-between items-center mb-1.5">
                             <label class="form-label mb-0">Password</label>
-                            <a href="#" id="forgot-password" onclick="triggerForgotPassword(event)" class="forgot-link">Forgot Password?</a>
+                            <a href="/Campus-Food-Ordering-System/Public/forgot-password.php" id="forgot-password" class="forgot-link">Forgot Password?</a>
                         </div>
                         <div class="form-input-wrapper">
                             <span class="form-input-icon">
@@ -176,19 +176,21 @@ include __DIR__ . '/includes/header.php';
                             </div>
                         </div>
                     </div>
-<!-- reCAPTCHA -->
-<div class="form-group">
-    <?php if (is_recaptcha_enabled()): ?>
-        <?php echo render_recaptcha_widget(); ?>
-        <div id="captcha-error" class="text-red-500 text-xs mt-1 hidden">Please complete the reCAPTCHA verification.</div>
-    <?php endif; ?>
-</div>
+                    
+                    <!-- reCAPTCHA -->
+                    <div class="form-group">
+                        <?php if (is_recaptcha_enabled()): ?>
+                            <?php echo render_recaptcha_widget(); ?>
+                            <div id="captcha-error" class="text-red-500 text-xs mt-1 hidden">Please complete the reCAPTCHA verification.</div>
+                        <?php endif; ?>
+                    </div>
+                    
                     <!-- Submit Button -->
                     <button id="submit-btn" type="submit" name="login" value="1" class="btn-submit">Login</button>
                 </form>
 
                 <!-- ============================================ -->
-                <!-- ✅ GOOGLE LOGIN - Just this section -->
+                <!-- GOOGLE LOGIN -->
                 <!-- ============================================ -->
                 <div class="auth-divider">
                     <span>Or</span>
@@ -215,5 +217,139 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+
+<script>
+// ============================================
+// TOGGLE PASSWORD VISIBILITY
+// ============================================
+function togglePasswordVisibility() {
+    const input = document.getElementById('password-input');
+    const icon = document.getElementById('password-toggle-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-regular fa-eye';
+    } else {
+        input.type = 'password';
+        icon.className = 'fa-regular fa-eye-slash';
+    }
+}
+
+// ============================================
+// SWITCH BETWEEN LOGIN AND REGISTER
+// ============================================
+function switchTab(tab) {
+    const registerFields = document.querySelectorAll('.register-fields');
+    const submitBtn = document.getElementById('submit-btn');
+    const bottomHint = document.getElementById('bottom-hint');
+    
+    // Reset captcha when switching tabs
+    resetCaptcha();
+    
+    if (tab === 'register') {
+        registerFields.forEach(el => el.style.display = 'block');
+        submitBtn.name = 'register';
+        submitBtn.textContent = 'Create Account';
+        bottomHint.innerHTML = 'Already have an account? <a href="#" onclick="switchTab(\'login\'); event.preventDefault();">Login</a>';
+    } else {
+        registerFields.forEach(el => el.style.display = 'none');
+        submitBtn.name = 'login';
+        submitBtn.textContent = 'Login';
+        bottomHint.innerHTML = 'Don\'t have an account? <a href="#" onclick="switchTab(\'register\'); event.preventDefault();">Register</a>';
+    }
+}
+
+// ============================================
+// FORGOT PASSWORD - ✅ Now redirects to forgot password page
+// ============================================
+function triggerForgotPassword(event) {
+    event.preventDefault();
+    window.location.href = '/Campus-Food-Ordering-System/Public/forgot-password.php';
+}
+
+// ============================================
+// RECAPTCHA VALIDATION
+// ============================================
+function validateCaptcha() {
+    if (typeof grecaptcha === 'undefined') {
+        return true;
+    }
+    
+    try {
+        const response = grecaptcha.getResponse();
+        const errorEl = document.getElementById('captcha-error');
+        
+        if (!response || response.length === 0) {
+            if (errorEl) {
+                errorEl.classList.remove('hidden');
+                errorEl.textContent = 'Please complete the reCAPTCHA verification.';
+            }
+            const captchaWidget = document.querySelector('.g-recaptcha');
+            if (captchaWidget) {
+                captchaWidget.style.border = '2px solid #ef4444';
+                captchaWidget.style.borderRadius = '4px';
+                captchaWidget.style.padding = '2px';
+            }
+            return false;
+        }
+        
+        if (errorEl) {
+            errorEl.classList.add('hidden');
+        }
+        const captchaWidget = document.querySelector('.g-recaptcha');
+        if (captchaWidget) {
+            captchaWidget.style.border = 'none';
+            captchaWidget.style.padding = '0';
+        }
+        return true;
+        
+    } catch (error) {
+        console.error('reCAPTCHA validation error:', error);
+        return false;
+    }
+}
+
+function resetCaptcha() {
+    if (typeof grecaptcha !== 'undefined') {
+        try {
+            grecaptcha.reset();
+            const errorEl = document.getElementById('captcha-error');
+            if (errorEl) {
+                errorEl.classList.add('hidden');
+            }
+            const captchaWidget = document.querySelector('.g-recaptcha');
+            if (captchaWidget) {
+                captchaWidget.style.border = 'none';
+                captchaWidget.style.padding = '0';
+            }
+        } catch (error) {
+            console.error('Error resetting reCAPTCHA:', error);
+        }
+    }
+}
+
+// ============================================
+// ATTACH VALIDATION TO FORMS
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('auth-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const hasCaptcha = form.querySelector('.g-recaptcha');
+            
+            if (hasCaptcha && typeof grecaptcha !== 'undefined') {
+                if (!validateCaptcha()) {
+                    e.preventDefault();
+                    const errorEl = document.getElementById('captcha-error');
+                    if (errorEl) {
+                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+});
+</script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

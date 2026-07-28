@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\User\Presentation\Http\Controllers;
 
 use App\User\Infrastructure\Repositories\UserRepository;
+use App\User\Infrastructure\Repositories\PasswordResetRepository;
 use App\User\Application\Usecases\LoginWithGoogleUseCase;
 use App\User\Infrastructure\Services\GoogleAuthService;
 use App\User\Application\Usecases\RegisterUserUseCase;
@@ -13,6 +14,9 @@ use App\User\Application\Usecases\UpdateProfileUseCase;
 use App\User\Application\Usecases\SendVerificationUseCase;
 use App\User\Application\Usecases\VerifyEmailUseCase;
 use App\Security\Infrastructure\Services\GoogleRecaptchaService;
+use App\User\Application\Usecases\ForgotPasswordUseCase;
+use App\User\Application\Usecases\VerifyResetCodeUseCase;
+use App\User\Application\Usecases\ResetPasswordUseCase;
 
 /**
  * User Controller Factory
@@ -23,8 +27,9 @@ class UserControllerFactory
 
     public static function create(): UserController
     {
-        // Repositories
+        // ✅ Repositories
         $userRepository = new UserRepository();
+        $passwordResetRepository = new PasswordResetRepository(); // ✅ CREATE THIS
 
         // ✅ reCAPTCHA Service
         $recaptchaService = new GoogleRecaptchaService();
@@ -50,11 +55,30 @@ class UserControllerFactory
             $recaptchaService
         );
 
+        // ✅ ForgotPasswordUseCase
+        $forgotPasswordUseCase = new ForgotPasswordUseCase(
+            $userRepository,
+            $passwordResetRepository, // ✅ Now defined
+            $recaptchaService
+        );
+
+        // ✅ VerifyResetCodeUseCase
+        $verifyResetCodeUseCase = new VerifyResetCodeUseCase(
+            $passwordResetRepository
+        );
+
+        // ✅ ResetPasswordUseCase
+        $resetPasswordUseCase = new ResetPasswordUseCase(
+            $userRepository,
+            $passwordResetRepository
+        );
+
         $getProfileUseCase = new GetProfileUseCase($userRepository);
         $updateProfileUseCase = new UpdateProfileUseCase($userRepository);
         $sendVerificationUseCase = new SendVerificationUseCase($userRepository);
         $verifyEmailUseCase = new VerifyEmailUseCase($userRepository);
 
+        // ✅ Return UserController with all dependencies
         return new UserController(
             $userRepository,
             $registerUserUseCase,
@@ -64,7 +88,10 @@ class UserControllerFactory
             $sendVerificationUseCase,
             $verifyEmailUseCase,
             $loginWithGoogleUseCase,
-            $googleAuthService
+            $googleAuthService,
+            $forgotPasswordUseCase,      // ✅ New
+            $verifyResetCodeUseCase,     // ✅ New
+            $resetPasswordUseCase        // ✅ New
         );
     }
 

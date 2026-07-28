@@ -21,7 +21,12 @@ use App\User\Application\DTOs\GoogleLoginRequest;
 use App\User\Domain\Services\GoogleAuthServiceInterface;
 use App\User\Application\Usecases\SendVerificationUseCase;
 use App\User\Application\Usecases\VerifyEmailUseCase;
-
+use App\User\Application\Usecases\ForgotPasswordUseCase;
+use App\User\Application\Usecases\VerifyResetCodeUseCase;
+use App\User\Application\Usecases\ResetPasswordUseCase;
+use App\User\Application\DTOs\ForgotPasswordRequest;      // ✅ Add this
+use App\User\Application\DTOs\VerifyResetCodeRequest;     // ✅ Add this
+use App\User\Application\DTOs\ResetPasswordRequest; 
 class UserController extends BaseController
 {
     private UserRepositoryInterface $userRepository;
@@ -34,6 +39,11 @@ class UserController extends BaseController
     private LoginWithGoogleUseCase $loginWithGoogleUseCase;
     private GoogleAuthServiceInterface $googleAuthService;
 
+    // Add these properties
+private ForgotPasswordUseCase $forgotPasswordUseCase;
+private VerifyResetCodeUseCase $verifyResetCodeUseCase;
+private ResetPasswordUseCase $resetPasswordUseCase;
+
     public function __construct(
         UserRepositoryInterface $userRepository,
         RegisterUserUseCase $registerUserUseCase,
@@ -43,7 +53,10 @@ class UserController extends BaseController
         SendVerificationUseCase $sendVerificationUseCase,
         VerifyEmailUseCase $verifyEmailUseCase,
         LoginWithGoogleUseCase $loginWithGoogleUseCase,
-        GoogleAuthServiceInterface $googleAuthService
+        GoogleAuthServiceInterface $googleAuthService,
+        ForgotPasswordUseCase $forgotPasswordUseCase,
+        VerifyResetCodeUseCase $verifyResetCodeUseCase,
+        ResetPasswordUseCase $resetPasswordUseCase
     ) {
         parent::__construct();
         $this->userRepository = $userRepository;
@@ -55,6 +68,9 @@ class UserController extends BaseController
         $this->verifyEmailUseCase = $verifyEmailUseCase;
         $this->loginWithGoogleUseCase = $loginWithGoogleUseCase;
         $this->googleAuthService = $googleAuthService;
+        $this->forgotPasswordUseCase = $forgotPasswordUseCase;
+        $this->verifyResetCodeUseCase = $verifyResetCodeUseCase;
+        $this->resetPasswordUseCase = $resetPasswordUseCase;
     }
 
     /**
@@ -365,5 +381,34 @@ class UserController extends BaseController
     public function getCurrentUserId(): int
     {
         return parent::getCurrentUserId();
+    }
+
+    // Add these methods
+ public function forgotPassword(): array
+    {
+        $email = $_POST['email'] ?? '';
+        $captchaToken = $_POST['g-recaptcha-response'] ?? null;
+
+        $request = new ForgotPasswordRequest($email, $captchaToken);
+        return $this->forgotPasswordUseCase->execute($request);
+    }
+
+ public function verifyResetCode(): array
+    {
+        $email = $_POST['email'] ?? '';
+        $code = $_POST['code'] ?? '';
+
+        $request = new VerifyResetCodeRequest($email, $code);
+        return $this->verifyResetCodeUseCase->execute($request);
+    }
+  public function resetPassword(): array
+    {
+        $email = $_POST['email'] ?? '';
+        $code = $_POST['code'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+
+        $request = new ResetPasswordRequest($email, $code, $newPassword, $confirmPassword);
+        return $this->resetPasswordUseCase->execute($request);
     }
 }

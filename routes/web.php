@@ -370,6 +370,39 @@ $router->get('/notifications', function() {
 })->withMiddleware(HttpKernel::customer());
 
 // ============================================
+// FORGOT PASSWORD ROUTES
+// ============================================
+
+// Show forgot password page
+$router->get('/forgot-password', function() {
+    require_once __DIR__ . '/../view/entrance/forgot-password.php';
+    exit();
+})->withMiddleware(HttpKernel::guest());
+
+// Handle forgot password request
+$router->post('/forgot-password', function($request) use ($userController) {
+    header('Content-Type: application/json');
+    $result = $userController->forgotPassword();
+    echo json_encode($result);
+    exit();
+})->withMiddleware(HttpKernel::guest());
+
+// Handle verify reset code
+$router->post('/verify-reset-code', function($request) use ($userController) {
+    header('Content-Type: application/json');
+    $result = $userController->verifyResetCode();
+    echo json_encode($result);
+    exit();
+})->withMiddleware(HttpKernel::guest());
+
+// Handle reset password
+$router->post('/reset-password', function($request) use ($userController) {
+    header('Content-Type: application/json');
+    $result = $userController->resetPassword();
+    echo json_encode($result);
+    exit();
+})->withMiddleware(HttpKernel::guest());
+// ============================================
 // 404 NOT FOUND
 // ============================================
 
@@ -397,4 +430,10 @@ $router->get('/{any}', function($any) {
 // });
 
 // Return the router
+
+// Add this temporarily to check if routes are working
+$router->get('/test-forgot', function() {
+    echo "Test route is working!";
+    exit;
+});
 return $router;
