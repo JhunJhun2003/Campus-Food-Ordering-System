@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../../../inc/settings_helper.php';
+
+$siteName = app_site_name();
+$siteNameDisplay = !empty($siteName) ? $siteName : 'FOODIE';
+
 /**
  * Admin Sidebar
  * 
@@ -19,7 +23,7 @@ if (!function_exists('getNotificationController')) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle ?? 'Foodie Admin'); ?></title>
+    <title><?php echo htmlspecialchars($siteNameDisplay . ' Admin' ?? $siteNameDisplay . ' Admin'); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,7 +55,7 @@ if (!function_exists('getNotificationController')) {
 ></dotlottie-wc>
                     </span>
                 </div>
-                <span class="text-xl font-black tracking-wider text-black">FOODIE</span>
+                <span class="text-xl font-black tracking-wider text-black"><?php echo htmlspecialchars($siteNameDisplay); ?></span>
                 <span class="text-xs text-gray-400 font-medium mt-1"><p class="text-xs text-gray-400"><?php echo htmlspecialchars($currentUser['role'] ?? ' '); ?></p></span>
             </div>
 

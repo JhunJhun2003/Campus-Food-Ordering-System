@@ -1,4 +1,9 @@
 <?php
+require_once __DIR__ . '/../../../inc/settings_helper.php';
+
+$siteName = app_site_name();
+$siteNameDisplay = !empty($siteName) ? $siteName : 'FOODIE';
+
 /**
  * Customer Page Header
  * 
@@ -7,7 +12,7 @@
  * @var string $activePage - Current page for navigation highlighting
  */
 
-$pageTitle = $pageTitle ?? 'Foodie - Customer Panel';
+$pageTitle = $siteNameDisplay . ' - Customer Panel' ?? $siteNameDisplay . ' - Customer Panel';
 $customCss = $customCss ?? 'css/dashboard.css';
 $activePage = $activePage ?? 'dashboard';
 $cssHref = str_starts_with($customCss, '/')
@@ -104,7 +109,7 @@ $currencySymbol = app_currency_symbol();
                       loop
                     ></dotlottie-wc>
                 </div>
-                <span class="text-2xl font-black tracking-wider text-slate-950">FOODIE</span>
+                <span class="text-2xl font-black tracking-wider text-slate-950"><?php echo htmlspecialchars($siteNameDisplay); ?></span>
             </a>
 
             <!-- Navigation Links -->

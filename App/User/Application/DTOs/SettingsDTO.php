@@ -9,11 +9,9 @@ class SettingsDTO
         public readonly string $siteName,
         public readonly string $siteEmail,
         public readonly string $sitePhone,
-        public readonly string $timezone,
         public readonly int $preparationTime,
         public readonly string $currency,
         public readonly bool $maintenanceMode,
-        public readonly string $notificationEmail = 'orders@foodie.com'
     ) {}
 
     public static function fromArray(array $data): self
@@ -22,11 +20,9 @@ class SettingsDTO
             siteName: $data['site_name'] ?? 'FOODIE',
             siteEmail: $data['site_email'] ?? 'admin@foodie.com',
             sitePhone: $data['site_phone'] ?? '+1234567890',
-            timezone: $data['timezone'] ?? 'Asia/Manila',
             preparationTime: (int) ($data['preparation_time'] ?? 15),
             currency: $data['currency'] ?? 'USD',
-            maintenanceMode: (bool) ($data['maintenance_mode'] ?? 0),
-            notificationEmail: $data['notification_email'] ?? 'orders@foodie.com'
+            maintenanceMode: (bool) ($data['maintenance_mode'] ?? 0)
         );
     }
 
@@ -36,11 +32,9 @@ class SettingsDTO
             'site_name' => $this->siteName,
             'site_email' => $this->siteEmail,
             'site_phone' => $this->sitePhone,
-            'timezone' => $this->timezone,
             'preparation_time' => $this->preparationTime,
             'currency' => $this->currency,
-            'maintenance_mode' => $this->maintenanceMode ? 1 : 0,
-            'notification_email' => $this->notificationEmail,
+            'maintenance_mode' => $this->maintenanceMode ? 1 : 0
         ];
     }
 }
