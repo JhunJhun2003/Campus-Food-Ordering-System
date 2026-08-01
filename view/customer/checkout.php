@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/user_helpers.php';  // ✅ ADD THIS - CRITICAL!
+require_once __DIR__ . '/../../inc/settings_helper.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 // ============================================
 // 1. AUTHENTICATION & AUTHORIZATION
@@ -28,6 +29,9 @@ $userController = getUserController();  // ✅ Now works
 $currentUser = $userController->getCurrentUser();
 $userId = $currentUser['id'] ?? 0;
 
+// ✅ Get preparation time from settings
+$preparationTime = (int) app_setting('preparation_time', 15);
+$preparationTimeEstimate = $preparationTime . ' mins';
 // ============================================
 // 2. BUSINESS LOGIC
 // ============================================
@@ -448,8 +452,8 @@ $currencySymbol = app_currency_symbol();
                 <span class="font-bold text-slate-800">#<?php echo $orderId ?? 'PENDING'; ?></span>
             </div>
             <div class="flex justify-between items-center text-xs text-slate-500">
-                <span>Delivery Time</span>
-                <span class="font-bold text-slate-800">Est. 25-35 mins</span>
+                <span>Preparation Time</span>
+                <span class="font-bold text-slate-800">Est. <?php echo htmlspecialchars($preparationTimeEstimate); ?></span>
             </div>
         </div>
 

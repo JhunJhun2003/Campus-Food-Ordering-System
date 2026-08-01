@@ -20,10 +20,11 @@ $simpleHeader = true;
 include __DIR__ . '/includes/header.php';
 ?>
 
+<!-- Card Frame - Same as login page -->
 <div class="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8">
-    <div class="auth-card max-w-md w-full">
+    <div class="auth-card">
         
-        <!-- Brand Panel -->
+        <!-- Left Column: Brand Panel -->
         <?php 
         $brandTitle = 'FOODIE';
         $brandSubtitle = 'Reset Your Password';

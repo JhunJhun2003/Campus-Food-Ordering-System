@@ -53,21 +53,38 @@
                                value="<?php echo htmlspecialchars($settings['preparation_time'] ?? 15); ?>" 
                                class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Cancellation Time (minutes)</label>
-                        <input type="number" name="setting_cancellation_time" 
-                               value="<?php echo htmlspecialchars($settings['cancellation_time'] ?? 5); ?>" 
-                               class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Currency</label>
-                        <select name="setting_currency" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
-                            <option value="USD" <?php echo ($settings['currency'] ?? '') == 'USD' ? 'selected' : ''; ?>>USD ($)</option>
-                            <option value="PHP" <?php echo ($settings['currency'] ?? '') == 'PHP' ? 'selected' : ''; ?>>PHP (₱)</option>
-                            <option value="EUR" <?php echo ($settings['currency'] ?? '') == 'EUR' ? 'selected' : ''; ?>>EUR (€)</option>
-                            <option value="GBP" <?php echo ($settings['currency'] ?? '') == 'GBP' ? 'selected' : ''; ?>>GBP (£)</option>
-                        </select>
-                    </div>
+                   
+                   <div>
+    <label class="block text-sm font-medium text-slate-700 mb-1">Currency</label>
+    <select name="setting_currency" id="currencySelect" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm">
+        <option value="USD" <?php echo (app_setting('currency', 'USD') == 'USD') ? 'selected' : ''; ?>>USD ($)</option>
+        <option value="PHP" <?php echo (app_setting('currency', 'USD') == 'PHP') ? 'selected' : ''; ?>>PHP (₱)</option>
+        <option value="EUR" <?php echo (app_setting('currency', 'USD') == 'EUR') ? 'selected' : ''; ?>>EUR (€)</option>
+        <option value="GBP" <?php echo (app_setting('currency', 'USD') == 'GBP') ? 'selected' : ''; ?>>GBP (£)</option>
+        <option value="JPY" <?php echo (app_setting('currency', 'USD') == 'JPY') ? 'selected' : ''; ?>>JPY (¥)</option>
+        <option value="MMK" <?php echo (app_setting('currency', 'USD') == 'MMK') ? 'selected' : ''; ?>>MMK (K)</option>
+        <option value="SGD" <?php echo (app_setting('currency', 'USD') == 'SGD') ? 'selected' : ''; ?>>SGD (S$)</option>
+        <option value="MYR" <?php echo (app_setting('currency', 'USD') == 'MYR') ? 'selected' : ''; ?>>MYR (RM)</option>
+        <option value="THB" <?php echo (app_setting('currency', 'USD') == 'THB') ? 'selected' : ''; ?>>THB (฿)</option>
+        <option value="VND" <?php echo (app_setting('currency', 'USD') == 'VND') ? 'selected' : ''; ?>>VND (₫)</option>
+        <option value="IDR" <?php echo (app_setting('currency', 'USD') == 'IDR') ? 'selected' : ''; ?>>IDR (Rp)</option>
+        <option value="AUD" <?php echo (app_setting('currency', 'USD') == 'AUD') ? 'selected' : ''; ?>>AUD (A$)</option>
+        <option value="CAD" <?php echo (app_setting('currency', 'USD') == 'CAD') ? 'selected' : ''; ?>>CAD (C$)</option>
+        <option value="CHF" <?php echo (app_setting('currency', 'USD') == 'CHF') ? 'selected' : ''; ?>>CHF (CHF)</option>
+        <option value="CNY" <?php echo (app_setting('currency', 'USD') == 'CNY') ? 'selected' : ''; ?>>CNY (¥)</option>
+        <option value="HKD" <?php echo (app_setting('currency', 'USD') == 'HKD') ? 'selected' : ''; ?>>HKD (HK$)</option>
+        <option value="KRW" <?php echo (app_setting('currency', 'USD') == 'KRW') ? 'selected' : ''; ?>>KRW (₩)</option>
+        <option value="NZD" <?php echo (app_setting('currency', 'USD') == 'NZD') ? 'selected' : ''; ?>>NZD (NZ$)</option>
+        <option value="SEK" <?php echo (app_setting('currency', 'USD') == 'SEK') ? 'selected' : ''; ?>>SEK (kr)</option>
+        <option value="NOK" <?php echo (app_setting('currency', 'USD') == 'NOK') ? 'selected' : ''; ?>>NOK (kr)</option>
+        <option value="DKK" <?php echo (app_setting('currency', 'USD') == 'DKK') ? 'selected' : ''; ?>>DKK (kr)</option>
+        <option value="ZAR" <?php echo (app_setting('currency', 'USD') == 'ZAR') ? 'selected' : ''; ?>>ZAR (R)</option>
+        <option value="BRL" <?php echo (app_setting('currency', 'USD') == 'BRL') ? 'selected' : ''; ?>>BRL (R$)</option>
+        <option value="INR" <?php echo (app_setting('currency', 'USD') == 'INR') ? 'selected' : ''; ?>>INR (₹)</option>
+        <option value="RUB" <?php echo (app_setting('currency', 'USD') == 'RUB') ? 'selected' : ''; ?>>RUB (₽)</option>
+    </select>
+    <p class="text-xs text-slate-400 mt-1">Current symbol: <span id="currencySymbolDisplay" class="font-bold text-slate-700"><?php echo app_currency_symbol(); ?></span></p>
+</div>
                 </div>
             </div>
         </div>

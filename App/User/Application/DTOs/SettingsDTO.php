@@ -11,7 +11,6 @@ class SettingsDTO
         public readonly string $sitePhone,
         public readonly string $timezone,
         public readonly int $preparationTime,
-        public readonly int $cancellationTime,
         public readonly string $currency,
         public readonly bool $maintenanceMode,
         public readonly string $notificationEmail = 'orders@foodie.com'
@@ -25,7 +24,6 @@ class SettingsDTO
             sitePhone: $data['site_phone'] ?? '+1234567890',
             timezone: $data['timezone'] ?? 'Asia/Manila',
             preparationTime: (int) ($data['preparation_time'] ?? 15),
-            cancellationTime: (int) ($data['cancellation_time'] ?? 5),
             currency: $data['currency'] ?? 'USD',
             maintenanceMode: (bool) ($data['maintenance_mode'] ?? 0),
             notificationEmail: $data['notification_email'] ?? 'orders@foodie.com'
@@ -40,7 +38,6 @@ class SettingsDTO
             'site_phone' => $this->sitePhone,
             'timezone' => $this->timezone,
             'preparation_time' => $this->preparationTime,
-            'cancellation_time' => $this->cancellationTime,
             'currency' => $this->currency,
             'maintenance_mode' => $this->maintenanceMode ? 1 : 0,
             'notification_email' => $this->notificationEmail,
