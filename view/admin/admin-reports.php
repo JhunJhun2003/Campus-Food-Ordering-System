@@ -46,6 +46,11 @@ $endParam = $_GET['end'] ?? null;
 $yearParam = $_GET['year'] ?? null;
 $monthParam = $_GET['month'] ?? null;
 
+// Show yearly charts by month by default for better readability.
+if ($period === 'this_year' && !isset($_GET['group'])) {
+    $group = 'month';
+}
+
 // Calculate date range based on period
 $startDate = null;
 $endDate = null;
@@ -345,7 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
             params.delete('end');
             params.delete('month');
             params.delete('year');
-            if (groupSelect) params.set('group', groupSelect.value);
+            if (groupSelect) {
+                const groupValue = period === 'this_year' ? 'month' : groupSelect.value;
+                params.set('group', groupValue);
+            }
             window.location.href = window.location.pathname + '?' + params.toString();
         });
     });
@@ -431,10 +439,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span class="w-3 h-3 rounded-full bg-indigo-600"></span>
                 <span>Revenue</span>
             </div>
-            <div class="flex items-center gap-1.5 text-xs text-slate-500">
-                <span class="w-3 h-3 rounded-full bg-indigo-200"></span>
-                <span>Area</span>
-            </div>
         </div>
     </div>
 
@@ -479,19 +483,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 $startX = 60;
                 $bottomY = 250;
                 
-                // Determine step for labels
-                $maxLabels = 15;
-                $step = ceil($count / $maxLabels);
-                if ($step < 1) $step = 1;
-                
+                // Determine step for labels and reduce clutter on dense data sets
+                $maxLabels = 12;
+                $step = max(1, ceil($count / $maxLabels));
                 $points = [];
                 foreach ($monthlyRevenue as $i => $data) {
                     $x = $startX + (($i / max($count - 1, 1)) * $chartWidth);
                     $y = $bottomY - (($data['revenue'] / $maxRevenue) * $chartHeight);
                     $points[] = [
-                        'x' => $x, 
-                        'y' => $y, 
-                        'revenue' => $data['revenue'], 
+                        'x' => $x,
+                        'y' => $y,
+                        'revenue' => $data['revenue'],
                         'month' => $data['month'],
                         'index' => $i
                     ];
@@ -499,15 +501,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 $pathD = '';
                 foreach ($points as $i => $p) {
-                    if ($i === 0) $pathD = "M {$p['x']} {$p['y']}";
-                    else $pathD .= " L {$p['x']} {$p['y']}";
+                    $pathD .= $i === 0 ? "M {$p['x']} {$p['y']}" : " L {$p['x']} {$p['y']}";
                 }
-                $areaPath = $pathD . " L {$points[$count-1]['x']} {$bottomY} L {$points[0]['x']} {$bottomY} Z";
                 ?>
                 
-                <!-- Area Fill -->
-                <path d="<?php echo $areaPath; ?>" fill="url(#chartGradient)" />
-                
+                <!-- X-Axis -->
+                <line x1="<?php echo $startX; ?>" y1="<?php echo $bottomY; ?>" x2="<?php echo $startX + $chartWidth; ?>" y2="<?php echo $bottomY; ?>" stroke="#CBD5E1" stroke-width="1.5" />
+
                 <!-- Line -->
                 <path d="<?php echo $pathD; ?>" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#chartShadow)" />
                 
@@ -517,27 +517,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     $showTooltip = $p['revenue'] > 0;
                 ?>
                     <!-- Data Point Circle -->
-                    <circle cx="<?php echo $p['x']; ?>" cy="<?php echo $p['y']; ?>" r="4.5" class="fill-white stroke-indigo-600 stroke-[2.5] cursor-pointer" />
+                    <circle cx="<?php echo $p['x']; ?>" cy="<?php echo $p['y']; ?>" r="3.5" class="fill-white stroke-indigo-600 stroke-[2] cursor-pointer">
+                        <?php if ($showTooltip): ?>
+                            <title><?php echo app_format_price($p['revenue']); ?></title>
+                        <?php endif; ?>
+                    </circle>
                     
                     <!-- X-Axis Label -->
                     <?php if ($showLabel): ?>
-                        <text x="<?php echo $p['x']; ?>" y="<?php echo $bottomY + 20; ?>" class="fill-slate-500 font-medium text-[10px]" text-anchor="middle">
-                            <?php 
-                            $label = $p['month'];
-                            // Shorten if too long
-                            if (strlen($label) > 10) {
-                                $parts = explode(' ', $label);
-                                $label = $parts[0] ?? $label;
-                            }
-                            echo $label; 
-                            ?>
+                        <?php
+                        $label = $p['month'];
+                        if (strlen($label) > 12) {
+                            $parts = preg_split('/[\s,-]+/', $label);
+                            $label = $parts[0] ?? $label;
+                        }
+                        $labelTransform = $count > 12 ? 'rotate(-45 ' . $p['x'] . ' ' . ($bottomY + 20) . ')' : '';
+                        ?>
+                        <text x="<?php echo $p['x']; ?>" y="<?php echo $bottomY + 24; ?>" class="fill-slate-500 font-medium text-[10px]" text-anchor="middle" <?php echo $labelTransform ? 'transform="' . $labelTransform . '"' : ''; ?>>
+                            <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
                         </text>
-                    <?php endif; ?>
-                    
-                    <!-- Tooltip for values with revenue -->
-                    <?php if ($showTooltip): ?>
-                        <rect x="<?php echo $p['x'] - 32; ?>" y="<?php echo $p['y'] - 38; ?>" width="64" height="24" rx="6" class="fill-slate-800 shadow-md" />
-                        <text x="<?php echo $p['x']; ?>" y="<?php echo $p['y'] - 22; ?>" class="fill-white font-semibold text-[10px]" text-anchor="middle"><?php echo app_format_price($p['revenue']); ?></text>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </svg>
