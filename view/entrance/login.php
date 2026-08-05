@@ -212,7 +212,7 @@ include __DIR__ . '/includes/header.php';
             <!-- Bottom Redirect -->
             <div class="bottom-hint" id="bottom-hint">
                 Don't have an account? 
-                <a href="#" onclick="switchTab('register'); event.preventDefault();">Register</a>
+                <a href="/Campus-Food-Ordering-System/view/entrance/register.php"  event.preventDefault();">Register</a>
             </div>
         </div>
     </div>
@@ -237,26 +237,7 @@ function togglePasswordVisibility() {
 // ============================================
 // SWITCH BETWEEN LOGIN AND REGISTER
 // ============================================
-function switchTab(tab) {
-    const registerFields = document.querySelectorAll('.register-fields');
-    const submitBtn = document.getElementById('submit-btn');
-    const bottomHint = document.getElementById('bottom-hint');
-    
-    // Reset captcha when switching tabs
-    resetCaptcha();
-    
-    if (tab === 'register') {
-        registerFields.forEach(el => el.style.display = 'block');
-        submitBtn.name = 'register';
-        submitBtn.textContent = 'Create Account';
-        bottomHint.innerHTML = 'Already have an account? <a href="#" onclick="switchTab(\'login\'); event.preventDefault();">Login</a>';
-    } else {
-        registerFields.forEach(el => el.style.display = 'none');
-        submitBtn.name = 'login';
-        submitBtn.textContent = 'Login';
-        bottomHint.innerHTML = 'Don\'t have an account? <a href="#" onclick="switchTab(\'register\'); event.preventDefault();">Register</a>';
-    }
-}
+
 
 // ============================================
 // FORGOT PASSWORD - ✅ Now redirects to forgot password page
