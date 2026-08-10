@@ -24,6 +24,11 @@ function redirectIfLoggedIn(): void
             exit();
         }
 
+        if (hasStaffPermissions((int) $_SESSION['user_id'])) {
+            header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+            exit();
+        }
+
         header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
         exit();
     }

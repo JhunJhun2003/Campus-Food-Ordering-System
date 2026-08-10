@@ -5,29 +5,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ============================================
-// 1. AUTHENTICATION & AUTHORIZATION
-// ============================================
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-    exit();
-}
-
-if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'customer') {
-    $_SESSION['error'] = 'Access denied. Admin role required.';
-    header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
-    exit();
-}else if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'staff') {
-    $_SESSION['error'] = 'Access denied. Admin role required.';
-    header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
-    exit();
-}else if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] == 'admin') {
-    // User is an admin, allow access
-} else {
-    $_SESSION['error'] = 'Access denied. Admin role required.';
-    header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
-    exit();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
 require_once __DIR__ . '/../../vendor/autoload.php';
@@ -37,7 +16,7 @@ require_once __DIR__ . '/../../inc/order_helpers.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 require_once __DIR__ . '/../../inc/settings_helper.php';
 
-requireLogin();
+requireAdminPageAccess();
 if (!hasPermission('manage_orders')) {
     renderAdminPermissionDeniedPage('Access denied', 'orders');
 }

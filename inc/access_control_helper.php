@@ -52,7 +52,7 @@ function isStaff(?int $userId = null): bool
     }
     
     // Session check for current user
-    return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'staff';
+    return isset($_SESSION['user_role']) && strtolower($_SESSION['user_role']) === 'staff';
 }
 
 /**
@@ -166,6 +166,63 @@ function hasAdminPermissions(?int $userId = null): bool
         'manage_settings',
         'view_reports',
     ], $userId);
+}
+
+function hasStaffPermissions(?int $userId = null): bool
+{
+    if ($userId === null) {
+        $userId = getCurrentUserId();
+    }
+
+    if ($userId === 0) {
+        return false;
+    }
+
+    return hasAnyPermission([
+        'view_dashboard',
+        'view_orders',
+        'manage_orders',
+        'view_menu',
+        'manage_menu',
+        'update_order_status',
+    ], $userId);
+}
+
+function getStaffLandingUrl(int $userId): string
+{
+    $pages = [
+        ['view_dashboard', '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php'],
+        ['view_orders', '/Campus-Food-Ordering-System/view/staff/staff-orders.php'],
+        ['manage_orders', '/Campus-Food-Ordering-System/view/staff/staff-orders.php'],
+        ['view_menu', '/Campus-Food-Ordering-System/view/staff/staff-menu.php'],
+        ['manage_menu', '/Campus-Food-Ordering-System/view/staff/staff-menu.php'],
+        ['update_profile', '/Campus-Food-Ordering-System/view/staff/staff-profile.php'],
+    ];
+
+    foreach ($pages as [$permission, $url]) {
+        if (hasPermission($permission, $userId)) {
+            return $url;
+        }
+    }
+
+    return '/Campus-Food-Ordering-System/view/entrance/login.php';
+}
+
+function requireAdminPageAccess(): void
+{
+    requireAuth('/Campus-Food-Ordering-System/view/entrance/login.php');
+
+    if (isStaff() && !isAdminLike()) {
+        $_SESSION['error'] = 'Access denied. Admin area only.';
+        header('Location: /Campus-Food-Ordering-System/view/staff/staff-dashboard.php');
+        exit();
+    }
+
+    if (!isAdminLike()) {
+        $_SESSION['error'] = 'Access denied. Admin access required.';
+        header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
+        exit();
+    }
 }
 
 function isAdminLike(?int $userId = null): bool
@@ -360,11 +417,17 @@ function requireAuth(string $redirect = '/entrance/login.php'): void
 /**
  * Redirect admin/staff away from customer pages
  */
-function redirectAdminStaffFromCustomer(string $redirectUrl = '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'): void
+function redirectAdminStaffFromCustomer(?string $redirectUrl = null): void
 {
-    if (isAdminLike() || isStaff()) {
+    if (isAdminLike()) {
         $_SESSION['error'] = 'Access denied. This page is for customers only.';
-        header('Location: ' . $redirectUrl);
+        header('Location: ' . ($redirectUrl ?? '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'));
+        exit();
+    }
+
+    if (isStaff() || hasStaffPermissions()) {
+        $_SESSION['error'] = 'Access denied. This page is for customers only.';
+        header('Location: ' . ($redirectUrl ?? '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php'));
         exit();
     }
 }

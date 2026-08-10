@@ -53,7 +53,8 @@ function requireStaffAuth(): void
         exit();
     }
     
-    if (!in_array($_SESSION['user_role'], ['staff'])) {
+    $role = strtolower($_SESSION['user_role'] ?? '');
+    if ($role !== 'staff' && !hasStaffPermissions((int) $_SESSION['user_id'])) {
         header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
         exit();
     }

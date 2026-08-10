@@ -34,7 +34,7 @@ $permissions = getStaffPermissions($userId);
 // Check if user has dashboard access
 if (!$permissions['viewDashboard']) {
     $_SESSION['error'] = "You do not have permission to access the staff dashboard.";
-    header('Location: /Campus-Food-Ordering-System/view/customer/dashboard.php');
+    header('Location: ' . getStaffLandingUrl((int) $userId));
     exit();
 }
 

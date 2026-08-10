@@ -84,10 +84,6 @@ class LoginWithGoogleUseCase
             return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
         }
 
-        if (!in_array($role, ['user', 'customer', 'admin', 'staff'], true)) {
-            return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
-        }
-
         $adminPermissions = [
             'view_dashboard',
             'manage_users',
@@ -103,6 +99,19 @@ class LoginWithGoogleUseCase
             foreach ($adminPermissions as $permission) {
                 if ($checkPermission->execute($userId, $permission)) {
                     return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
+                }
+            }
+
+            $staffPermissions = [
+                'view_orders',
+                'manage_orders',
+                'view_menu',
+                'manage_menu',
+                'update_order_status',
+            ];
+            foreach ($staffPermissions as $permission) {
+                if ($checkPermission->execute($userId, $permission)) {
+                    return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
                 }
             }
         } catch (\Throwable $e) {
