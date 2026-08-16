@@ -180,9 +180,7 @@ function hasStaffPermissions(?int $userId = null): bool
 
     return hasAnyPermission([
         'view_dashboard',
-        'view_orders',
         'manage_orders',
-        'view_menu',
         'manage_menu',
         'update_order_status',
     ], $userId);
@@ -419,6 +417,10 @@ function requireAuth(string $redirect = '/entrance/login.php'): void
  */
 function redirectAdminStaffFromCustomer(?string $redirectUrl = null): void
 {
+    if (isCustomer()) {
+        return;
+    }
+
     if (isAdminLike()) {
         $_SESSION['error'] = 'Access denied. This page is for customers only.';
         header('Location: ' . ($redirectUrl ?? '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php'));

@@ -26,7 +26,7 @@ use App\User\Application\Usecases\VerifyResetCodeUseCase;
 use App\User\Application\Usecases\ResetPasswordUseCase;
 use App\User\Application\DTOs\ForgotPasswordRequest;      // ✅ Add this
 use App\User\Application\DTOs\VerifyResetCodeRequest;     // ✅ Add this
-use App\User\Application\DTOs\ResetPasswordRequest; 
+use App\User\Application\DTOs\ResetPasswordRequest;
 class UserController extends BaseController
 {
     private UserRepositoryInterface $userRepository;
@@ -40,9 +40,9 @@ class UserController extends BaseController
     private GoogleAuthServiceInterface $googleAuthService;
 
     // Add these properties
-private ForgotPasswordUseCase $forgotPasswordUseCase;
-private VerifyResetCodeUseCase $verifyResetCodeUseCase;
-private ResetPasswordUseCase $resetPasswordUseCase;
+    private ForgotPasswordUseCase $forgotPasswordUseCase;
+    private VerifyResetCodeUseCase $verifyResetCodeUseCase;
+    private ResetPasswordUseCase $resetPasswordUseCase;
 
     public function __construct(
         UserRepositoryInterface $userRepository,
@@ -83,7 +83,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
             $_POST['email'] ?? '',
             $_POST['password'] ?? '',
             $_POST['phone'] ?? '',
-            $_POST['g-recaptcha-response'] ?? null 
+            $_POST['g-recaptcha-response'] ?? null
         );
 
         $response = $this->registerUserUseCase->execute($request);
@@ -93,7 +93,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
             'message' => $response->message,
             'user' => $response->user,
             'errors' => $response->errors ?? null,
-            
+
         ];
     }
 
@@ -106,7 +106,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
             $_POST['email'] ?? '',
             $_POST['password'] ?? '',
             isset($_POST['remember']),
-             $_POST['g-recaptcha-response'] ?? null
+            $_POST['g-recaptcha-response'] ?? null
         );
 
         $response = $this->loginUserUseCase->execute($request);
@@ -118,7 +118,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
             $_SESSION['user_role'] = $response->user->getRoleName();
             $_SESSION['role_id'] = $response->user->getRoleId();
             $_SESSION['user_verified'] = $response->user->isVerified();
-            
+
             if ($request->remember) {
                 setcookie('user_email', $response->user->getEmail()->getValue(), time() + (7 * 24 * 60 * 60), '/');
             }
@@ -144,6 +144,10 @@ private ResetPasswordUseCase $resetPasswordUseCase;
     {
         $role = strtolower($role);
 
+        if ($role === 'customer') {
+            return '/Campus-Food-Ordering-System/view/customer/dashboard.php';
+        }
+
         if ($role === 'admin') {
             return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
         }
@@ -153,10 +157,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         }
 
         $adminPermissions = [
-            'view_dashboard',
             'manage_users',
-            'manage_menu',
-            'manage_orders',
             'manage_settings',
             'view_reports',
         ];
@@ -171,9 +172,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
             }
 
             $staffPermissions = [
-                'view_orders',
                 'manage_orders',
-                'view_menu',
                 'manage_menu',
                 'update_order_status',
             ];
@@ -197,7 +196,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         $_SESSION = [];
         session_destroy();
         setcookie('user_email', '', time() - 3600, '/');
-        
+
         header('Location: /Campus-Food-Ordering-System/view/entrance/login.php');
         exit();
     }
@@ -211,7 +210,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         if (!$this->isAuthenticated()) {
             return null;
         }
-        
+
         return [
             'id' => $_SESSION['user_id'] ?? null,
             'name' => $_SESSION['user_name'] ?? '',
@@ -229,7 +228,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         // Use parent's requireAuthentication and authorize methods
         $this->requireAuthentication();
         $this->authorizeResource($userId, 'manage_users');
-        
+
         return $this->getProfileUseCase->execute($userId);
     }
 
@@ -241,7 +240,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         // Use parent's requireAuthentication and authorize methods
         $this->requireAuthentication();
         $this->authorizeResource($userId, 'manage_users');
-        
+
         return $this->updateProfileUseCase->execute($userId, $data);
     }
 
@@ -253,7 +252,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         // Use parent's requireAuthentication method
         $this->requireAuthentication();
         $this->authorizeResource($userId);
-        
+
         try {
             $user = $this->userRepository->findById(new UserId($userId));
             if (!$user) {
@@ -393,7 +392,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
     }
 
     // Add these methods
- public function forgotPassword(): array
+    public function forgotPassword(): array
     {
         $email = $_POST['email'] ?? '';
         $captchaToken = $_POST['g-recaptcha-response'] ?? null;
@@ -402,7 +401,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         return $this->forgotPasswordUseCase->execute($request);
     }
 
- public function verifyResetCode(): array
+    public function verifyResetCode(): array
     {
         $email = $_POST['email'] ?? '';
         $code = $_POST['code'] ?? '';
@@ -410,7 +409,7 @@ private ResetPasswordUseCase $resetPasswordUseCase;
         $request = new VerifyResetCodeRequest($email, $code);
         return $this->verifyResetCodeUseCase->execute($request);
     }
-  public function resetPassword(): array
+    public function resetPassword(): array
     {
         $email = $_POST['email'] ?? '';
         $code = $_POST['code'] ?? '';

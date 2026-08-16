@@ -36,8 +36,8 @@ class LoginUserUseCase
         if ($this->recaptchaService->isEnabled()) {
             if (!$this->recaptchaService->verify($request->captchaToken)) {
                 return new LoginUserResponse(
-                    false, 
-                    'Please complete the reCAPTCHA verification.', 
+                    false,
+                    'Please complete the reCAPTCHA verification.',
                     null
                 );
             }
@@ -69,6 +69,11 @@ class LoginUserUseCase
     private function getRedirectUrl(string $roleName, int $userId): string
     {
         $role = strtolower($roleName);
+
+        if ($role === 'customer') {
+            return '/Campus-Food-Ordering-System/view/customer/dashboard.php';
+        }
+
         if ($role === 'admin') {
             return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
         }
@@ -78,10 +83,7 @@ class LoginUserUseCase
         }
 
         $adminPermissions = [
-            'view_dashboard',
             'manage_users',
-            'manage_menu',
-            'manage_orders',
             'manage_settings',
             'view_reports',
         ];
@@ -96,9 +98,7 @@ class LoginUserUseCase
             }
 
             $staffPermissions = [
-                'view_orders',
                 'manage_orders',
-                'view_menu',
                 'manage_menu',
                 'update_order_status',
             ];

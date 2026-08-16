@@ -36,7 +36,7 @@ class LoginWithGoogleUseCase
 
             // 2. Authenticate with Google
             $googleUser = $this->googleAuthService->authenticate($request->code);
-            
+
             if (!$googleUser) {
                 return new GoogleLoginResponse(false, 'Failed to authenticate with Google');
             }
@@ -76,19 +76,21 @@ class LoginWithGoogleUseCase
     private function getRedirectUrl(string $roleName, int $userId): string
     {
         $role = strtolower($roleName);
+
+        if ($role === 'customer' || $role === 'user') {
+            return '/Campus-Food-Ordering-System/view/customer/dashboard.php';
+        }
+
         if ($role === 'admin') {
             return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
         }
 
-        if ($role === 'staff') {
+        if ($role === 'staff' || $role === 'staff1') {
             return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
         }
 
         $adminPermissions = [
-            'view_dashboard',
             'manage_users',
-            'manage_menu',
-            'manage_orders',
             'manage_settings',
             'view_reports',
         ];
@@ -103,9 +105,7 @@ class LoginWithGoogleUseCase
             }
 
             $staffPermissions = [
-                'view_orders',
                 'manage_orders',
-                'view_menu',
                 'manage_menu',
                 'update_order_status',
             ];
