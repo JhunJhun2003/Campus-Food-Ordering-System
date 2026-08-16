@@ -109,7 +109,7 @@ function get_currency_symbol(string $currencyCode): string
         'EUR' => '€',
         'GBP' => '£',
         'JPY' => '¥',
-        'MMK' => 'K',
+        'MMK' => 'Ks',
         'PHP' => '₱',
         'SGD' => 'S$',
         'MYR' => 'RM',
