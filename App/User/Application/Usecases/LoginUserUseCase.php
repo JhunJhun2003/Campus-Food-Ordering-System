@@ -74,41 +74,12 @@ class LoginUserUseCase
             return '/Campus-Food-Ordering-System/view/customer/dashboard.php';
         }
 
-        if ($role === 'admin') {
+        if ($role === 'admin' || (function_exists('isAdminLike') && \isAdminLike($userId))) {
             return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
         }
 
-        if ($role === 'staff') {
+        if ($role === 'staff' || (function_exists('hasStaffPermissions') && \hasStaffPermissions($userId))) {
             return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
-        }
-
-        $adminPermissions = [
-            'manage_users',
-            'manage_settings',
-            'view_reports',
-        ];
-
-        try {
-            $repository = new AccessControlRepository(Database::getConnection());
-            $checkPermission = new CheckPermissionUseCase($repository);
-            foreach ($adminPermissions as $permission) {
-                if ($checkPermission->execute($userId, $permission)) {
-                    return '/Campus-Food-Ordering-System/view/admin/admin-dashboard.php';
-                }
-            }
-
-            $staffPermissions = [
-                'manage_orders',
-                'manage_menu',
-                'update_order_status',
-            ];
-            foreach ($staffPermissions as $permission) {
-                if ($checkPermission->execute($userId, $permission)) {
-                    return '/Campus-Food-Ordering-System/view/staff/staff-dashboard.php';
-                }
-            }
-        } catch (\Throwable $e) {
-            // ignore and fallback to customer dashboard
         }
 
         return '/Campus-Food-Ordering-System/view/customer/dashboard.php';

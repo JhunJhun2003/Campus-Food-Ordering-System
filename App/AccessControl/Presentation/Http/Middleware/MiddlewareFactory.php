@@ -54,16 +54,16 @@ class MiddlewareFactory
     /**
      * Create admin middleware
      */
-    public static function admin(string $redirectUrl = '/view/customer/dashboard.php'): RoleMiddleware
+    public static function admin(string $redirectUrl = '/Campus-Food-Ordering-System/view/customer/dashboard.php'): AdminAccessMiddleware
     {
-        return new RoleMiddleware(['admin'], $redirectUrl);
+        return new AdminAccessMiddleware($redirectUrl);
     }
 
     /**
      * Create staff middleware
      */
-    public static function staff(string $redirectUrl = '/view/customer/dashboard.php'): RoleMiddleware
+    public static function staff(string $redirectUrl = '/Campus-Food-Ordering-System/view/customer/dashboard.php'): StaffAccessMiddleware
     {
-        return new RoleMiddleware(['admin', 'staff'], $redirectUrl);
+        return new StaffAccessMiddleware($redirectUrl);
     }
 }

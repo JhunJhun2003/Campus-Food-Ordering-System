@@ -146,7 +146,7 @@ $currencySymbol = app_currency_symbol();
                     <?php getNotificationController()->widget(); ?>
                 <?php endif; ?>
                 
-                <?php if ($canUpdateProfile): ?>
+                <?php if ($isLoggedIn): ?>
                 <div class="user-dropdown relative">
                     <button onclick="toggleDropdown()" class="text-slate-700 hover:text-emerald-500 interactive-transition p-2 rounded-full hover:bg-slate-50 flex items-center gap-2">
                         <i class="fa-regular fa-user text-lg"></i>
@@ -154,9 +154,14 @@ $currencySymbol = app_currency_symbol();
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
                     </button>
                     <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50">
+                        <?php if ($canUpdateProfile): ?>
                         <a href="/Campus-Food-Ordering-System/view/customer/profile.php" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Profile</a>
+                        <?php endif; ?>
                         <?php if ($canViewOrders): ?>
                         <a href="/Campus-Food-Ordering-System/view/customer/orders.php" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">My Orders</a>
+                        <?php endif; ?>
+                        <?php if (isAdminLike() || isStaff() || hasStaffPermissions()): ?>
+                        <a href="/Campus-Food-Ordering-System/view/admin/admin-dashboard.php" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Admin/Staff Panel</a>
                         <?php endif; ?>
                         <hr class="my-1 border-slate-100">
                         <a href="/Campus-Food-Ordering-System/view/entrance/logout.php" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</a>

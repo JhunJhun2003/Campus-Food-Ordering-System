@@ -232,8 +232,13 @@ function isAdminLike(?int $userId = null): bool
     if (isStaff($userId)) {
         return false;
     }
+    
+    if (isCustomer($userId)) {
+        return false;
+    }
 
-    return hasAdminPermissions($userId);
+    // Any role created by the admin (custom role) should be allowed into the admin module
+    return true;
 }
 
 // ============================================
