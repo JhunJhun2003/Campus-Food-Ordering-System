@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 require_once __DIR__ . '/../../inc/order_helpers.php'; // ✅ ADD THIS if exists, or create it
-
+require_once __DIR__ . '/../../inc/settings_helper.php'; // ✅ ADD THIS for settings
 // ✅ Check maintenance mode - staff cannot access during maintenance
 checkMaintenanceRedirect();
 if (isAdminLike()) {
@@ -172,7 +172,7 @@ include __DIR__ . '/includes/sidebar.php';
                                         echo htmlspecialchars($categoryName ?: 'Uncategorized');
                                     ?>
                                 </td>
-                                <td class="py-4 px-6 font-medium text-slate-900">$<?php echo number_format($food->getPrice(), 2); ?></td>
+                                <td class="py-4 px-6 font-medium text-slate-900"><?php echo app_format_price($food->getPrice()); ?></td>
                                 <td class="py-4 px-6">
                                     <?php if ($food->getStock() > 0): ?>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"><?php echo $food->getStock(); ?></span>

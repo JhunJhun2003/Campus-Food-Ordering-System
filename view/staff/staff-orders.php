@@ -11,6 +11,7 @@ require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
+require_once __DIR__ . '/../../inc/settings_helper.php';
 
 // ✅ Check maintenance mode - staff cannot access during maintenance
 checkMaintenanceRedirect();
@@ -207,7 +208,7 @@ include __DIR__ . '/includes/sidebar.php';
                                 <td class="py-4 px-6 font-medium text-slate-900">#<?php echo $order->getId(); ?></td>
                                 <td class="py-4 px-6 text-slate-600"><?php echo htmlspecialchars($order->getCustomerName() ?? 'Unknown'); ?></td>
                                 <td class="py-4 px-6 text-slate-600"><?php echo htmlspecialchars($order->getCustomerPhone() ?? 'N/A'); ?></td>
-                                <td class="py-4 px-6 font-medium text-slate-900">$<?php echo number_format($order->getTotalAmount(), 2); ?></td>
+                                <td class="py-4 px-6 font-medium text-slate-900"><?php echo app_format_price($order->getTotalAmount()); ?></td>
                                 <td class="py-4 px-6">
                                     <?php
                                         $statusName = '';
@@ -237,11 +238,11 @@ include __DIR__ . '/includes/sidebar.php';
                                 <td class="py-4 px-6">
                                     <div class="flex items-center justify-center space-x-2">
                                         <!-- View Details -->
-                                        <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium btn-view-details" 
-                                                data-order-id="<?php echo $order->getId(); ?>" title="View Order Details">
+                                           <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium btn-view-details" 
+                                                    data-order-id="<?php echo $order->getId(); ?>" title="View Order Details">
                                             <i class="fa-regular fa-eye"></i>
                                         </button>
-                                       <a href="/Campus-Food-Ordering-System/Public/receipt.php?id=<?php echo $orderId; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
+                                           <a href="/Campus-Food-Ordering-System/Public/receipt.php?id=<?php echo $order->getId(); ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
     <i class="fa-solid fa-print"></i>
 </a>
                                         
@@ -345,6 +346,8 @@ include __DIR__ . '/includes/sidebar.php';
 </style>
 
 <script>
+    const currencySymbol = '<?php echo addslashes(app_currency_symbol()); ?>';
+    const currencyDecimalPlaces = <?php echo (int) app_setting('currency_decimal_places', 2); ?>;
 // Search
 document.getElementById('searchInput').addEventListener('input', function() {
     const searchTerm = this.value.toLowerCase();
@@ -466,7 +469,7 @@ function renderOrderDetails(order) {
             itemsHtml += `
                 <div class="order-item-row">
                     <span>${item.food_name} (Qty: ${item.quantity})</span>
-                    <span class="font-medium">$${parseFloat(item.subtotal).toFixed(2)}</span>
+                    <span class="font-medium">${currencySymbol}${parseFloat(item.subtotal).toFixed(2)}</span>
                 </div>
             `;
         });
@@ -623,11 +626,10 @@ function renderOrderDetails(order) {
                 </div>
             </div>
             
-            ${imageHtml}
-            
+           
             <div class="border-t border-slate-100 pt-3 flex justify-between font-bold text-slate-900">
                 <span>Total Amount</span>
-                <span class="text-emerald-600">$${parseFloat(order.total_amount).toFixed(2)}</span>
+                <span class="text-emerald-600">${currencySymbol}${parseFloat(order.total_amount).toFixed(currencyDecimalPlaces)}</span>
             </div>
             
             <div class="text-xs text-slate-400 text-right border-t border-slate-100 pt-3">

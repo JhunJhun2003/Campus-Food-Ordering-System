@@ -57,10 +57,10 @@ include __DIR__ . '/includes/sidebar.php';
                 <i class="fa-regular fa-user text-xl"></i>
             </div>
         </div>
-        <div class="mt-4 flex items-center text-xs text-green-600">
+        <!-- <div class="mt-4 flex items-center text-xs text-green-600">
             <i class="fa-solid fa-arrow-up mr-1"></i>
             <span>12% this month</span>
-        </div>
+        </div> -->
     </div>
 
     <div class="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
@@ -73,10 +73,10 @@ include __DIR__ . '/includes/sidebar.php';
                 <i class="fa-solid fa-utensils text-xl"></i>
             </div>
         </div>
-        <div class="mt-4 flex items-center text-xs text-green-600">
+        <!-- <div class="mt-4 flex items-center text-xs text-green-600">
             <i class="fa-solid fa-arrow-up mr-1"></i>
             <span>5 new this week</span>
-        </div>
+        </div> -->
     </div>
 
     <div class="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
@@ -89,10 +89,10 @@ include __DIR__ . '/includes/sidebar.php';
                 <i class="fa-solid fa-receipt text-xl"></i>
             </div>
         </div>
-        <div class="mt-4 flex items-center text-xs text-orange-600">
+        <!-- <div class="mt-4 flex items-center text-xs text-orange-600">
             <i class="fa-solid fa-arrow-up mr-1"></i>
             <span>8% this month</span>
-        </div>
+        </div> -->
     </div>
 
     <div class="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">

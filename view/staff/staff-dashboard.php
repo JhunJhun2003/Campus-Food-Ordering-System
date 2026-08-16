@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../inc/auth_helper.php';
 require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
+require_once __DIR__ . '/../../inc/settings_helper.php';
 
 // ✅ Check maintenance mode - staff cannot access during maintenance
 checkMaintenanceRedirect();
@@ -193,7 +194,7 @@ include __DIR__ . '/includes/sidebar.php';
                     <tr>
                         <td class="px-4 py-3 font-medium text-slate-900">#<?php echo $order['id']; ?></td>
                         <td class="px-4 py-3 text-slate-600"><?php echo htmlspecialchars($order['customer_name'] ?? 'Unknown'); ?></td>
-                        <td class="px-4 py-3 font-medium text-slate-900">$<?php echo number_format((float)$order['total_amount'] ?? 0, 2); ?></td>
+                        <td class="px-4 py-3 font-medium text-slate-900"><?php echo app_format_price((float)$order['total_amount']); ?></td>
                         <td class="px-4 py-3">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo $colorClass; ?>">
                                 <?php echo ucfirst($statusName); ?>

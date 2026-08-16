@@ -15,6 +15,7 @@ require_once __DIR__ . '/includes/permissions.php';
 require_once __DIR__ . '/../../inc/access_control_helper.php';
 require_once __DIR__ . '/../../inc/refund_helpers.php';
 require_once __DIR__ . '/../../inc/order_helpers.php';
+require_once __DIR__ . '/../../inc/settings_helper.php';
 
 // Check maintenance mode
 checkMaintenanceRedirect();
@@ -149,7 +150,7 @@ include __DIR__ . '/includes/sidebar.php';
                                     <div class="font-medium text-slate-900"><?php echo htmlspecialchars($refund['requested_by_name'] ?? 'Guest'); ?></div>
                                     <div class="text-xs text-slate-400"><?php echo htmlspecialchars($refund['requested_by_email'] ?? ''); ?></div>
                                 </td>
-                                <td class="py-4 px-6 font-semibold text-slate-900">$<?php echo number_format((float) ($refund['order_total'] ?? 0), 2); ?></td>
+                                <td class="py-4 px-6 font-semibold text-slate-900"><?php echo app_format_price((float)$refund['order_total']); ?></td>
                                 <td class="py-4 px-6 max-w-xs truncate" title="<?php echo htmlspecialchars($refund['reason']); ?>">
                                     <?php echo htmlspecialchars($refund['reason']); ?>
                                 </td>
@@ -161,11 +162,11 @@ include __DIR__ . '/includes/sidebar.php';
                                 </td>
                                 <td class="py-4 px-6 text-center">
                                     <div class="flex items-center justify-center space-x-2">
-                                        <a href="/Campus-Food-Ordering-System/order/receipt?id=<?php echo $refund['order_id']; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
+                                        <a href="/Campus-Food-Ordering-System/Public/order/receipt?id=<?php echo $refund['order_id']; ?>" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium" title="Print Receipt">
                                             <i class="fa-solid fa-print"></i>
                                         </a>
                                         <?php if ((int)$refund['refund_status_id'] === 1 && ($permissions['updateOrderStatus'] ?? false)): ?>
-                                            <button onclick="openProcessModal(<?php echo $refund['id']; ?>, <?php echo $refund['order_id']; ?>, '<?php echo htmlspecialchars($refund['requested_by_name'] ?? 'Guest'); ?>', '<?php echo number_format((float) ($refund['order_total'] ?? 0), 2); ?>')" class="text-emerald-600 hover:text-emerald-800 text-sm font-medium" title="Process Refund">
+                                            <button onclick="openProcessModal(<?php echo $refund['id']; ?>, <?php echo $refund['order_id']; ?>, '<?php echo htmlspecialchars($refund['requested_by_name'] ?? 'Guest'); ?>', '<?php echo app_format_price((float) ($refund['order_total'] ?? 0)); ?>')" class="text-emerald-600 hover:text-emerald-800 text-sm font-medium" title="Process Refund">
                                                 <i class="fa-solid fa-circle-check"></i>
                                             </button>
                                         <?php endif; ?>
